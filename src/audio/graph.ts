@@ -15,7 +15,7 @@
 import type { SimEvent } from '../core/events';
 import { mechanics, tuning } from '../sim/player/tuning';
 import { Ambience } from './ambience';
-import { clamp, noiseBank, Strip, type NoiseBank, type Vec3 } from './dsp';
+import { clamp, noiseBank, setPanningModel, Strip, type NoiseBank, type Vec3 } from './dsp';
 import { EmitterSet, type EmitterDef } from './emitters';
 import { Mixer, type BusName } from './mixer';
 import { MusicDirector, PolledClock } from './director';
@@ -30,8 +30,19 @@ export interface ListenerPose extends Vec3 {
   yaw: number;
 }
 
-/** Cap on simultaneous one-shot sounds; beyond it, new ones are dropped. */
-const MAX_STRIPS = 48;
+/**
+ * Caps on simultaneous one-shot sounds, all buses and per bus; beyond them new
+ * ones are dropped. Phones get a smaller budget (the audio thread is the
+ * first thing to crackle and drop out under load).
+ */
+const VOICES = {
+  full: { total: 40, sfx: 24, music: 8, ambience: 6, ui: 6, voice: 4 },
+  lite: { total: 22, sfx: 12, music: 5, ambience: 3, ui: 4, voice: 2 },
+} as const;
+/** Footsteps are the most frequent sound: at most this many at once (their tails overlap). */
+const STEP_VOICES = { full: 4, lite: 2 } as const;
+/** A strip still alive this long after its scheduled end lost an `ended` event: reap it. */
+const REAP_AFTER = 2;
 /** Minimum spacing between two sounds of the same event type (s). */
 const MIN_GAP: Record<string, number> = {
   footstep: 0.07,
@@ -118,6 +129,8 @@ const where = (e: SimEvent, prefix = ''): Vec3 | null => {
 };
 
 export interface GraphOptions {
+  /** Phones and tablets: fewer voices, equal-power panning, shorter reverbs, lighter decoding. */
+  lite?: boolean;
   ambience?: boolean;
   destination?: AudioNode;
   /** URL of public/audio/ (ending in '/'); null disables recorded sounds. */
@@ -149,7 +162,10 @@ export class AudioGraph {
   private readonly musicClock = new PolledClock();
   private readonly ambience: Ambience | null;
   private readonly emitters: EmitterSet;
-  private strips = 0;
+  private readonly live = new Set<Strip>();
+  private readonly busStrips = new Map<BusName, number>();
+  private readonly steps: Strip[] = [];
+  readonly lite: boolean;
   private readonly last = new Map<string, number>();
   private readonly lastVariant = new Map<string, number>();
   private cue: { name: CueName; strip: Strip; at: number } | null = null;
@@ -161,21 +177,33 @@ export class AudioGraph {
     readonly ctx: BaseAudioContext,
     opts: GraphOptions = {},
   ) {
+    this.lite = opts.lite === true;
     this.noise = noiseBank(ctx);
-    this.mixer = new Mixer(ctx, opts.destination);
-    this.samples = opts.samples ? new SampleBank(ctx, opts.samples, opts.fetcher) : null;
+    this.mixer = new Mixer(ctx, opts.destination, this.lite ? 1.6 : Infinity);
+    setPanningModel(this.lite ? 'equalpower' : 'HRTF');
+    this.samples = opts.samples
+      ? new SampleBank(ctx, opts.samples, opts.fetcher, this.lite ? 32000 : Infinity)
+      : null;
     this.score = new ScorePlayer(ctx, this.mixer.bus.music, {
       base: opts.samples ?? '',
       strip: () => this.strip('music', null),
       fallback: (cue) => this.fallbackCue(cue),
+      lite: this.lite,
+      musicLevel: () => this.mixer.outputLevel('music'),
       ...(opts.fetcher ? { fetcher: opts.fetcher } : {}),
     });
     this.director = new MusicDirector(this.score, this.musicClock);
-    this.emitters = new EmitterSet(ctx, this.noise, this.mixer.bus.ambience);
+    this.emitters = new EmitterSet(ctx, this.noise, this.mixer.bus.ambience, this.lite ? 3 : 8);
     this.ambience =
       opts.ambience === false
         ? null
-        : new Ambience(ctx, this.noise, this.mixer.bus.ambience, () => this.strip('ambience', null));
+        : new Ambience(
+            ctx,
+            this.noise,
+            this.mixer.bus.ambience,
+            () => this.strip('ambience', null),
+            this.lite,
+          );
     this.samples?.onLoaded((c) => this.loaded(c));
   }
 
@@ -199,17 +227,37 @@ export class AudioGraph {
     this.ambience?.useBeds(air, wind, () => this.samples?.pick('drip') ?? null);
   }
 
-  /** A new one-shot on `bus`, spatialised at `at` when given; null when the voice cap is reached. */
+  /** A new one-shot on `bus`, spatialised at `at` when given; null when a voice cap is reached. */
   strip(bus: BusName, at: Vec3 | null, gain = 1): Strip | null {
-    if (this.strips >= MAX_STRIPS) return null;
-    this.strips++;
-    const s = new Strip(this.ctx, this.noise, this.mixer.bus[bus], at, () => this.strips--);
+    const caps = VOICES[this.lite ? 'lite' : 'full'];
+    const onBus = this.busStrips.get(bus) ?? 0;
+    if (this.live.size >= caps.total || onBus >= caps[bus]) return null;
+    this.busStrips.set(bus, onBus + 1);
+    const s = new Strip(this.ctx, this.noise, this.mixer.bus[bus], at, () => {
+      this.live.delete(s);
+      this.busStrips.set(bus, (this.busStrips.get(bus) ?? 1) - 1);
+    });
+    this.live.add(s);
     s.input.gain.value = gain;
     return s;
   }
 
+  /** Frees strips long past their end whose sources never reported `ended`. Returns how many. */
+  reap(): number {
+    const now = this.ctx.currentTime;
+    let n = 0;
+    for (const s of [...this.live]) {
+      const end = Math.max(s.end, s.born);
+      if (now > end + REAP_AFTER) {
+        s.forceDispose();
+        n++;
+      }
+    }
+    return n;
+  }
+
   get activeStrips(): number {
-    return this.strips;
+    return this.live.size;
   }
 
   setRoom(preset: ReverbPreset | null): void {
@@ -273,8 +321,11 @@ export class AudioGraph {
   private play(bus: BusName, at: Vec3 | null, build: (s: Strip, t: number) => void, gain = 1): Strip | null {
     const s = this.strip(bus, at, gain);
     if (!s) return null;
-    build(s, this.ctx.currentTime + LEAD);
-    s.seal();
+    try {
+      build(s, this.ctx.currentTime + LEAD);
+    } finally {
+      s.seal();
+    }
     return s;
   }
 
@@ -389,14 +440,20 @@ export class AudioGraph {
     const gait: Gait = run ? 'run' : 'walk';
     const bank = `step.${material}.${gait}` as BankName;
     const pan = this.nextSide();
+    // Footstep voices: the oldest still ringing gives way (their tails overlap at a run).
+    for (let i = this.steps.length - 1; i >= 0; i--) if (this.steps[i]?.done) this.steps.splice(i, 1);
+    if (this.steps.length >= STEP_VOICES[this.lite ? 'lite' : 'full']) this.steps.shift()?.forceDispose();
     const s = this.strip('sfx', null);
     if (!s) return;
+    this.steps.push(s);
     const t = this.ctx.currentTime + LEAD;
     const level = material === 'sand' ? LEVEL.step.sand : LEVEL.step.stone;
+    // Under load, the extra layers go first.
+    const busy = this.live.size > VOICES[this.lite ? 'lite' : 'full'].total * 0.6;
     if ((material === 'stone' || material === 'sand') && this.ready(bank)) {
       this.layer(s, t, bank, { gain: level[gait], rate: run ? 1.02 : 0.98, pan });
       // Clothing and gear moving with the stride: subtle, not on every step.
-      if (Math.random() < (run ? 0.85 : 0.5)) {
+      if (!busy && Math.random() < (run ? 0.85 : 0.5)) {
         this.layer(s, t, 'cloth.step', {
           delay: 0.01 + Math.random() * 0.04,
           gain: LEVEL.cloth[gait],
@@ -406,12 +463,46 @@ export class AudioGraph {
         });
       }
       // The steps carry the room: a little more reverb than the bus sends on its own.
-      s.send(this.mixer.reverbSend, run ? 0.22 : 0.3);
+      if (!busy) s.send(this.mixer.reverbSend, run ? 0.22 : 0.3);
     } else {
       s.input.gain.value = PLAYER;
       sfx.footstep(s, t, material, this.variant(material), run);
     }
     s.seal();
+  }
+
+  /**
+   * The engine's watchdog, about once a second while the context runs: frees
+   * voices that lost their `ended` event, reopens gains stuck near zero, and
+   * restarts a music stream the browser paused behind our back.
+   */
+  heal(): { reaped: number; stuck: string[] } {
+    const reaped = this.reap();
+    const stuck: string[] = [...this.mixer.recover(), ...this.score.recover()];
+    return { reaped, stuck };
+  }
+
+  /** A user gesture arrived: retry what browsers only allow inside one (a refused or paused stream). */
+  gesture(): void {
+    this.score.kick();
+  }
+
+  /** Diagnostics for the watchdog log and the soak test. */
+  snapshot(): Record<string, unknown> {
+    return {
+      voices: this.live.size,
+      emitters: this.emitters.liveCount,
+      level: Math.round(this.mixer.level() * 10) / 10,
+      gains: this.mixer.gains(),
+      music: this.score.snapshot(),
+      state: this.director.state,
+      cue: this.director.cue,
+    };
+  }
+
+  /** Only the music state (the context is not running: no sound can be made, but the score keeps track). */
+  onMusicEvent(e: SimEvent): void {
+    this.director.onEvent(e);
   }
 
   onEvent(e: SimEvent, atRaw: Vec3 | null): void {

@@ -39,6 +39,28 @@ export interface Emitter {
 
 type AudioContextCtor = typeof AudioContext;
 
+/**
+ * Phones and tablets get the light audio profile: fewer voices, equal-power
+ * panning, shorter reverbs, lower decode rates, direct music streams and a
+ * larger output buffer (the audio thread must never miss its deadline).
+ */
+export function isLiteDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  return coarse || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+}
+
+/** The context index.html's first-gesture script made and unlocked (see #audio-unlock), if any. */
+export function adoptedContext(
+  win: unknown = typeof window === 'undefined' ? undefined : window,
+): AudioContext | null {
+  const ctx = (win as { __ncAudioCtx?: AudioContext } | undefined)?.__ncAudioCtx;
+  return ctx && ctx.state !== 'closed' ? ctx : null;
+}
+
+/** How often the watchdog looks at the context (ms). */
+const WATCHDOG_MS = 1000;
+
 function contextCtor(): AudioContextCtor | null {
   if (typeof window === 'undefined') return null;
   const w = window as unknown as { AudioContext?: AudioContextCtor; webkitAudioContext?: AudioContextCtor };
@@ -54,7 +76,19 @@ export class AudioEngine {
   private readonly volumes = new Map<BusName, number>();
   private muted = false;
   private level = 'antechamber';
+  /** The pause menu suspended the audio on purpose: the watchdog leaves it alone. */
+  private paused = false;
+  private readonly lite = isLiteDevice();
+  private watchdog: ReturnType<typeof setInterval> | null = null;
+  /** Diagnostics: recoveries so far, and a short log of what the watchdog saw. */
+  private readonly stats = { resumes: 0, reaped: 0, healed: 0, interruptions: 0 };
+  private readonly journal: string[] = [];
   private phase: 'title' | 'intro' | 'play' | 'end' | null = null;
+
+  /** A gesture already unlocked audio (on the splash, before this code loaded): unlock() needs no new one. */
+  get gestureSeen(): boolean {
+    return adoptedContext() !== null;
+  }
 
   /** Must be called from a user gesture (browsers block audio until then). Safe to call repeatedly. */
   unlock(): Promise<void> {
@@ -62,17 +96,26 @@ export class AudioEngine {
       return this.ctx.state === 'running' ? Promise.resolve() : this.ctx.resume().catch(() => undefined);
     }
     if (this.unlocking) return this.unlocking;
+    // The splash's first gesture may already have made and unlocked the context: adopt it.
+    const adopted = adoptedContext();
     const Ctor = contextCtor();
-    if (!Ctor) return Promise.resolve();
-    const ctx = new Ctor({ latencyHint: 'interactive' });
+    if (!adopted && !Ctor) return Promise.resolve();
+    // Phones: a 60 ms output buffer instead of the smallest one, so a busy frame cannot starve the audio thread.
+    const ctx = adopted ?? new (Ctor as AudioContextCtor)({ latencyHint: this.lite ? 0.06 : 'interactive' });
     this.ctx = ctx;
+    // Publish it for index.html's gesture script, so that same tap never makes a second context
+    // (window capture listeners, like main's, run before its document ones).
+    if (!adopted && typeof window !== 'undefined') {
+      (window as unknown as { __ncAudioCtx?: AudioContext }).__ncAudioCtx = ctx;
+    }
+    this.guard(ctx);
     // resume() must be requested synchronously inside the gesture.
     const resumed = ctx.resume().catch(() => undefined);
     // Building the graph synthesises buffers and impulse responses: seconds on
     // a slow phone. It waits a moment so whatever the gesture changed on
     // screen (the start button's press) paints first; events meanwhile are dropped.
     const built = new Promise<void>((done) => setTimeout(done, 60)).then(() => {
-      const graph = new AudioGraph(ctx, { samples: `${import.meta.env.BASE_URL}audio/` });
+      const graph = new AudioGraph(ctx, { samples: `${import.meta.env.BASE_URL}audio/`, lite: this.lite });
       this.graph = graph;
       for (const [bus, v] of this.volumes) graph.mixer.setBusVolume(bus, v);
       graph.mixer.setMuted(this.muted);
@@ -95,9 +138,103 @@ export class AudioEngine {
     return this.unlocking;
   }
 
+  /**
+   * The self-healing part. Browsers suspend or interrupt an AudioContext on
+   * their own (Chrome for Android: audio focus taken by another app or a
+   * call, the screen turning off, the tab going to the background). Nothing
+   * brought it back during play, so the sound came and went and finally
+   * stopped. Now: every state change, every user gesture, the page becoming
+   * visible again and a one-second watchdog resume it (Chrome allows resume()
+   * once the page has had a gesture); the watchdog also frees voices that lost
+   * their `ended` event and reopens gains stuck near zero.
+   */
+  private guard(ctx: AudioContext): void {
+    ctx.addEventListener('statechange', () => {
+      this.note(`state ${ctx.state}`);
+      if (ctx.state !== 'running') {
+        if (ctx.state !== 'closed' && !this.paused) this.stats.interruptions++;
+        this.revive();
+      }
+    });
+    if (typeof window !== 'undefined') {
+      const gesture = (): void => {
+        this.revive();
+        this.graph?.gesture();
+      };
+      for (const type of ['pointerdown', 'touchend', 'keydown', 'click']) {
+        window.addEventListener(type, gesture, { capture: true, passive: true });
+      }
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        this.note(document.hidden ? 'hidden' : 'visible');
+        if (!document.hidden) {
+          this.revive();
+          this.graph?.gesture();
+        }
+      });
+    }
+    this.watchdog = setInterval(() => this.check(), WATCHDOG_MS);
+  }
+
+  /** Resumes the context unless the pause menu holds it or the page is hidden. */
+  private revive(): void {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state === 'running' || ctx.state === 'closed' || this.paused) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    this.stats.resumes++;
+    void ctx.resume().catch(() => undefined);
+  }
+
+  private check(): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (ctx.state !== 'running') {
+      this.revive();
+      return;
+    }
+    const g = this.graph;
+    if (!g) return;
+    const { reaped, stuck } = g.heal();
+    if (reaped > 0) {
+      this.stats.reaped += reaped;
+      this.note(`reaped ${reaped} voices`);
+    }
+    if (stuck.length > 0) {
+      this.stats.healed += stuck.length;
+      this.note(`reopened ${stuck.join(', ')}`);
+    }
+  }
+
+  private note(line: string): void {
+    const t = this.ctx ? this.ctx.currentTime.toFixed(1) : '-';
+    this.journal.push(`${t} ${line}`);
+    if (this.journal.length > 40) this.journal.shift();
+  }
+
+  /** Diagnostics for the console (`__nc.audio.debug()`) and the soak test. */
+  debug(): Record<string, unknown> {
+    const ctx = this.ctx;
+    return {
+      state: ctx?.state ?? 'none',
+      time: ctx ? Math.round(ctx.currentTime * 100) / 100 : 0,
+      lite: this.lite,
+      latency: ctx ? Math.round(((ctx.baseLatency || 0) + (ctx.outputLatency || 0)) * 1000) : 0,
+      paused: this.paused,
+      ...this.stats,
+      ...(this.graph ? this.graph.snapshot() : {}),
+      log: this.journal.slice(-8),
+    };
+  }
+
   /** Handle a simulation event. `at` is the world position where it happened (usually the player). */
   onEvent(e: SimEvent, at: { x: number; y: number; z: number }): void {
-    if (!this.graph || this.ctx?.state !== 'running') return;
+    if (!this.graph) return;
+    // While the context is not running no sound can be made, but the music keeps track of the game.
+    if (this.ctx?.state !== 'running') {
+      this.graph.onMusicEvent(e);
+      return;
+    }
     this.graph.onEvent(e, at);
   }
 
@@ -161,6 +298,7 @@ export class AudioEngine {
    * scheduled music stop in place and continue where they were on resume.
    */
   setPaused(paused: boolean): void {
+    this.paused = paused;
     const ctx = this.ctx;
     if (!ctx) return;
     this.graph?.setPaused(paused);

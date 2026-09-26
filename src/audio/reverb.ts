@@ -76,8 +76,18 @@ export function reverbWet(preset: ReverbPreset): number {
   return SPECS[preset].wet;
 }
 
-export function generateImpulse(ctx: BaseAudioContext, preset: ReverbPreset): AudioBuffer {
-  const s = SPECS[preset];
+/**
+ * `maxSeconds` caps the tail (mobile: a long stereo convolution is one of the
+ * heaviest loads on the audio thread); the decay is steepened to fit, so the
+ * room keeps its colour, just shorter.
+ */
+export function generateImpulse(
+  ctx: BaseAudioContext,
+  preset: ReverbPreset,
+  maxSeconds = Infinity,
+): AudioBuffer {
+  const base = SPECS[preset];
+  const s = base.rt60 * 1.05 > maxSeconds ? { ...base, rt60: maxSeconds / 1.05 } : base;
   const sr = ctx.sampleRate;
   const len = Math.floor(sr * (s.predelay + s.rt60 * 1.05));
   const buf = ctx.createBuffer(2, len, sr);

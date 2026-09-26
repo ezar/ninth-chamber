@@ -69,6 +69,8 @@ export class SampleBank {
     /** URL prefix of public/audio, ending in '/'. */
     private readonly base: string,
     private readonly fetcher: Fetcher = defaultFetch,
+    /** Highest decode rate (phones: 32 kHz, a third less memory than 48 kHz). */
+    private readonly maxRate = Infinity,
   ) {
     this.enabled = opusSupported();
   }
@@ -145,7 +147,8 @@ export class SampleBank {
    * The context that decodes at `rate`: a small offline context for reduced rates (the buffers
    * play in any context, resampled on the fly), else the main one.
    */
-  private decoder(rate: number | undefined): BaseAudioContext {
+  private decoder(wanted: number | undefined): BaseAudioContext {
+    const rate = Math.min(wanted ?? this.ctx.sampleRate, this.maxRate);
     if (!rate || rate >= this.ctx.sampleRate || typeof OfflineAudioContext === 'undefined') return this.ctx;
     let d = decoders.get(rate);
     if (!d) {

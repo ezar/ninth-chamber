@@ -99,6 +99,8 @@ async function main(): Promise<void> {
   };
   window.addEventListener('pointerdown', titleMusic, { capture: true });
   window.addEventListener('keydown', titleMusic, { capture: true });
+  // A tap on the first-paint splash, before this code loaded, already unlocked audio (index.html): start now.
+  if (audio.gestureSeen) titleMusic();
 
   // The story cards over the loading reel (index.html): when they give way to the
   // title, the start button takes the focus if the tomb is ready.
@@ -825,6 +827,8 @@ async function main(): Promise<void> {
       return shots;
     },
     camera,
+    /** The audio engine: `__nc.audio.debug()` shows the context state, voices, gains and the watchdog log. */
+    audio,
     start,
     pause,
     resume,

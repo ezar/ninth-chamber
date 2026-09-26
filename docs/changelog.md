@@ -1,5 +1,22 @@
 # Changelog
 
+## Audio on phones: the sound no longer drops out and stops
+
+- **Root cause.** The AudioContext was resumed only from the title gesture and the pause menu. When Chrome for Android suspended or interrupted it on its own (audio focus, screen off, background, a stalled stream), nothing resumed it. The engine also dropped every event and frame update while the context was not running. Before that, the phone's audio thread ran at its limit, so the sound crackled in and out.
+- **Self-healing.** The context resumes on `statechange`, on every gesture, when the page becomes visible again, and from a one-second watchdog. It is left alone while the pause menu holds it. The watchdog also frees voices that lost their `ended` event and resets gains stuck near zero. The music director keeps following events while the context is suspended. `__nc.audio.debug()` shows the state, voices, gains and a log.
+- **Light profile on phones:**
+  - 60 ms output buffer;
+  - equal-power panning instead of HRTF;
+  - 22 voices (12 sfx) and 2 footstep voices;
+  - reverbs capped at 1.6 s;
+  - the 3 nearest fires only;
+  - sound effects decoded at 32 kHz and music loops at 22 kHz;
+  - no chase or boss prefetch;
+  - the synthesised air stops once the recorded beds play;
+  - music streams play straight from the `<audio>` element instead of through Web Audio.
+- **Ducking** is a JS-side envelope scheduled as linear ramps, so a duck can't get stuck. `cancelAndHoldAtTime` is no longer used. At most two stream elements exist at a time. A stream the browser pauses restarts on the next gesture.
+- **Splash unlock.** The first tap or key, even on the splash before the game's code loads, makes and unlocks the AudioContext (`#audio-unlock` in `index.html`, with a silent buffer for iOS). The engine adopts that context, so the title theme starts from that same tap.
+
 ## Splash and the story while the game loads
 
 - **Splash** (`index.html`, `src/ui/prelude.css`): from the first paint, on black, the nine-segment seal carves itself: eight segments drawn one by one with an amber stroke and a glint as the stone fills in, the ninth left as an outline that flickers once like a dying ember; then the wordmark (by locale) fades in while its letter-spacing settles, with a faint shimmer of dust. About 2.8 s, pure CSS and SVG (the seal is the identity geometry from `src/ui/seal.ts`, baked in at build time). Any tap or key skips it; with reduced motion the finished seal holds still for a second. Loading runs underneath.

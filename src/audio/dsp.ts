@@ -24,12 +24,67 @@ export const dbToGain = (db: number): number => 10 ** (db / 20);
 
 /** Stops an automation at `t` keeping its current value, so a new ramp starts without a jump. */
 export function holdParam(param: AudioParam, t: number): void {
-  if (typeof param.cancelAndHoldAtTime === 'function') {
-    param.cancelAndHoldAtTime(t);
-  } else {
-    const v = param.value;
-    param.cancelScheduledValues(t);
-    param.setValueAtTime(v, t);
+  // Not cancelAndHoldAtTime: engines disagree on it around setTargetAtTime curves, and it is
+  // missing in some. Cancel and restart from the current value instead.
+  const v = param.value;
+  param.cancelScheduledValues(t);
+  param.setValueAtTime(v, t);
+}
+
+/**
+ * A duck (dip and release) on a gain, known in JS at any time: `value(t)` is
+ * exact even while the node is idle, and the AudioParam gets plain linear
+ * ramps that always land on their values.
+ */
+export class DuckEnvelope {
+  private from = 1;
+  private depth = 1;
+  private t0 = 0;
+  private attackEnd = 0;
+  private holdEnd = 0;
+  private releaseEnd = 0;
+
+  constructor(private readonly param: AudioParam) {}
+
+  value(t: number): number {
+    if (t >= this.releaseEnd) return 1;
+    if (t <= this.t0) return this.from;
+    if (t < this.attackEnd)
+      return this.from + ((this.depth - this.from) * (t - this.t0)) / (this.attackEnd - this.t0);
+    if (t < this.holdEnd) return this.depth;
+    return this.depth + ((1 - this.depth) * (t - this.holdEnd)) / (this.releaseEnd - this.holdEnd);
+  }
+
+  /** Dips to `gain` over `attack`, holds until `until` (extending a duck in progress), releases over `release`. */
+  duck(t: number, gain: number, attack: number, until: number, release: number): void {
+    const from = this.value(t);
+    const depth = t < this.releaseEnd ? Math.min(gain, this.depth) : gain;
+    const holdEnd = Math.max(until, t < this.releaseEnd ? this.holdEnd : 0, t + attack);
+    this.from = from;
+    this.depth = depth;
+    this.t0 = t;
+    this.attackEnd = t + attack;
+    this.holdEnd = holdEnd;
+    this.releaseEnd = holdEnd + release;
+    this.apply(t);
+  }
+
+  /** Re-schedules the param from the envelope (also the watchdog's repair). */
+  apply(t: number): void {
+    const p = this.param;
+    p.cancelScheduledValues(0);
+    p.setValueAtTime(this.value(t), t);
+    if (t < this.attackEnd) p.linearRampToValueAtTime(this.depth, this.attackEnd);
+    if (t < this.holdEnd) p.setValueAtTime(this.depth, this.holdEnd);
+    if (t < this.releaseEnd) p.linearRampToValueAtTime(1, this.releaseEnd);
+  }
+
+  get busy(): boolean {
+    return this.releaseEnd > 0;
+  }
+
+  get end(): number {
+    return this.releaseEnd;
   }
 }
 
@@ -166,9 +221,19 @@ export function setPannerPosition(p: PannerNode, v: Vec3, t: number, smooth = 0)
   }
 }
 
+let panningModel: PanningModelType = 'HRTF';
+
+/**
+ * HRTF (two convolutions per voice) or equal-power panning. Phones use
+ * equal-power: a dozen HRTF voices is enough to overload a mobile audio thread.
+ */
+export function setPanningModel(model: PanningModelType): void {
+  panningModel = model;
+}
+
 export function createPanner(ctx: BaseAudioContext, refDistance: number, rolloff: number): PannerNode {
   return new PannerNode(ctx, {
-    panningModel: 'HRTF',
+    panningModel,
     distanceModel: 'inverse',
     refDistance,
     maxDistance: 60,
@@ -242,6 +307,8 @@ export class Strip {
   private disposed = false;
   /** Latest end time of any source (context time). */
   end = 0;
+  /** Context time when the strip was made. */
+  readonly born: number;
 
   constructor(
     readonly ctx: BaseAudioContext,
@@ -250,6 +317,7 @@ export class Strip {
     at: Vec3 | null,
     private readonly onDone: () => void,
   ) {
+    this.born = ctx.currentTime;
     this.input = new GainNode(ctx, { gain: 1 });
     if (at) {
       this.panner = createPanner(ctx, 3, 1);
@@ -277,6 +345,20 @@ export class Strip {
   seal(): void {
     this.sealed = true;
     if (this.pending === 0) this.dispose();
+  }
+
+  get done(): boolean {
+    return this.disposed;
+  }
+
+  /**
+   * Frees the strip even if some source never reported its end (a lost
+   * `ended` event would otherwise hold its voice forever). Used by the voice
+   * reaper for strips long past their scheduled end.
+   */
+  forceDispose(): void {
+    this.sealed = true;
+    this.dispose();
   }
 
   private dispose(): void {
