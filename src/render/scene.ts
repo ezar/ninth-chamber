@@ -1,11 +1,11 @@
 /**
  * The game renderer (spec §11 "Render"): builds the level from the grid,
  * lights it with the per-room looks, and draws the world state with render
- * interpolation. It only reads the simulation.
+ * interpolation through the post-processing stack. It only reads the
+ * simulation. What it spends on shadows, effects and resolution follows the
+ * quality tier (render/quality.ts).
  */
 import * as THREE from 'three/webgpu';
-import { float, luminance, mix, pass, uniform, vec3, vec4 } from 'three/tsl';
-import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { BLOCK } from '../sim/grid/units';
 import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
@@ -15,6 +15,8 @@ import type { NoraPose } from './nora';
 import { NoraRig } from './nora-scan';
 import { Props } from './props';
 import { loadSurfaces, surfaceParams, type SurfaceName, type SurfaceSet } from './materials';
+import { PostStack } from './post';
+import { QUALITY, type QualityProfile } from './quality';
 
 export interface PlayerPose {
   pos: Vec3;
@@ -22,15 +24,23 @@ export interface PlayerPose {
 }
 
 const FIRE_SLOTS = 4;
+/**
+ * Nora's meshes live on this layer only, so a shadow camera can leave her out
+ * (the mobile tier's occasionally refreshed sun shadow) while the view camera
+ * and the live shadows include her.
+ */
+const CHARACTER_LAYER = 1;
+/** Seconds between refreshes of a non-live (mobile) sun shadow. */
+const STATIC_SHADOW_REFRESH = 1;
+/** Film grain amplitude on the display image (art bible: subtle). */
+const GRAIN = 0.035;
 
 export class GameRenderer {
   readonly renderer: THREE.WebGPURenderer;
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(55, 1, 0.05, 250);
-  private pipeline: THREE.RenderPipeline | null = null;
-  private bloomNode: ReturnType<typeof bloom> | null = null;
-  private readonly uTint = uniform(new THREE.Color('#ffffff'));
-  private readonly uSaturation = uniform(1);
+  private readonly post: PostStack;
+  private profile: QualityProfile;
   private readonly hemi = new THREE.HemisphereLight('#6f7f8f', '#2a1f17', 0.4);
   private readonly sun = new THREE.DirectionalLight('#ffffff', 0);
   private readonly fireLights: THREE.PointLight[] = [];
@@ -44,25 +54,37 @@ export class GameRenderer {
   private readonly bounces: { light: THREE.PointLight; room: string; strength: number }[] = [];
   private readonly levelMeshes: THREE.Mesh[] = [];
   private time = 0;
-  private vignette: HTMLElement | null = null;
   private surfaces: Record<SurfaceName, SurfaceSet> | null = null;
+  private reducedMotion = false;
+  private sunShadowAge = Infinity;
+  private readonly contactShadow: THREE.Mesh;
+  private focus: { at: THREE.Vector3; amount: number } | null = null;
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
-    this.renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    profile: QualityProfile = QUALITY.high,
+  ) {
+    // No MSAA on the canvas: the scene is drawn into the post pipeline's own target.
+    this.renderer = new THREE.WebGPURenderer({ canvas, antialias: false });
     this.renderer.toneMapping = THREE.AgXToneMapping;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.camera.layers.enable(CHARACTER_LAYER);
+    this.post = new PostStack(this.renderer, this.scene, this.camera);
+    this.profile = profile;
 
     this.scene.fog = new THREE.FogExp2('#2a1f17', 0.03);
     this.scene.background = new THREE.Color('#0e0c0a');
     this.scene.add(this.hemi, this.sun, this.sun.target);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.03;
     for (let i = 0; i < FIRE_SLOTS; i++) {
       const l = new THREE.PointLight('#ff8a3d', 0, 18, 2);
+      // Point shadows: a small bias against acne on rough stone, a normal bias for grazing walls.
+      l.shadow.bias = -0.004;
+      l.shadow.normalBias = 0.05;
+      l.shadow.camera.layers.enable(CHARACTER_LAYER);
       this.fireLights.push(l);
       this.scene.add(l);
     }
@@ -71,8 +93,9 @@ export class GameRenderer {
     // character-lighting cheat); short range, so it barely touches the set.
     this.characterFill.position.set(0.6, 2.2, 1.6);
     this.nora.root.add(this.characterFill);
-    this.vignette = document.getElementById('vignette');
-    this.resize();
+    this.contactShadow = makeContactShadow();
+    this.scene.add(this.contactShadow);
+    this.applyProfile(false);
   }
 
   async init(): Promise<void> {
@@ -81,15 +104,10 @@ export class GameRenderer {
       loadSurfaces(),
       this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`),
     ]);
-    const scenePass = pass(this.scene, this.camera);
-    const color = scenePass.getTextureNode('output');
-    this.bloomNode = bloom(color, 0.5, 0.5, 0.8);
-    const lit = color.add(this.bloomNode);
-    const graded = mix(vec3(luminance(lit.rgb)), lit.rgb, this.uSaturation).mul(
-      mix(vec3(1, 1, 1), this.uTint, 0.5),
-    );
-    this.pipeline = new THREE.RenderPipeline(this.renderer);
-    this.pipeline.outputNode = vec4(graded, float(1));
+    this.nora.root.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.layers.set(CHARACTER_LAYER);
+    });
+    this.applyAnisotropy();
   }
 
   /** 'WebGPU' or 'WebGL2', depending on the backend Three.js picked. */
@@ -98,9 +116,111 @@ export class GameRenderer {
     return backend?.isWebGPUBackend ? 'WebGPU' : 'WebGL2';
   }
 
-  /** Builds all level geometry and props. Call once per level. */
+  get quality(): QualityProfile {
+    return this.profile;
+  }
+
+  /** Applies a quality tier (spec §11): resolution, shadows, post effects, filtering and particles. */
+  setQuality(profile: QualityProfile): void {
+    const anisotropyChanged = profile.anisotropy !== this.profile.anisotropy;
+    this.profile = profile;
+    this.applyProfile(anisotropyChanged);
+  }
+
+  private applyProfile(anisotropyChanged: boolean): void {
+    const p = this.profile;
+    // Sun: a live shadow sees Nora; the static (mobile) one leaves her to the contact blob.
+    const sun = this.sun.shadow;
+    sun.mapSize.set(p.sun.size, p.sun.size);
+    sun.radius = p.sun.radius;
+    if (p.sun.live) sun.camera.layers.enable(CHARACTER_LAYER);
+    else sun.camera.layers.disable(CHARACTER_LAYER);
+    sun.autoUpdate = p.sun.live;
+    this.sunShadowAge = Infinity;
+    this.fireLights.forEach((l, i) => {
+      l.castShadow = i < p.fireShadows;
+      l.shadow.mapSize.set(p.fireShadowSize, p.fireShadowSize);
+    });
+    this.contactShadow.visible = p.contactShadow;
+
+    this.post.configure({
+      ambientOcclusion: p.ambientOcclusion,
+      antialias: p.antialias,
+      bloom: p.bloom,
+      depthOfField: p.depthOfField,
+    });
+    this.applyParticleBudget();
+    if (anisotropyChanged) this.applyAnisotropy();
+    this.resize();
+  }
+
+  /** Anisotropic filtering on the scanned surfaces, capped by the GPU. */
+  private applyAnisotropy(): void {
+    if (!this.surfaces) return;
+    const level = Math.min(this.profile.anisotropy, Math.max(1, this.renderer.getMaxAnisotropy()));
+    for (const set of Object.values(this.surfaces)) {
+      for (const t of [set.map, set.normalMap, set.roughnessMap, set.armMap]) {
+        if (!t || t.anisotropy === level) continue;
+        t.anisotropy = level;
+        t.needsUpdate = true;
+      }
+    }
+  }
+
+  /** Draws only the tier's share of every particle system (sun-shaft dust, brazier embers). */
+  private applyParticleBudget(): void {
+    const k = this.profile.particles;
+    this.scene.traverse((o) => {
+      if (!(o instanceof THREE.Points)) return;
+      const count = o.geometry.getAttribute('position')?.count ?? 0;
+      o.geometry.setDrawRange(0, Math.max(1, Math.round(count * k)));
+    });
+  }
+
+  /** Scene render scale from dynamic resolution (spec §14); post effects keep the output size. */
+  setRenderScale(scale: number): void {
+    this.post.setRenderScale(scale);
+  }
+
+  /** Reduced motion (spec §13): no film grain. */
+  setReducedMotion(on: boolean): void {
+    this.reducedMotion = on;
+  }
+
+  /**
+   * Depth of field for camera focus shots: keeps `at` sharp and blurs the
+   * rest by `amount` (0..1). Optional: tiers without it ignore the call.
+   */
+  setFocus(at: Vec3 | null, amount: number): void {
+    if (!at || amount <= 0) {
+      this.focus = null;
+      return;
+    }
+    this.focus ??= { at: new THREE.Vector3(), amount: 0 };
+    this.focus.at.set(at.x, at.y, at.z);
+    this.focus.amount = Math.min(1, amount);
+  }
+
+  /**
+   * Renders the current view once with every effect on (depth of field
+   * included), so shaders compile behind the loading screen rather than on
+   * the first frames of play.
+   */
+  warmup(): void {
+    this.post.dofAmount.value = this.post.hasDepthOfField ? 0.5 : 0;
+    this.post.render(0);
+    this.post.dofAmount.value = 0;
+  }
+
+  /**
+   * Builds all level geometry and props. A new World on the same level (a
+   * restart) only swaps the state the renderer reads.
+   */
   setWorld(world: World): void {
+    const sameLevel = this.world?.level === world.level;
     this.world = world;
+    this.currentRoom = null;
+    if (sameLevel) return;
     const level = world.level;
 
     const sunRooms = new Set(level.rooms.filter((r) => lookFile(r.look)?.sun).map((r) => r.id));
@@ -139,7 +259,7 @@ export class GameRenderer {
 
     this.buildShafts(meshes.skylights, sunRooms);
     void this.loadLightmap(level.id);
-    this.currentRoom = null;
+    this.applyParticleBudget();
   }
 
   /**
@@ -281,9 +401,12 @@ export class GameRenderer {
   resize(): void {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.profile.pixelRatioCap));
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    this.post.setSize(size.x, size.y);
   }
 
   /** World position of an entity, for camera focus shots. */
@@ -306,7 +429,7 @@ export class GameRenderer {
     dt: number,
   ): void {
     const world = this.world;
-    if (!world || !this.pipeline) return;
+    if (!world) return;
     this.time += dt;
 
     // Player.
@@ -337,10 +460,14 @@ export class GameRenderer {
     this.props?.update(world, this.time, dt);
     this.updateFireLights(eye);
     this.updateShafts(dt);
+    this.updateContactShadow(world, px, py, pz);
 
     this.camera.position.set(eye.x, eye.y, eye.z);
     this.camera.lookAt(lookAt.x, lookAt.y, lookAt.z);
-    this.pipeline.render();
+    this.updateShadowBudget(dt);
+    this.updateFocus();
+    this.post.grain.value = this.reducedMotion ? 0 : GRAIN;
+    this.post.render(dt);
   }
 
   private fitSun(minX: number, minZ: number, maxX: number, maxZ: number): void {
@@ -356,6 +483,61 @@ export class GameRenderer {
     s.far = 120;
     s.updateProjectionMatrix();
     this.sun.target.position.set(cx, 0, cz);
+    this.sunShadowAge = Infinity;
+  }
+
+  /**
+   * Shadow maps are the costliest part of a frame, so only those that matter
+   * are re-rendered: the sun where it shines, fires that are lit and near
+   * the camera, and on single-shadow tiers only one of the two kinds.
+   */
+  private updateShadowBudget(dt: number): void {
+    const p = this.profile;
+    const sunOn = this.sun.intensity > 0.05;
+    const sun = this.sun.shadow;
+    if (p.sun.live) {
+      sun.autoUpdate = sunOn;
+    } else {
+      this.sunShadowAge += dt;
+      if (sunOn && this.sunShadowAge >= STATIC_SHADOW_REFRESH) {
+        sun.needsUpdate = true;
+        this.sunShadowAge = 0;
+      }
+    }
+    this.fireLights.forEach((l, i) => {
+      if (i >= p.fireShadows) return;
+      const near = l.position.distanceTo(this.camera.position) < l.distance + 4;
+      l.shadow.autoUpdate = l.intensity > 0 && near && !(p.singleShadow && sunOn);
+    });
+  }
+
+  /** Depth of field follows the camera's focus shot. */
+  private updateFocus(): void {
+    const f = this.focus;
+    if (!f || !this.post.hasDepthOfField) {
+      this.post.dofAmount.value = 0;
+      return;
+    }
+    const d = this.camera.position.distanceTo(f.at);
+    this.post.focusDistance.value = d;
+    // A wider sharp band for far targets, as a real lens at a fixed aperture gives.
+    this.post.focusRange.value = 2 + d * 0.35;
+    this.post.dofAmount.value = f.amount;
+  }
+
+  /** A soft dark blob under Nora on tiers without her dynamic shadow. */
+  private updateContactShadow(world: World, x: number, y: number, z: number): void {
+    const blob = this.contactShadow;
+    if (!blob.visible) return;
+    const floor = world.grid.floorAt(x, z);
+    if (!Number.isFinite(floor)) {
+      blob.scale.setScalar(0.001);
+      return;
+    }
+    const h = Math.max(0, y - floor);
+    blob.position.set(x, floor + 0.015, z);
+    blob.scale.setScalar(1 - Math.min(0.45, h * 0.15));
+    (blob.material as THREE.MeshBasicMaterial).opacity = 0.75 * Math.max(0, 1 - h / 3);
   }
 
   private applyLook(): void {
@@ -372,14 +554,14 @@ export class GameRenderer {
     this.sun.intensity = l.sunIntensity;
     const t = this.sun.target.position;
     this.sun.position.set(t.x + l.sunDir.x * 60, t.y + l.sunDir.y * 60, t.z + l.sunDir.z * 60);
-    if (this.bloomNode) {
-      this.bloomNode.strength.value = l.bloomStrength;
-      this.bloomNode.radius.value = l.bloomRadius;
-      this.bloomNode.threshold.value = l.bloomThreshold;
-    }
-    this.uTint.value.copy(l.tint);
-    this.uSaturation.value = l.saturation;
-    if (this.vignette) this.vignette.style.opacity = String(Math.min(1, l.vignette * 1.6));
+    const post = this.post;
+    post.bloomStrength.value = l.bloomStrength;
+    post.bloomRadius.value = l.bloomRadius;
+    post.bloomThreshold.value = l.bloomThreshold;
+    post.tint.value.copy(l.tint);
+    post.saturation.value = l.saturation;
+    post.contrast.value = l.contrast;
+    post.vignette.value = l.vignette;
   }
 
   /** The fire light pool follows the nearest braziers. */
@@ -430,4 +612,35 @@ export class GameRenderer {
       attr.needsUpdate = true;
     }
   }
+}
+
+/** A radial gradient quad lying on the floor: the mobile tier's contact shadow. */
+function makeContactShadow(): THREE.Mesh {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  if (g) {
+    // alphaMap reads the green channel: an opaque grey gradient.
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, 'rgb(217,217,217)');
+    r.addColorStop(0.45, 'rgb(115,115,115)');
+    r.addColorStop(1, 'rgb(0,0,0)');
+    g.fillStyle = r;
+    g.fillRect(0, 0, 64, 64);
+  }
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.1, 1.1),
+    new THREE.MeshBasicMaterial({
+      color: '#000000',
+      alphaMap: new THREE.CanvasTexture(c),
+      transparent: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    }),
+  );
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = 1;
+  mesh.visible = false;
+  return mesh;
 }
