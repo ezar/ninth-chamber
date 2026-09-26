@@ -296,7 +296,7 @@ def _seal_amber(name: str) -> bpy.types.Object:
     """Raised amber inlay tracing the ninth (top) segment's outline, on both faces."""
     r = SEAL_R
     r0, r1 = 0.36 * r, 0.86 * r
-    gap = 0.018 * r / 0.5
+    gap = 0.011 * r / 0.5
     inset = 0.0065
     pts = []
 
@@ -475,7 +475,7 @@ def _chunk(rng: random.Random, size, cuts: int, name: str):
     return core.obj_from_bmesh(name, bm), planes
 
 
-def _frac_attr(obj, planes, band: float = 0.012) -> None:
+def _frac_attr(obj, planes, band: float = 0.02) -> None:
     import numpy as np
 
     co = core.mesh_coords(obj)
@@ -508,12 +508,19 @@ def _rubble(ctx: Ctx, name: str, seed: int, chunks) -> list:
         _frac_attr(src, planes)
         s = float(seed * 10 + i)
 
-        def disp(g, s=s):
+        amp = 0.045 * max(size)
+
+        def disp(g, s=s, amp=amp):
             p = g.pos()
-            fr = g.attr("frac").smooth(0.0, 0.6)
+            fr = g.attr("frac").smooth(0.0, 0.5)
             dressed = looks.stone_disp(g, amp=0.004, chip=0.02, seed=s, chip_density=0.8, chip_scale=10.0)
-            rough = (g.noise(p, scale=7.0, detail=6.0, rough=0.62, w=s + 0.5, kind="RIDGED_MULTIFRACTAL") * 0.004
-                     + (g.noise(p, scale=3.0, detail=3.0, w=s + 1.5) - 0.5) * 0.018)
+            # Conchoidal fracture: stepped facets (random height per Voronoi cell) over rough noise.
+            pw = g.warp(p, 0.04, 6.0, seed=s + 2.5)
+            cell = g.voronoi(pw, scale=9.0 / max(size[0], 0.3), feature="F1", out="Color", w=s + 3.5)
+            facet = (g.separate(cell)[0] - 0.5) * (amp * 0.5)
+            rough = (g.noise(p, scale=6.0, detail=6.0, rough=0.6, w=s + 0.5, kind="RIDGED_MULTIFRACTAL") * (amp * 0.12)
+                     + (g.noise(p, scale=2.5, detail=4.0, rough=0.55, w=s + 1.5) - 0.5) * (amp * 1.4)
+                     + facet)
             return g.mixf(fr, dressed, rough)
 
         core.curvature(src, "curv0", 3)

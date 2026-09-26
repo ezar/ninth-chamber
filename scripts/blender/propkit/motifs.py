@@ -46,7 +46,7 @@ def seal(g: Graph, lx: S, ly: S, r: float = 0.5, groove: float = 0.012, soft: fl
     radial = band(g, rr - (r0 + r1) / 2, seg_w, soft)
     # Constant-width gaps between segments: angular distance * radius.
     arc = (f - 0.5).abs() * (2 * math.pi / 9) * rr  # metres from segment centre line
-    half_arc = (0.5 * (2 * math.pi / 9)) * rr - 0.018 * r / 0.5
+    half_arc = (0.5 * (2 * math.pi / 9)) * rr - 0.011 * r / 0.5
     in_arc = (half_arc - arc).smooth(0.0, soft)
     solid = radial * in_arc
     is_ninth = g.math("LESS_THAN", idx, 0.5)
@@ -82,9 +82,10 @@ def glyph_band(g: Graph, u: S, v: S, cell: float = 0.24, seed: float = 0.0) -> S
     # Glyph 0: small nine-part rosette (ring + dot).
     rr = g.vmath("LENGTH", g.combine(lx, ly * 1.0, 0.0))
     gl0 = band(g, rr - 0.24, lw, soft * 0.5) + (0.07 - rr).smooth(0.0, 0.03)
-    # Glyph 1: staff with a crossbar near the top.
-    gl1 = band(g, lx, lw, soft * 0.5) * (0.32 - ly.abs()).smooth(0.0, 0.03) + band(g, ly - 0.16, lw, soft * 0.5) * (
-        0.2 - lx.abs()).smooth(0.0, 0.03)
+    # Glyph 1: sceptre (staff crowned by a small ring).
+    orb = g.vmath("LENGTH", g.combine(lx, ly - 0.2, 0.0))
+    gl1 = band(g, lx, lw, soft * 0.5) * ly.smooth(-0.36, -0.32) * ly.smooth(0.1, 0.06) + band(
+        g, orb - 0.1, lw * 0.9, soft * 0.5)
     # Glyph 2: stacked chevrons.
     chev = ly - lx.abs() * 0.9
     gl2 = (band(g, chev - 0.05, lw, soft * 0.5) + band(g, chev + 0.2, lw, soft * 0.5)) * (0.3 - lx.abs()).smooth(0.0,
