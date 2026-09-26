@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import math
-import random
 
 import bpy  # noqa: F401  (must precede bmesh when bpy runs as a module)
 import bmesh
 import numpy as np
-from mathutils import Euler, Matrix, Quaternion, Vector
+from mathutils import Euler, Matrix, Vector
 
 from . import core, looks, motifs, shapes
 from .core import BakeSpec
@@ -487,19 +486,22 @@ def _periodic(g: Graph, p: S, scale: float):
 
 def _toe(x: float) -> float:
     th = 2 * math.pi * x / DRIFT_L
-    return DRIFT_D * (0.9 + 0.05 * math.cos(th + 0.7) + 0.05 * math.cos(2 * th + 2.1))
+    return DRIFT_D * (0.86 + 0.07 * math.cos(th + 0.7) + 0.07 * math.cos(2 * th + 2.1))
 
 
 def _drift_profile(x: float, d: float) -> float:
-    """Height at distance d from the wall. Periodic in x so the ends of chained drifts match."""
+    """Height at distance d from the wall. Periodic in x so the ends of chained drifts match.
+
+    The height at the wall peaks at exactly DRIFT_H (0.35 m).
+    """
     th = 2 * math.pi * x / DRIFT_L
     toe = _toe(x)
-    top = DRIFT_H * (0.97 + 0.03 * math.cos(th + 1.9)) if abs(abs(x) - DRIFT_L / 2) > 1e-6 else DRIFT_H * (
-        0.97 + 0.03 * math.cos(math.pi + 1.9))
+    top = DRIFT_H * (0.93 + 0.07 * math.cos(th + 1.9))
     if d >= toe:
         return 0.0
     t = d / toe
-    return top * (1 - t) ** 1.55 * (1 + 0.25 * t * (1 - t))
+    mound = 1.0 + 0.35 * t * (1 - t) * (0.5 + 0.5 * math.cos(2 * th + 0.4))
+    return top * (1 - t) ** 1.55 * (1 + 0.25 * t * (1 - t)) * mound
 
 
 def _drift(nx: int, nd: int) -> bpy.types.Object:
@@ -553,5 +555,6 @@ def sand_drift(ctx: Ctx) -> list:
               keep_base=False)
     core.smooth_by_angle(low, 60)
     core.uv_smart(low, 70, 0.004)
-    finish(ctx, [BakeSpec("sand_drift", low, [hi], size=1024, cage=0.02, ray=0.05, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("sand_drift", low, [hi], size=1024, cage=0.02, ray=0.05, normal_jpeg=True,
+                          albedo=looks.SAND)])
     return [low]

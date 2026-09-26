@@ -106,7 +106,7 @@ def _brazier_soot(g: Graph, p: S) -> S:
     radial = (nx * x + ny * y) / (r + 1e-4)
     inner = radial.smooth(0.05, -0.2) * z.smooth(0.97, 1.0) * r.smooth(0.1, 0.2)
     streak = g.noise(g.scale_vec(p, 12.0, 12.0, 1.5), scale=1.0, detail=4.0, w=51.0)
-    outer = z.smooth(1.0, 1.14) * (streak.smooth(0.35, 0.65) * 0.6 + 0.25) * radial.smooth(-0.1, 0.2)
+    outer = z.smooth(0.98, 1.13) * (streak.smooth(0.3, 0.65) * 0.7 + 0.35) * radial.smooth(-0.1, 0.2)
     under = z.smooth(0.9, 0.97) * z.smooth(1.02, 0.98) * 0.4
     return (inner * 0.95 + outer * 0.7 + under).clamp()
 
@@ -149,9 +149,11 @@ def brazier(ctx: Ctx) -> list:
 
     def cdisp(g):
         p = g.pos()
-        f1 = g.voronoi(p, scale=16.0, feature="F1", w=0.0)
-        f2 = g.voronoi(p, scale=16.0, feature="F2", w=0.0)
-        lump = (f2 - f1).smooth(0.0, 0.35) * 0.028
+        pw = g.warp(p, 0.025, 7.0, seed=5.0)
+        f1 = g.voronoi(pw, scale=12.0, feature="F1", w=0.0)
+        f2 = g.voronoi(pw, scale=12.0, feature="F2", w=0.0)
+        size = g.noise(p, scale=6.0, w=4.0) * 0.024 + 0.012
+        lump = (f2 - f1).smooth(0.0, 0.3) * size
         return lump + (g.noise(p, scale=30.0, detail=4.0, w=2.0) - 0.5) * 0.006
 
     core.subsurf(csrc, 2, simple=True)

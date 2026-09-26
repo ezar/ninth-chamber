@@ -26,7 +26,7 @@ from typing import Callable
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-import bpy  # noqa: E402
+import bpy  # noqa: E402,F401  (initialises Blender before bmesh/mathutils users)
 
 from propkit import contact, core  # noqa: E402
 from propkit.glb import summary  # noqa: E402
@@ -138,7 +138,7 @@ def main() -> None:
             d = PROPS[n]
             png = os.path.join(args.work, "tiles", f"{n}.png")
             contact.render_tile(path, png, contact.View(azimuth=d.azimuth, elevation=d.elevation, front=d.front,
-                                                        zoom=d.zoom))
+                                                        zoom=d.zoom), res=560, samples=40)
             info = summary(path)
             lo, hi = info["bounds"]
             label = (f"{n}  {info['tris']} tris  {os.path.getsize(path) / 1e6:.2f} MB\n"
