@@ -211,6 +211,24 @@ export interface ToneOpts {
   pan?: number;
 }
 
+export interface SampleOpts {
+  /** Playback rate (1 = original pitch and speed). */
+  rate?: number | undefined;
+  gain?: number | undefined;
+  pan?: number | undefined;
+  /** Where to start in the buffer (s). */
+  offset?: number | undefined;
+  /** Cut the sound after this long (s), with `fadeOut`; loops need it. */
+  duration?: number | undefined;
+  fadeOut?: number | undefined;
+  /** Optional fade-in (s), for loops and cut-in starts. */
+  fadeIn?: number | undefined;
+  /** Optional low-pass (Hz): distance, muffling. */
+  lp?: number | undefined;
+  /** Loop the buffer between 0 and this time (s) for `duration`. */
+  loopEnd?: number | undefined;
+}
+
 /**
  * A one-shot sound under construction: a gain input (optionally spatialised)
  * that frees itself once every source added to it has ended.
@@ -218,6 +236,7 @@ export interface ToneOpts {
 export class Strip {
   readonly input: GainNode;
   private readonly panner: PannerNode | null;
+  private readonly sends: GainNode[] = [];
   private pending = 0;
   private sealed = false;
   private disposed = false;
@@ -265,7 +284,57 @@ export class Strip {
     this.disposed = true;
     this.input.disconnect();
     this.panner?.disconnect();
+    for (const s of this.sends) s.disconnect();
     this.onDone();
+  }
+
+  /** An extra, per-sound send (post-panner) to `dest`, e.g. more room reverb for footsteps. */
+  send(dest: AudioNode, amount: number): void {
+    const g = new GainNode(this.ctx, { gain: amount });
+    (this.panner ?? this.input).connect(g).connect(dest);
+    this.sends.push(g);
+  }
+
+  /** Plays a recorded buffer into the strip; returns the end time. */
+  sample(t: number, buffer: AudioBuffer, o: SampleOpts = {}, out: AudioNode = this.input): number {
+    const ctx = this.ctx;
+    const rate = o.rate ?? 1;
+    const offset = Math.min(o.offset ?? 0, Math.max(0, buffer.duration - 0.01));
+    const loop = o.loopEnd !== undefined && o.duration !== undefined;
+    const src = new AudioBufferSourceNode(ctx, { buffer, playbackRate: rate, loop });
+    if (loop) {
+      src.loopStart = 0;
+      src.loopEnd = o.loopEnd ?? buffer.duration;
+    }
+    const gain = o.gain ?? 1;
+    const g = new GainNode(ctx, { gain });
+    const chain: AudioNode[] = [g];
+    let head: AudioNode = src;
+    if (o.lp !== undefined) {
+      const lp = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: o.lp, Q: 0.5 });
+      head.connect(lp);
+      head = lp;
+      chain.push(lp);
+    }
+    head.connect(g);
+    chain.push(...this.tail(g, o.pan, out));
+    const natural = t + (buffer.duration - offset) / rate;
+    let end = natural;
+    if (o.fadeIn !== undefined && o.fadeIn > 0) {
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(gain, t + o.fadeIn);
+    }
+    if (o.duration !== undefined && (loop || t + o.duration < natural)) {
+      const fade = o.fadeOut ?? 0.08;
+      const cut = t + Math.max(o.duration, (o.fadeIn ?? 0) + 0.005);
+      end = cut + fade;
+      g.gain.setValueAtTime(gain, cut);
+      g.gain.linearRampToValueAtTime(0, end);
+    }
+    src.start(t, offset);
+    src.stop(end + 0.02);
+    this.own(src, end + 0.02, ...chain);
+    return end;
   }
 
   /** Applies an attack / hold / exponential decay envelope; returns the end time. */

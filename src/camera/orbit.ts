@@ -23,6 +23,8 @@ export const cameraTuning = {
   follow: 10,
   /** Radians per mouse pixel. */
   sensitivity: 0.005,
+  /** Options menu: pushing up looks down (flight-stick style). */
+  invertY: false,
   /** Clearance kept between the camera and walls (m). */
   radius: 0.25,
   /** Time to recover the full distance after a collision (s). */
@@ -31,6 +33,9 @@ export const cameraTuning = {
   fadeDistance: 1.2,
   /** Lateral over-the-shoulder offset to the right of the character (m). */
   shoulder: 0.42,
+  /** With the pistols out: over the right shoulder and closer (spec §6 "Apuntado"). */
+  aimShoulder: 0.5,
+  aimDistance: 4,
   /** Seconds without look input before the lazy follow takes over. */
   followDelay: 1.4,
   /** Maximum lazy-follow turn rate at full running speed (rad/s). */
@@ -75,12 +80,18 @@ export class OrbitCamera {
   readonly lookAt = { x: 0, y: 0, z: 0 };
   /** Vertical field of view in degrees, eased with speed. */
   fov = cameraTuning.fov;
+  /** Reduced motion: no shake and no speed-driven field of view. */
+  calm = false;
   private focus: { at: Vec3; left: number; blend: number } | null = null;
+  private focusEase = 0;
   private autoYaw: number | null = null;
   private sinceLook = 0;
   private trauma = 0;
   private time = 0;
   private shoulderNow = cameraTuning.shoulder;
+  /** Pistols drawn: set by the game each frame. */
+  aiming = false;
+  private aimNow = 0;
   private readonly lead = { x: 0, z: 0 };
 
   look(dx: number, dy: number, zoom: number): void {
@@ -89,10 +100,8 @@ export class OrbitCamera {
       this.sinceLook = 0;
     }
     this.yaw -= dx * cameraTuning.sensitivity;
-    this.pitch = Math.max(
-      cameraTuning.minPitch,
-      Math.min(cameraTuning.maxPitch, this.pitch + dy * cameraTuning.sensitivity),
-    );
+    const pitchDelta = (cameraTuning.invertY ? -dy : dy) * cameraTuning.sensitivity;
+    this.pitch = Math.max(cameraTuning.minPitch, Math.min(cameraTuning.maxPitch, this.pitch + pitchDelta));
     this.distance = Math.max(
       cameraTuning.minDistance,
       Math.min(cameraTuning.maxDistance, this.distance + zoom * 0.5),
@@ -122,8 +131,19 @@ export class OrbitCamera {
     return this.focus !== null;
   }
 
+  /** The point a focus shot looks at, for depth of field (null outside focus shots). */
+  get focusPoint(): Vec3 | null {
+    return this.focus?.at ?? null;
+  }
+
+  /** How far the current focus shot has blended in (0..1, eased). */
+  get focusWeight(): number {
+    return this.focusEase;
+  }
+
   /** Adds screen shake (0..1); amplitude grows with the square of the accumulated trauma. */
   shake(amount: number): void {
+    if (this.calm) return;
     this.trauma = Math.min(1, this.trauma + amount);
   }
 
@@ -158,6 +178,13 @@ export class OrbitCamera {
       case 'door.opening':
       case 'door.closing':
         this.shake(0.22 * near(e.id, 18));
+        break;
+      // Combat: a small kick per shot, a jolt when a jackal snaps at Nora (a landed bite adds player.hurt).
+      case 'weapon.fired':
+        this.shake(0.18);
+        break;
+      case 'enemy.bite':
+        this.shake(0.2);
         break;
     }
   }
@@ -213,8 +240,12 @@ export class OrbitCamera {
 
     // Over-the-shoulder pivot, pulled toward the centre while hanging and
     // clipped against walls so the camera never starts inside stone.
-    const want0 = hanging || this.focus ? 0 : cameraTuning.shoulder;
+    this.aimNow += ((this.aiming && !hanging ? 1 : 0) - this.aimNow) * Math.min(1, dt * 4);
+    const shoulder = cameraTuning.shoulder + (cameraTuning.aimShoulder - cameraTuning.shoulder) * this.aimNow;
+    const want0 = hanging || this.focus ? 0 : shoulder;
     this.shoulderNow += (want0 - this.shoulderNow) * Math.min(1, dt * 3);
+    const distance =
+      this.distance + (Math.min(this.distance, cameraTuning.aimDistance) - this.distance) * this.aimNow;
     const right = { x: Math.cos(this.yaw), z: -Math.sin(this.yaw) };
     const reach = {
       x: this.target.x + right.x * (this.shoulderNow + cameraTuning.radius),
@@ -235,13 +266,12 @@ export class OrbitCamera {
     const h = Math.cos(this.pitch);
     const dir = { x: Math.sin(this.yaw) * h, y: Math.sin(this.pitch), z: Math.cos(this.yaw) * h };
     const want = {
-      x: pivot.x + dir.x * (this.distance + cameraTuning.radius),
-      y: pivot.y + dir.y * (this.distance + cameraTuning.radius),
-      z: pivot.z + dir.z * (this.distance + cameraTuning.radius),
+      x: pivot.x + dir.x * (distance + cameraTuning.radius),
+      y: pivot.y + dir.y * (distance + cameraTuning.radius),
+      z: pivot.z + dir.z * (distance + cameraTuning.radius),
     };
-    const free =
-      raycast(grid, pivot, want, 0.05) * (this.distance + cameraTuning.radius) - cameraTuning.radius;
-    const allowed = Math.max(0.3, Math.min(this.distance, free));
+    const free = raycast(grid, pivot, want, 0.05) * (distance + cameraTuning.radius) - cameraTuning.radius;
+    const allowed = Math.max(0.3, Math.min(distance, free));
     // Snap in on collision, ease back out slowly so passing columns does not jerk.
     this.actual =
       allowed < this.actual
@@ -258,7 +288,9 @@ export class OrbitCamera {
     // Speed widens the lens a touch; a long fall widens it further.
     const run = Math.min(1, speed / cameraTuning.runSpeed);
     const fall = Math.min(1, Math.max(0, -motion.vy - 6) / 10);
-    const fovWant = cameraTuning.fov + (cameraTuning.runFov - cameraTuning.fov) * run * run + 6 * fall;
+    const fovWant = this.calm
+      ? cameraTuning.fov
+      : cameraTuning.fov + (cameraTuning.runFov - cameraTuning.fov) * run * run + 6 * fall;
     this.fov += (fovWant - this.fov) * Math.min(1, dt * 2.5);
 
     // Trauma shake: layered incommensurate sines read as noise without a noise table.
@@ -285,10 +317,13 @@ export class OrbitCamera {
       f.blend = Math.min(1, f.blend + dt * 1.5);
       const b = f.left > 0 ? f.blend : Math.max(0, f.blend - (0 - f.left) * 2);
       const e = b * b * (3 - 2 * b);
+      this.focusEase = e;
       this.lookAt.x += (f.at.x - this.lookAt.x) * e;
       this.lookAt.y += (f.at.y - this.lookAt.y) * e;
       this.lookAt.z += (f.at.z - this.lookAt.z) * e;
       if (f.left < -0.5) this.focus = null;
+    } else {
+      this.focusEase = 0;
     }
   }
 

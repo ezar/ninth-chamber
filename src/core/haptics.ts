@@ -102,6 +102,12 @@ export class Haptics {
       const d = Math.hypot(at.x - player.x, at.z - player.z);
       return Math.max(0, 1 - d / radius);
     };
+    const at = (ev: SimEvent, radius: number): number => {
+      const x = Number(ev.x);
+      const z = Number(ev.z);
+      if (!Number.isFinite(x + z)) return 1;
+      return Math.max(0.3, 1 - Math.hypot(x - player.x, z - player.z) / radius);
+    };
     switch (e.type) {
       case 'player.landed': {
         const fall = Number(e.fall) || 0;
@@ -149,6 +155,22 @@ export class Haptics {
         break;
       case 'checkpoint':
         this.play({ phone: 10, strong: 0, weak: 0.25, ms: 60 });
+        break;
+      // Combat. Enemy events carry their own position (x, y, z).
+      case 'weapon.fired':
+        this.play({ phone: 12, strong: 0.05, weak: 0.35, ms: 70 });
+        break;
+      case 'enemy.hit':
+        this.play({ phone: 8, strong: 0.15, weak: 0.25, ms: 50 }, at(e, 16));
+        break;
+      case 'enemy.bite':
+        // A landed bite also sends player.hurt, which follows and takes over; a miss is a faint snap.
+        this.play(
+          e.hit ? { phone: 10, strong: 0.3, weak: 0.7, ms: 80 } : { phone: 6, strong: 0, weak: 0.3, ms: 40 },
+        );
+        break;
+      case 'enemy.died':
+        this.play({ phone: [25, 40, 15], strong: 0.4, weak: 0.3, ms: 160 }, at(e, 16));
         break;
     }
   }

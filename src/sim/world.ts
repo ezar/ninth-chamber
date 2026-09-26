@@ -11,6 +11,7 @@ import type { GridQuery } from './grid/collision';
 import { Level, sectorTop } from './grid/level';
 import { BLOCK, DIR_YAW, cellCenter } from './grid/units';
 import { compileRules, runLogic, type CompiledRule } from './logic/rules';
+import { createEnemies, resetEnemies, updateEnemies } from './actors/enemies';
 import { updateActors } from './actors/update';
 import { stepPlayer } from './player/controller';
 import { mechanics, tuning } from './player/tuning';
@@ -57,7 +58,7 @@ function createActors(level: Level): Actor[] {
         });
         break;
       case 'lever':
-        actors.push({ kind: 'lever', id: e.id, cx, cz, wall: e.wall, used: false });
+        actors.push({ kind: 'lever', id: e.id, cx, cz, wall: e.wall, used: false, spring: e.spring });
         break;
       case 'plate':
         actors.push({ kind: 'plate', id: e.id, cx, cz, pressed: false });
@@ -75,6 +76,7 @@ function createActors(level: Level): Actor[] {
         actors.push({ kind: 'zone', id: e.id, cx, cz, w: e.size[0], h: e.size[1], inside: false });
         break;
       case 'brazier':
+      case 'enemy':
         break;
     }
   }
@@ -103,6 +105,7 @@ function createPlayer(level: Level): PlayerState {
     move: null,
     target: null,
     dir: null,
+    weapon: { drawn: false, busy: 0, cooldown: 0, target: null, hand: 1 },
   };
 }
 
@@ -110,6 +113,7 @@ export function createWorld(level: Level, seed = 1): World {
   const state: DynamicState = {
     player: createPlayer(level),
     actors: createActors(level),
+    enemies: createEnemies(level),
     tiles: {},
     signals: {},
     flags: [],
@@ -125,7 +129,17 @@ export function createWorld(level: Level, seed = 1): World {
     state,
     checkpoint: clone(state),
     rules: compileRules(level.logic),
-    stats: { time: 0, distance: 0, deaths: 0, secrets: 0, medkits: 0 },
+    stats: {
+      time: 0,
+      distance: 0,
+      deaths: 0,
+      secrets: 0,
+      medkits: 0,
+      medkitsUsed: 0,
+      shots: 0,
+      hits: 0,
+      kills: 0,
+    },
     ended: false,
     grid: null as unknown as GridQuery,
   };
@@ -189,6 +203,32 @@ export function blockAt(world: World, cx: number, cz: number): BlockActor | unde
   );
 }
 
+/**
+ * Puts a block back where the level placed it (spec §8: a reset lever keeps
+ * block puzzles from dead ends). Skipped while the player holds the block or
+ * stands in its start cell, or another block sits there.
+ */
+export function resetBlock(world: World, id: string): boolean {
+  const b = findActor(world, id, 'block');
+  const start = world.level.entities.find((e) => e.id === id && e.type === 'block');
+  if (!b || !start) return false;
+  const [cx, cz] = start.at;
+  const p = world.state.player;
+  if (p.target === id) return false;
+  if (Math.floor(p.pos.x / BLOCK) === cx && Math.floor(p.pos.z / BLOCK) === cz) return false;
+  const other = blockAt(world, cx, cz);
+  if (other && other.id !== id) return false;
+  const s = world.level.sector(cx, cz);
+  b.cx = cx;
+  b.cz = cz;
+  b.y = s ? sectorTop(s) : 0;
+  b.from = null;
+  b.fallTo = null;
+  b.t = 0;
+  world.events.emit({ type: 'block.reset', tick: world.tick, id });
+  return true;
+}
+
 export function doorAt(world: World, cx: number, cz: number): DoorActor | undefined {
   return world.state.actors.find((a): a is DoorActor => a.kind === 'door' && a.cx === cx && a.cz === cz);
 }
@@ -204,7 +244,10 @@ export function saveCheckpoint(world: World): void {
   world.events.emit({ type: 'checkpoint', tick: world.tick });
 }
 
-/** Restores the last checkpoint after a death. */
+/**
+ * Restores the last checkpoint after a death. Enemies alive then go back to
+ * their start and forget Nora (spec §7).
+ */
 export function respawn(world: World): void {
   world.state = clone(world.checkpoint);
   const p = world.state.player;
@@ -212,6 +255,10 @@ export function respawn(world: World): void {
   p.modeTime = 0;
   p.vel = { x: 0, y: 0, z: 0 };
   p.health = Math.max(p.health, tuning.maxHealth / 2);
+  p.weapon.target = null;
+  p.weapon.cooldown = 0;
+  p.weapon.busy = 0;
+  resetEnemies(world);
   world.events.emit({ type: 'player.respawned', tick: world.tick });
 }
 
@@ -221,6 +268,7 @@ export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
     const before = { ...world.state.player.pos };
     stepPlayer(world, input, dt);
     updateActors(world, dt);
+    updateEnemies(world, dt);
     runLogic(world, dt);
     const p = world.state.player.pos;
     world.stats.distance += Math.hypot(p.x - before.x, p.z - before.z);

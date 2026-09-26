@@ -28,7 +28,8 @@ const KEY_BUTTONS: Record<string, Button> = {
   KeyH: 'medkit',
   KeyG: 'flare',
   KeyI: 'inventory',
-  Tab: 'inventory',
+  // Spec §6 "Apuntado": Tab switches target (the inventory keeps I).
+  Tab: 'target',
   Escape: 'pause',
   KeyC: 'recenter',
 };
@@ -50,7 +51,23 @@ export class KeyboardMouseDevice implements InputDevice {
   private look = { x: 0, y: 0, zoom: 0 };
   private dragging = false;
   private rightDown = false;
+  private enabled = true;
   private readonly off: (() => void)[] = [];
+
+  /**
+   * While disabled (menus and the title screen own the keyboard) keys are
+   * neither recorded nor default-prevented, so Tab, Space and arrows work
+   * in the page. Disabling forgets everything held.
+   */
+  setEnabled(enabled: boolean): void {
+    if (enabled === this.enabled) return;
+    this.enabled = enabled;
+    this.keys.clear();
+    this.tapped = 0;
+    this.look = { x: 0, y: 0, zoom: 0 };
+    this.dragging = false;
+    this.rightDown = false;
+  }
 
   constructor(private readonly target: HTMLElement) {
     const on = <K extends keyof WindowEventMap>(
@@ -64,6 +81,7 @@ export class KeyboardMouseDevice implements InputDevice {
     };
 
     on(window, 'keydown', (e) => {
+      if (!this.enabled) return;
       if (e.code in KEY_BUTTONS || e.code in KEY_AXES) e.preventDefault();
       if (e.repeat) return;
       this.keys.add(e.code);
@@ -78,7 +96,7 @@ export class KeyboardMouseDevice implements InputDevice {
     });
 
     on(target, 'pointerdown', (e) => {
-      if (e.pointerType !== 'mouse') return;
+      if (e.pointerType !== 'mouse' || !this.enabled) return;
       if (e.button === 0) this.dragging = true;
       if (e.button === 2) {
         this.rightDown = true;
@@ -97,7 +115,14 @@ export class KeyboardMouseDevice implements InputDevice {
         this.look.y += e.movementY;
       }
     });
-    on(target, 'wheel', (e) => (this.look.zoom += Math.sign(e.deltaY)), { passive: true });
+    on(
+      target,
+      'wheel',
+      (e) => {
+        if (this.enabled) this.look.zoom += Math.sign(e.deltaY);
+      },
+      { passive: true },
+    );
     on(target, 'contextmenu', (e) => e.preventDefault());
   }
 
@@ -144,12 +169,14 @@ const PAD_BUTTONS: [number, Button][] = [
   [1, 'roll'], // B
   [7, 'fire'], // RT
   [6, 'walk'], // LT
-  [5, 'weapons'], // RB
-  [4, 'flare'], // LB
+  [5, 'weapons'], // RB (spec §13)
+  [4, 'weapons'], // LB: draw / holster on either bumper (owner's request); Y stays the medkit
+  [12, 'flare'], // d-pad up (flares arrive in phase 2)
   [3, 'medkit'], // Y
   [8, 'inventory'], // Select
   [9, 'pause'], // Start
   [11, 'recenter'], // right stick click
+  [15, 'target'], // d-pad right
 ];
 
 const DEADZONE = 0.18;

@@ -4,6 +4,7 @@
  * references and placement.
  */
 import { exprNames, parseExpr } from '../logic/expr';
+import { enemyTypes } from '../player/tuning';
 import { Level } from './level';
 import { levelSchema } from './schema';
 
@@ -20,9 +21,10 @@ const SIGNALS: Record<string, string[]> = {
   door: ['open'],
   secret: ['taken'],
   relic: ['taken'],
+  enemy: ['dead'],
 };
 
-const ACTIONS_ON: Record<string, string[]> = { door: ['open', 'close', 'toggle'] };
+const ACTIONS_ON: Record<string, string[]> = { door: ['open', 'close', 'toggle'], block: ['reset'] };
 
 export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): ValidationResult {
   const errors: string[] = [];
@@ -57,6 +59,11 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
       continue;
     }
     if (s.wall && e.type !== 'zone') errors.push(`entity '${e.id}' is inside a wall`);
+    if (e.type === 'enemy') {
+      const stats = enemyTypes[e.enemy];
+      if (s.pit || s.flags.has('death')) errors.push(`enemy '${e.id}' starts on a pit or a deadly sector`);
+      if (s.ceil - Math.max(...s.floor) < stats.height) errors.push(`enemy '${e.id}' has no headroom`);
+    }
     if (e.type === 'lever') {
       const n = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] }[e.wall];
       const behind = level.sector(cx + (n?.[0] ?? 0), cz + (n?.[1] ?? 0));
@@ -103,6 +110,11 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
       }
     }
   });
+
+  const packs = new Map<string, number>();
+  for (const e of file.entities)
+    if (e.type === 'enemy' && e.pack) packs.set(e.pack, (packs.get(e.pack) ?? 0) + 1);
+  for (const [pack, n] of packs) if (n < 2) warnings.push(`pack '${pack}' has a single member`);
 
   if (i18nKeys && !i18nKeys.has(file.name)) errors.push(`missing i18n key '${file.name}' for the level name`);
   if (!file.entities.some((e) => e.type === 'relic')) warnings.push('the level has no relic');

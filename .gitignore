@@ -9,3 +9,4 @@ __pycache__
 *.pyc
 *.blend1
 .claude/
+scripts/audio/.cache/

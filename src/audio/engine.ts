@@ -2,13 +2,16 @@
  * Game audio engine (spec §12) on the raw Web Audio API.
  *
  * The simulation never calls this: main wires simulation events and the
- * camera pose into it. Every sound is synthesised procedurally for now.
- * Silence is part of the design: a discreet ambience bed, effects that
- * announce mechanisms before they act, and music only at marked moments.
+ * camera pose into it. Sounds are recorded samples (public/audio, see
+ * samples.ts and soundtrack.ts) with the procedural synthesis as fallback
+ * while files load or where Opus/WebM cannot be decoded. Silence is part of
+ * the design: a discreet ambience bed, effects that announce mechanisms
+ * before they act, and music only at marked moments.
  *
  * Nothing is created until unlock(), which must run inside a user gesture.
  * Before that every call just records state (room, emitters, volumes, mute)
- * and events are dropped.
+ * and events are dropped. unlock() then fetches and decodes the sample banks
+ * in the background, most urgent first.
  */
 
 import type { SimEvent } from '../core/events';
@@ -63,14 +66,21 @@ export class AudioEngine {
     this.ctx = ctx;
     // resume() must be requested synchronously inside the gesture.
     const resumed = ctx.resume().catch(() => undefined);
-    const graph = new AudioGraph(ctx);
-    this.graph = graph;
-    for (const [bus, v] of this.volumes) graph.mixer.setBusVolume(bus, v);
-    graph.mixer.setMuted(this.muted);
-    graph.setRoom(this.room);
-    graph.setEmitters(this.emitters);
-    graph.start();
-    this.unlocking = resumed.then(() => {
+    // Building the graph synthesises buffers and impulse responses: seconds on
+    // a slow phone. It waits a moment so whatever the gesture changed on
+    // screen (the start button's press) paints first; events meanwhile are dropped.
+    const built = new Promise<void>((done) => setTimeout(done, 60)).then(() => {
+      const graph = new AudioGraph(ctx, { samples: `${import.meta.env.BASE_URL}audio/` });
+      this.graph = graph;
+      for (const [bus, v] of this.volumes) graph.mixer.setBusVolume(bus, v);
+      graph.mixer.setMuted(this.muted);
+      graph.setRoom(this.room);
+      graph.setEmitters(this.emitters);
+      graph.start();
+      void graph.loadSamples();
+      return graph;
+    });
+    this.unlocking = Promise.all([resumed, built]).then(([, graph]) => {
       this.unlocking = null;
       // Generate the remaining impulse responses off the critical path.
       const warm = (): void =>
@@ -91,6 +101,30 @@ export class AudioEngine {
   update(listener: Listener, _dt: number): void {
     if (!this.graph || this.ctx?.state !== 'running') return;
     this.graph.update(listener);
+  }
+
+  /** Starts a recorded music cue that no simulation event plays (the title theme). No-op before unlock. */
+  playTrack(name: 'title', fadeIn = 2): void {
+    // The graph is built a moment after the unlock gesture: queue behind it.
+    if (!this.graph && this.unlocking) {
+      void this.unlocking.then(() => this.graph?.playTrack(name, fadeIn));
+      return;
+    }
+    this.graph?.playTrack(name, fadeIn);
+  }
+
+  /** Fades the music out over `fade` s after `delay` s. */
+  stopMusic(fade = 3, delay = 0): void {
+    if (!this.graph && this.unlocking) {
+      void this.unlocking.then(() => this.graph?.stopMusic(fade, delay));
+      return;
+    }
+    this.graph?.stopMusic(fade, delay);
+  }
+
+  /** Menu feedback: a press, a hover, a confirmation. No-op before unlock. */
+  ui(name: 'click' | 'hover' | 'confirm'): void {
+    if (this.graph) this.graph.ui(name);
   }
 
   /** Crossfades the convolution reverb to the room's preset (null: dry). */
@@ -115,5 +149,16 @@ export class AudioEngine {
   setMuted(muted: boolean): void {
     this.muted = muted;
     this.graph?.mixer.setMuted(muted);
+  }
+
+  /**
+   * Pause menu: suspends the whole audio context, so loops, reverb tails and
+   * scheduled music stop in place and continue where they were on resume.
+   */
+  setPaused(paused: boolean): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (paused) void ctx.suspend().catch(() => undefined);
+    else void ctx.resume().catch(() => undefined);
   }
 }

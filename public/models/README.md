@@ -26,7 +26,25 @@ The prop GLBs listed below are **generated** by [`scripts/blender/build_props.py
 
 ## Models
 
-MODEL_TABLE
+| Model                | Size x × y × z (m) | Triangles | File    | Meshes                           | Notes                                                                                                                  |
+| -------------------- | ------------------ | --------- | ------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `brazier.glb`        | 0.92 × 1.15 × 0.95 | 2888      | 1.09 MB | `brazier` (2748), `coals` (140)  | Oxidized bronze tripod brazier, rim at 1.15 m, bowl 0.92 m across; sooted bowl, bright wear on rim, collars and feet.  |
+| `column_base.glb`    | 2.30 × 0.50 × 2.30 | 224       | 0.67 MB | `column_base` (224)              | Stacked sandstone plinth wrapping a 2 x 2 m pillar (open inside and underneath), sand in the joints.                   |
+| `column_capital.glb` | 2.30 × 0.60 × 2.30 | 328       | 0.65 MB | `column_capital` (328)           | Corbelled capital in three stepped courses, soot towards the ceiling.                                                  |
+| `door.glb`           | 2.00 × 5.00 × 0.46 | 874       | 1.14 MB | `door` (106), `seal_amber` (768) | Trapezoid sandstone slab (2.0 m at the base, 1.84 m at the top), nine-segment seal at 2.6 m on both faces.             |
+| `lever.glb`          | 0.40 × 0.50 × 0.61 | 1436      | 0.91 MB | `lever` (504), `handle` (932)    | Bronze wall plate with slotted housing and rivets, plus the pivoting handle with a worn knob.                          |
+| `block.glb`          | 2.00 × 2.00 × 2.00 | 596       | 0.82 MB | `block` (596)                    | Pushable dressed monolith, paler stone, 6 cm bevels, grip notches at 1.2 m, glyph band, drag grooves.                  |
+| `idol_jade.glb`      | 0.16 × 0.30 × 0.16 | 2600      | 0.50 MB | `idol_jade` (2600)               | Seated votive figure on a round plinth, polished jade.                                                                 |
+| `idol_gold.glb`      | 0.16 × 0.30 × 0.16 | 2600      | 0.52 MB | `idol_gold` (2600)               | Same figure in worn gold (metalness 1, matte recesses).                                                                |
+| `idol_stone.glb`     | 0.16 × 0.30 × 0.16 | 2600      | 0.58 MB | `idol_stone` (2600)              | Same figure in weathered grey stone.                                                                                   |
+| `relic.glb`          | 0.13 × 0.22 × 0.13 | 2182      | 0.71 MB | `relic` (2092), `gem` (90)       | The Amber Heart: nine-facet amber gem in a thin worn gold cage with foot and top loop.                                 |
+| `altar.glb`          | 2.00 × 1.00 × 2.00 | 1222      | 0.92 MB | `altar` (1222)                   | Stepped altar dressing for a 1 m grid step, top exactly at 1.0 m, recessed glyph frieze, seal carved on top.           |
+| `medkit.glb`         | 0.31 × 0.13 × 0.21 | 640       | 0.32 MB | `medkit` (640)                   | Leather field pouch, buckled flap, canvas gussets, stitched green leaf (no red cross).                                 |
+| `rubble_a.glb`       | 1.26 × 0.49 × 0.90 | 898       | 1.12 MB | `rubble_a` (898)                 | One large broken block (0.8 m) and two small chunks.                                                                   |
+| `rubble_b.glb`       | 1.12 × 0.32 × 0.81 | 830       | 1.09 MB | `rubble_b` (830)                 | Three medium chunks (0.3 to 0.5 m).                                                                                    |
+| `rubble_c.glb`       | 0.88 × 0.20 × 0.73 | 950       | 1.28 MB | `rubble_c` (950)                 | Five small chunks (0.2 to 0.3 m).                                                                                      |
+| `pot_broken.glb`     | 0.79 × 0.32 × 0.75 | 1772      | 1.07 MB | `pot_broken` (1772)              | Broken amphora: body lying on its side, neck with handles, three shards.                                               |
+| `sand_drift.glb`     | 2.00 × 0.35 × 0.60 | 538       | 0.55 MB | `sand_drift` (538)               | Sand drift wedge against a wall: 2 m along X, 0.6 m out along +Z, 0.35 m high at the wall; ends match so drifts chain. |
 
 ## Hooks for the game
 

@@ -22,6 +22,13 @@ export interface NoraPose {
   climbT: number;
   /** 0..100. */
   health: number;
+  /** Pistols in hand: 0 holstered … 1 drawn. */
+  weapons: number;
+  /** 1 while aiming at a target or firing, 0 holding the pistols ready. */
+  aiming: number;
+  /** Aim direction relative to the body: yaw (player convention, + = to her left) and pitch (+ = up), rad. */
+  aimYaw: number;
+  aimPitch: number;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -227,6 +234,19 @@ const RIGHT: Side = {
   kneeH: KNEE_H_R,
 };
 const SIDES: readonly Side[] = [LEFT, RIGHT];
+/** Joints the aiming layer overrides. */
+const AIM_JOINTS: readonly number[] = [
+  SPINE,
+  CHEST,
+  CLAV_L,
+  UPPER_L,
+  FORE_L,
+  HAND_L,
+  CLAV_R,
+  UPPER_R,
+  FORE_R,
+  HAND_R,
+];
 
 /** Joint names shared with the scanned model's skeleton (scripts/character/rig_nora.py). */
 export type RetargetJoint =
@@ -707,6 +727,13 @@ export class NoraModel {
   private dipVel = 0;
   private opacity = 1;
 
+  // Aiming arms layer (spec §7: arms and torso follow the target, the legs keep running).
+  private aimW = 0;
+  private aimAiming = 0;
+  private aimYaw = 0;
+  private aimPitch = 0;
+  private readonly aimQ = new Pose();
+
   // Satchel pendulum.
   private readonly bagPivot = new THREE.Group();
   private readonly bagAngle = new THREE.Vector2();
@@ -768,6 +795,7 @@ export class NoraModel {
     }
 
     this.evaluate(pose, dt, this.live);
+    this.applyAim(pose, dt, this.live);
     this.fade = Math.min(1, this.fade + dt / 0.15);
     if (this.fade < 1) this.shown.blend(this.snap, this.live, smoother(this.fade));
     else this.shown.copy(this.live);
@@ -793,6 +821,11 @@ export class NoraModel {
       if (name) (out.get(name) ?? out.set(name, new THREE.Quaternion()).get(name))?.copy(q);
     }
     hipsOffset.copy(this.shown.pos).sub(at(BIND, HIPS));
+  }
+
+  /** A hand joint (0 = left, 1 = right): fingers along its -Y axis, palm facing its -Z axis. */
+  hand(side: 0 | 1): THREE.Object3D {
+    return this.bone(side === 0 ? HAND_L : HAND_R);
   }
 
   /** Hides the procedural body while it keeps animating (it drives the scanned model). */
@@ -1819,6 +1852,53 @@ export class NoraModel {
         this.evalDead(pose, out);
         break;
     }
+  }
+
+  /**
+   * Aiming layer over the mode's pose: the torso twists towards the aim and
+   * both arms reach along it (two-bone IK), pistols gripped. Holding them
+   * ready, the arms point low ahead. Legs and hips are left untouched.
+   */
+  private applyAim(pose: NoraPose, dt: number, p: Pose): void {
+    const armed = pose.mode === 'ground' || pose.mode === 'air' ? pose.weapons : 0;
+    this.aimW += (armed - this.aimW) * (1 - Math.exp(-dt * 14));
+    this.aimAiming += (pose.aiming - this.aimAiming) * (1 - Math.exp(-dt * 12));
+    const k = 1 - Math.exp(-dt * 16);
+    this.aimYaw += (pose.aimYaw - this.aimYaw) * k;
+    this.aimPitch += (pose.aimPitch - this.aimPitch) * k;
+    const w = this.aimW;
+    if (w < 1e-3) return;
+
+    const a = this.aimAiming;
+    const yaw = this.aimYaw * a;
+    const pitch = lerp(-0.75, clamp(this.aimPitch, -1, 0.9), a);
+    const q = this.aimQ.copy(p);
+    // Torso: a twist of up to ~1 rad shared by spine and chest; the arms cover the rest.
+    const twist = clamp(yaw, -1.0, 1.0);
+    at(q.q, SPINE).multiply(_q1.setFromAxisAngle(_v1.set(0, 1, 0), twist * 0.35));
+    at(q.q, CHEST).multiply(_q1.setFromAxisAngle(_v1.set(0, 1, 0), twist * 0.65));
+    at(q.q, CHEST).multiply(_q1.setFromAxisAngle(_v1.set(1, 0, 0), pitch * 0.25 * a));
+    const dir = _v2.set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
+    const aimDir = dir.clone();
+    const up = new THREE.Vector3(0, 1, 0);
+    for (const sd of SIDES) {
+      const s = sd.s;
+      this.rot(q, sd.clav, 0, s * 0.12 * a, s * 0.04);
+      this.fk(q, sd.upper, _v3, _q2);
+      // Arms nearly straight when aiming, bent holding the pistols ready; wrists slightly toed in.
+      const reach = lerp(0.38, 0.505, a);
+      const inward = new THREE.Vector3().crossVectors(up, aimDir).multiplyScalar(s).normalize();
+      const wrist = _v3
+        .clone()
+        .addScaledVector(aimDir, reach)
+        .addScaledVector(inward, 0.05 + 0.03 * a);
+      const fingers = aimDir.clone().addScaledVector(up, -0.3).normalize();
+      this.armIK(q, sd, wrist, new THREE.Vector3(s * 0.9, -0.6, 0.2), fingers, inward);
+      q.curl[s < 0 ? 0 : 1] = 0.95;
+    }
+    for (const j of AIM_JOINTS) at(p.q, j).slerp(at(q.q, j), w);
+    p.curl[0] = lerp(p.curl[0] ?? 0, q.curl[0] ?? 0, w);
+    p.curl[1] = lerp(p.curl[1] ?? 0, q.curl[1] ?? 0, w);
   }
 
   // --- Pose building blocks --------------------------------------------------------------------

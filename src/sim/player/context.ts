@@ -68,17 +68,28 @@ export function faceDir(p: PlayerState, dir: Dir): void {
 
 /** Applies damage and kills the player at zero health. */
 export function hurt(c: Ctx, amount: number, cause: string): void {
-  if (amount <= 0 || c.p.mode === 'dead') return;
-  c.p.health = Math.max(0, c.p.health - amount);
-  emit(c, 'player.hurt', { amount, cause });
-  if (c.p.health === 0) die(c, cause);
+  damagePlayer(c.world, amount, cause);
 }
 
 export function die(c: Ctx, cause: string): void {
-  if (c.p.mode === 'dead') return;
-  c.p.health = 0;
-  c.p.vel = { x: 0, y: 0, z: 0 };
-  setMode(c.p, 'dead');
-  c.world.stats.deaths++;
-  emit(c, 'player.died', { cause });
+  killPlayer(c.world, cause);
+}
+
+/** Damage from anywhere in the simulation (falls, enemies). */
+export function damagePlayer(world: World, amount: number, cause: string): void {
+  const p = world.state.player;
+  if (amount <= 0 || p.mode === 'dead') return;
+  p.health = Math.max(0, p.health - amount);
+  world.events.emit({ type: 'player.hurt', tick: world.tick, amount, cause });
+  if (p.health === 0) killPlayer(world, cause);
+}
+
+export function killPlayer(world: World, cause: string): void {
+  const p = world.state.player;
+  if (p.mode === 'dead') return;
+  p.health = 0;
+  p.vel = { x: 0, y: 0, z: 0 };
+  setMode(p, 'dead');
+  world.stats.deaths++;
+  world.events.emit({ type: 'player.died', tick: world.tick, cause });
 }

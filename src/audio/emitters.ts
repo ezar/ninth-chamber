@@ -3,6 +3,10 @@
  * fire crackle for braziers, a low shimmering hum for relics. Sources far
  * from the listener are stopped and restarted when approached, so a level
  * full of braziers costs only the ones you can hear.
+ *
+ * Braziers play the recorded fire loop once it is loaded (every brazier
+ * shares the one buffer, each from its own offset and at its own rate, so
+ * neighbours never phase); until then, and as a fallback, a synthesised fire.
  */
 
 import { createPanner, holdParam, rnd, setPannerPosition, type NoiseBank, type Vec3 } from './dsp';
@@ -13,6 +17,8 @@ export interface EmitterDef extends Vec3 {
 }
 
 const START_DISTANCE = 30;
+/** Recorded fire (levelled to -20 LUFS) relative to the synthesised one. */
+const FIRE_SAMPLE_LEVEL = 0.9;
 const STOP_DISTANCE = 34;
 const FADE = 0.6;
 
@@ -101,12 +107,23 @@ function fireBuffer(ctx: BaseAudioContext): AudioBuffer {
 export class EmitterSet {
   private defs = new Map<string, EmitterDef>();
   private live = new Map<string, Live>();
+  private fire: { buffer: AudioBuffer; end: number } | null = null;
 
   constructor(
     private readonly ctx: BaseAudioContext,
     private readonly noise: NoiseBank,
     private readonly dest: AudioNode,
   ) {}
+
+  /** Switches braziers to the recorded fire loop (restarting any already burning with a crossfade). */
+  setFire(buffer: AudioBuffer, end: number): void {
+    this.fire = { buffer, end };
+    for (const [id, l] of [...this.live]) {
+      if (l.def.kind !== 'brazier') continue;
+      this.stop(id);
+      this.start(l.def);
+    }
+  }
 
   set(list: readonly EmitterDef[]): void {
     const next = new Map<string, EmitterDef>();
@@ -151,6 +168,25 @@ export class EmitterSet {
 
   private buildFire(l: Live, t: number): void {
     const ctx = this.ctx;
+    if (this.fire) {
+      const { buffer, end } = this.fire;
+      const src = new AudioBufferSourceNode(ctx, { buffer, loop: true, playbackRate: rnd(0.92, 1.08) });
+      src.loopStart = 0;
+      src.loopEnd = end;
+      // The recording is close-miked: a gentle high cut makes a brazier a few metres away.
+      const lp = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 7000, Q: 0.5 });
+      const level = new GainNode(ctx, { gain: FIRE_SAMPLE_LEVEL });
+      // Slow breathing of the flames on top of the crackle.
+      const lfo = new OscillatorNode(ctx, { frequency: rnd(0.15, 0.3) });
+      const depth = new GainNode(ctx, { gain: FIRE_SAMPLE_LEVEL * 0.15 });
+      lfo.connect(depth).connect(level.gain);
+      src.connect(lp).connect(level).connect(l.gain);
+      src.start(t, Math.random() * end);
+      lfo.start(t);
+      l.sources.push(src, lfo);
+      l.nodes.push(lp, level, depth);
+      return;
+    }
     const buf = fireBuffer(ctx);
     const src = new AudioBufferSourceNode(ctx, { buffer: buf, loop: true, playbackRate: rnd(0.93, 1.07) });
     const hp = new BiquadFilterNode(ctx, { type: 'highpass', frequency: 70, Q: 0.5 });

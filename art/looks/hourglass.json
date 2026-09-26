@@ -1,0 +1,11 @@
+{
+  "id": "hourglass",
+  "background": "#0d0a07",
+  "exposure": 1.05,
+  "hemi": { "sky": "#6b5236", "ground": "#1e150c", "intensity": 0.2 },
+  "fog": { "color": "#6e5234", "density": 0.032 },
+  "sun": null,
+  "fire": { "color": "#ffa04c", "intensity": 38, "flicker": 0.22 },
+  "bloom": { "strength": 0.55, "radius": 0.55, "threshold": 0.8 },
+  "grade": { "tint": "#ffe0b0", "saturation": 0.95, "contrast": 1.1, "vignette": 0.45 }
+}

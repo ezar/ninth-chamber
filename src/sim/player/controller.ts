@@ -10,6 +10,7 @@ import { air } from './modes/air';
 import { ground } from './modes/ground';
 import { climb, hang } from './modes/hang';
 import { block, dead, lever, moveBlock, pickup } from './modes/interact';
+import { stepMedkit, stepWeapons } from './weapons';
 
 const MODES: Record<PlayerMode, (c: Ctx) => void> = {
   ground,
@@ -35,4 +36,8 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
   MODES[p.mode](c);
   if (p.mode !== before)
     world.events.emit({ type: 'player.mode', tick: world.tick, from: before, to: p.mode });
+  // A respawn replaces the whole state: this tick's context is stale.
+  if (world.state.player !== p) return;
+  stepWeapons(c);
+  stepMedkit(c);
 }
