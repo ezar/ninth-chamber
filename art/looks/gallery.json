@@ -1,0 +1,11 @@
+{
+  "id": "gallery",
+  "background": "#0d1114",
+  "exposure": 1.05,
+  "hemi": { "sky": "#c9a57a", "ground": "#2a3a44", "intensity": 0.4 },
+  "fog": { "color": "#5b7280", "density": 0.045 },
+  "sun": { "color": "#ffd6a0", "intensity": 2.5, "direction": [-0.34, 0.9, 0.27] },
+  "fire": { "color": "#ff9448", "intensity": 20, "flicker": 0.25 },
+  "bloom": { "strength": 0.5, "radius": 0.5, "threshold": 0.82 },
+  "grade": { "tint": "#e6e0d4", "saturation": 0.95, "contrast": 1.08, "vignette": 0.35 }
+}

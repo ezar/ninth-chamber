@@ -10,6 +10,7 @@
     "src/core/input-frame.ts",
     "src/core/rng.ts",
     "src/core/events.ts",
-    "src/core/loop.ts"
+    "src/core/loop.ts",
+    "src/core/clone.ts"
   ]
 }

@@ -1,40 +1,83 @@
 /**
- * Milestone 1 renderer: a floor with a 2 m block grid, a few reference pillars
- * and the box character. Interpolates between the previous and current state.
+ * The game renderer (spec §11 "Render"): builds the level from the grid,
+ * lights it with the per-room looks, and draws the world state with render
+ * interpolation. It only reads the simulation.
  */
 import * as THREE from 'three/webgpu';
-import type { Vec3 } from '../sim/world';
-import { tuning } from '../sim/player/tuning';
-
-const BLOCK = 2;
+import { float, luminance, mix, pass, uniform, vec3, vec4 } from 'three/tsl';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+import { BLOCK } from '../sim/grid/units';
+import type { Vec3 } from '../sim/state';
+import type { World } from '../sim/world';
+import { buildLevelMeshes } from './level-mesh';
+import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
+import { NoraModel, type NoraPose } from './nora';
+import { Props } from './props';
+import { ashlar, flagstones, rock, sand } from './textures';
 
 export interface PlayerPose {
   pos: Vec3;
   yaw: number;
 }
 
+const FIRE_SLOTS = 4;
+
 export class GameRenderer {
   readonly renderer: THREE.WebGPURenderer;
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(60, 1, 0.05, 200);
-  private readonly player = new THREE.Group();
+  readonly camera = new THREE.PerspectiveCamera(55, 1, 0.05, 250);
+  private pipeline: THREE.RenderPipeline | null = null;
+  private bloomNode: ReturnType<typeof bloom> | null = null;
+  private readonly uTint = uniform(new THREE.Color('#ffffff'));
+  private readonly uSaturation = uniform(1);
+  private readonly hemi = new THREE.HemisphereLight('#6f7f8f', '#2a1f17', 0.4);
+  private readonly sun = new THREE.DirectionalLight('#ffffff', 0);
+  private readonly fireLights: THREE.PointLight[] = [];
+  private readonly nora = new NoraModel();
+  private props: Props | null = null;
+  private world: World | null = null;
+  private look: Look = cloneLook(getLook(null));
+  private currentRoom: string | null = null;
+  private readonly shafts: { mesh: THREE.Group; dust: THREE.Points; room: string }[] = [];
+  private readonly bounces: { light: THREE.PointLight; room: string; strength: number }[] = [];
+  private time = 0;
+  private vignette: HTMLElement | null = null;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.AgXToneMapping;
     this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
-    this.scene.background = new THREE.Color('#1a130d');
-    this.scene.fog = new THREE.Fog('#1a130d', 14, 48);
-
-    this.buildRoom();
-    this.buildPlayer();
+    this.scene.fog = new THREE.FogExp2('#2a1f17', 0.03);
+    this.scene.background = new THREE.Color('#0e0c0a');
+    this.scene.add(this.hemi, this.sun, this.sun.target);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.bias = -0.0004;
+    this.sun.shadow.normalBias = 0.03;
+    for (let i = 0; i < FIRE_SLOTS; i++) {
+      const l = new THREE.PointLight('#ff8a3d', 0, 18, 2);
+      this.fireLights.push(l);
+      this.scene.add(l);
+    }
+    this.scene.add(this.nora.root);
+    this.vignette = document.getElementById('vignette');
     this.resize();
   }
 
   async init(): Promise<void> {
     await this.renderer.init();
+    const scenePass = pass(this.scene, this.camera);
+    const color = scenePass.getTextureNode('output');
+    this.bloomNode = bloom(color, 0.5, 0.5, 0.8);
+    const lit = color.add(this.bloomNode);
+    const graded = mix(vec3(luminance(lit.rgb)), lit.rgb, this.uSaturation).mul(
+      mix(vec3(1, 1, 1), this.uTint, 0.5),
+    );
+    this.pipeline = new THREE.RenderPipeline(this.renderer);
+    this.pipeline.outputNode = vec4(graded, float(1));
   }
 
   /** 'WebGPU' or 'WebGL2', depending on the backend Three.js picked. */
@@ -43,77 +86,159 @@ export class GameRenderer {
     return backend?.isWebGPUBackend ? 'WebGPU' : 'WebGL2';
   }
 
-  private buildRoom(): void {
-    const size = 12; // blocks per side
-    const floorTex = gridTexture();
-    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-    floorTex.repeat.set(size, size);
-    floorTex.colorSpace = THREE.SRGBColorSpace;
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(size * BLOCK, size * BLOCK),
-      new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.92 }),
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    this.scene.add(floor);
+  /** Builds all level geometry and props. Call once per level. */
+  setWorld(world: World): void {
+    this.world = world;
+    const level = world.level;
 
-    // Pillars on block corners to read the scale.
-    const stone = new THREE.MeshStandardMaterial({ color: '#8a7355', roughness: 0.85 });
-    const pillarGeo = new THREE.BoxGeometry(BLOCK, BLOCK * 2, BLOCK);
-    const spots: [number, number][] = [
-      [-4, -4],
-      [4, -4],
-      [-4, 4],
-      [4, 4],
-      [0, -8],
-    ];
-    const pillars = new THREE.InstancedMesh(pillarGeo, stone, spots.length);
-    const m = new THREE.Matrix4();
-    spots.forEach(([x, z], i) => {
-      m.makeTranslation(x * BLOCK + BLOCK / 2, BLOCK, z * BLOCK + BLOCK / 2);
-      pillars.setMatrixAt(i, m);
+    const sunRooms = new Set(level.rooms.filter((r) => lookFile(r.look)?.sun).map((r) => r.id));
+    const meshes = buildLevelMeshes(level, { skylightRooms: sunRooms });
+
+    const wallTex = ashlar({ base: '#b8895a', courses: 4, seed: 11 });
+    const floorTex = flagstones({ base: '#b09a7c', slabs: 2, seed: 5 });
+    const sandTex = sand({ base: '#c8a77c' });
+    const rockTex = rock({ base: '#6d5a47' });
+    const limestone = ashlar({ base: '#cfc5b1', courses: 8, seed: 31 });
+    const pbr = (
+      t: typeof wallTex,
+      extra: THREE.MeshStandardMaterialParameters = {},
+    ): THREE.MeshStandardMaterial =>
+      new THREE.MeshStandardMaterial({
+        map: t.map,
+        normalMap: t.normalMap,
+        roughnessMap: t.roughnessMap,
+        vertexColors: true,
+        ...extra,
+      });
+    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, cast = true): void => {
+      const m = new THREE.Mesh(geo, mat);
+      m.castShadow = cast;
+      m.receiveShadow = true;
+      this.scene.add(m);
+    };
+    add(meshes.surfaces.wall, pbr(wallTex, { normalScale: new THREE.Vector2(0.9, 0.9) }));
+    add(meshes.surfaces.floorStone, pbr(floorTex), false);
+    add(meshes.surfaces.floorSand, pbr(sandTex), false);
+    add(meshes.surfaces.ceiling, pbr(rockTex, { side: THREE.DoubleSide }));
+    add(meshes.surfaces.lip, pbr(limestone, { roughness: 0.55, color: '#efe6d4' }));
+
+    const bronze = new THREE.MeshStandardMaterial({ color: '#5e7b68', roughness: 0.65, metalness: 0.35 });
+    this.props = new Props(level, {
+      stone: wallTex,
+      floor: floorTex,
+      bronze,
+      darkMetal: new THREE.MeshStandardMaterial({ color: '#2b2622', roughness: 0.5, metalness: 0.7 }),
+      gold: new THREE.MeshStandardMaterial({ color: '#e8b75a', roughness: 0.25, metalness: 1 }),
     });
-    pillars.castShadow = pillars.receiveShadow = true;
-    this.scene.add(pillars);
+    this.scene.add(this.props.group);
 
-    this.scene.add(new THREE.HemisphereLight('#8fa3c0', '#3a2616', 0.9));
-    const sun = new THREE.DirectionalLight('#d8e4ff', 1.4);
-    sun.position.set(-8, 18, 6);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
-    const s = sun.shadow.camera;
-    s.left = s.bottom = -16;
-    s.right = s.top = 16;
-    this.scene.add(sun);
-
-    const fire = new THREE.PointLight('#ff9a4a', 60, 16, 2);
-    fire.position.set(1, 2.2, -13);
-    this.scene.add(fire);
+    this.buildShafts(meshes.skylights, sunRooms);
+    this.currentRoom = null;
   }
 
-  private buildPlayer(): void {
-    // Placeholder box character (spec §11): body + head + nose to show facing.
-    const w = tuning.radius * 2;
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(w, tuning.height * 0.78, w * 0.7),
-      new THREE.MeshStandardMaterial({ color: '#4f6b5a', roughness: 0.7 }),
-    );
-    body.position.y = tuning.height * 0.39;
-    const head = new THREE.Mesh(
-      new THREE.BoxGeometry(w * 0.6, tuning.height * 0.2, w * 0.6),
-      new THREE.MeshStandardMaterial({ color: '#c89a78', roughness: 0.6 }),
-    );
-    head.position.y = tuning.height * 0.88;
-    const nose = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.08, 0.14),
-      new THREE.MeshStandardMaterial({ color: '#c89a78' }),
-    );
-    nose.position.set(0, tuning.height * 0.88, -w * 0.35);
-    for (const part of [body, head, nose]) {
-      part.castShadow = true;
-      this.player.add(part);
+  /** A soft volumetric-looking beam and dust under each skylight. */
+  private buildShafts(skylights: { x: number; z: number; ceil: number }[], rooms: Set<string>): void {
+    const world = this.world;
+    if (!world) return;
+    const gradient = document.createElement('canvas');
+    gradient.width = 64;
+    gradient.height = 256;
+    const g = gradient.getContext('2d');
+    if (g) {
+      const lin = g.createLinearGradient(0, 0, 0, 256);
+      lin.addColorStop(0, 'rgba(255,255,255,0.9)');
+      lin.addColorStop(0.7, 'rgba(255,255,255,0.35)');
+      lin.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = lin;
+      g.fillRect(0, 0, 64, 256);
     }
-    this.scene.add(this.player);
+    const tex = new THREE.CanvasTexture(gradient);
+    for (const roomId of rooms) {
+      const cells = skylights.filter(
+        (s) => world.level.roomAt(Math.floor(s.x / BLOCK), Math.floor(s.z / BLOCK))?.id === roomId,
+      );
+      if (!cells.length) continue;
+      const cx = cells.reduce((a, c) => a + c.x, 0) / cells.length;
+      const cz = cells.reduce((a, c) => a + c.z, 0) / cells.length;
+      const ceil = cells[0]?.ceil ?? 10;
+      const floor = world.level.floorAt(cx, cz);
+      const look = getLook(world.level.rooms.find((r) => r.id === roomId)?.look ?? null);
+      const dir = look.sunDir.clone();
+      const length = (ceil - floor) / Math.max(0.2, dir.y) + 0.5;
+      // Nested cones fake a soft volumetric edge.
+      const beam = new THREE.Group();
+      beam.position.set(cx, ceil, cz);
+      beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir.clone().negate());
+      for (const [r0, r1, o] of [
+        [1.1, 1.3, 0.09],
+        [1.6, 1.85, 0.06],
+        [2.05, 2.35, 0.035],
+      ] as const) {
+        const geo = new THREE.CylinderGeometry(r0, r1, length, 16, 1, true);
+        geo.translate(0, -length / 2, 0);
+        const mat = new THREE.MeshBasicMaterial({
+          map: tex,
+          color: look.sunColor.clone().multiplyScalar(o * 1.6),
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          fog: false,
+        });
+        beam.add(new THREE.Mesh(geo, mat));
+      }
+      this.scene.add(beam);
+      const mesh = beam;
+
+      // Bright sky seen through the opening.
+      const sky = new THREE.Mesh(
+        new THREE.PlaneGeometry(8, 8),
+        new THREE.MeshBasicMaterial({ color: look.sunColor.clone().multiplyScalar(3), fog: false }),
+      );
+      sky.rotation.x = Math.PI / 2;
+      sky.position.set(cx, ceil + 0.5, cz);
+      this.scene.add(sky);
+
+      // Warm bounce from the sunlit floor (cheap stand-in for global illumination).
+      const hit = new THREE.Vector3(cx, floor, cz).add(
+        dir
+          .clone()
+          .multiplyScalar(-(ceil - floor) / Math.max(0.2, dir.y))
+          .setY(0),
+      );
+      const bounce = new THREE.PointLight('#e0b27a', 0, 22, 1.6);
+      bounce.position.set(hit.x, floor + 1.2, hit.z);
+      this.scene.add(bounce);
+      this.bounces.push({ light: bounce, room: roomId, strength: look.sunIntensity });
+
+      const n = 260;
+      const pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        const t = ((i * 0.618) % 1) * length;
+        const a = i * 2.39996;
+        const r = Math.sqrt((i * 0.377) % 1) * 1.8;
+        const p = new THREE.Vector3(Math.cos(a) * r, -t, Math.sin(a) * r).applyQuaternion(mesh.quaternion);
+        pos[i * 3] = cx + p.x;
+        pos[i * 3 + 1] = ceil + p.y;
+        pos[i * 3 + 2] = cz + p.z;
+      }
+      const dg = new THREE.BufferGeometry();
+      dg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      dg.userData.base = pos.slice();
+      const dust = new THREE.Points(
+        dg,
+        new THREE.PointsMaterial({
+          color: look.sunColor,
+          size: 0.02,
+          transparent: true,
+          opacity: 0.8,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        }),
+      );
+      this.scene.add(dust);
+      this.shafts.push({ mesh, dust, room: roomId });
+    }
   }
 
   resize(): void {
@@ -124,45 +249,148 @@ export class GameRenderer {
     this.camera.updateProjectionMatrix();
   }
 
-  render(prev: PlayerPose, curr: PlayerPose, alpha: number, eye: Vec3, target: Vec3): void {
+  /** World position of an entity, for camera focus shots. */
+  entityPosition(id: string): Vec3 | null {
+    const e = this.world?.level.entities.find((x) => x.id === id);
+    if (!e || !this.world) return null;
+    const x = e.at[0] * BLOCK + BLOCK / 2;
+    const z = e.at[1] * BLOCK + BLOCK / 2;
+    return { x, y: this.world.level.floorAt(x, z) + 1.5, z };
+  }
+
+  render(
+    prev: PlayerPose,
+    curr: PlayerPose,
+    alpha: number,
+    pose: NoraPose,
+    eye: Vec3,
+    lookAt: Vec3,
+    cameraDistance: number,
+    dt: number,
+  ): void {
+    const world = this.world;
+    if (!world || !this.pipeline) return;
+    this.time += dt;
+
+    // Player.
     const lerp = (a: number, b: number): number => a + (b - a) * alpha;
-    this.player.position.set(
-      lerp(prev.pos.x, curr.pos.x),
-      lerp(prev.pos.y, curr.pos.y),
-      lerp(prev.pos.z, curr.pos.z),
-    );
+    const px = lerp(prev.pos.x, curr.pos.x);
+    const py = lerp(prev.pos.y, curr.pos.y);
+    const pz = lerp(prev.pos.z, curr.pos.z);
+    this.nora.root.position.set(px, py, pz);
     let dy = curr.yaw - prev.yaw;
     if (dy > Math.PI) dy -= 2 * Math.PI;
     if (dy < -Math.PI) dy += 2 * Math.PI;
-    this.player.rotation.y = prev.yaw + dy * alpha;
+    this.nora.root.rotation.y = prev.yaw + dy * alpha;
+    this.nora.update(pose, dt);
+    this.nora.setOpacity(Math.min(1, Math.max(0.15, (cameraDistance - 0.6) / 0.8)));
+
+    // Room look.
+    const room = world.level.roomAt(Math.floor(px / BLOCK), Math.floor(pz / BLOCK));
+    if (room && room.id !== this.currentRoom) {
+      const first = this.currentRoom === null;
+      this.currentRoom = room.id;
+      if (first) this.look = cloneLook(getLook(room.look));
+      this.fitSun(room.minX, room.minZ, room.maxX, room.maxZ);
+    }
+    const target = getLook(room?.look ?? null);
+    blendLook(this.look, target, Math.min(1, dt * 1.2));
+    this.applyLook();
+
+    this.props?.update(world, this.time, dt);
+    this.updateFireLights(eye);
+    this.updateShafts(dt);
 
     this.camera.position.set(eye.x, eye.y, eye.z);
-    this.camera.lookAt(target.x, target.y, target.z);
-    this.renderer.render(this.scene, this.camera);
+    this.camera.lookAt(lookAt.x, lookAt.y, lookAt.z);
+    this.pipeline.render();
   }
-}
 
-/** Canvas-generated grid texture: one 2 m block per repeat. */
-function gridTexture(): THREE.CanvasTexture {
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const g = c.getContext('2d');
-  if (!g) throw new Error('Canvas 2D not available');
-  g.fillStyle = '#6b5842';
-  g.fillRect(0, 0, 128, 128);
-  g.strokeStyle = '#4a3b2b';
-  g.lineWidth = 3;
-  g.strokeRect(1.5, 1.5, 125, 125);
-  // Click marks (0.5 m).
-  g.strokeStyle = 'rgba(74, 59, 43, 0.35)';
-  g.lineWidth = 1;
-  for (let i = 1; i < 4; i++) {
-    g.beginPath();
-    g.moveTo(i * 32, 0);
-    g.lineTo(i * 32, 128);
-    g.moveTo(0, i * 32);
-    g.lineTo(128, i * 32);
-    g.stroke();
+  private fitSun(minX: number, minZ: number, maxX: number, maxZ: number): void {
+    const cx = ((minX + maxX) / 2) * BLOCK;
+    const cz = ((minZ + maxZ) / 2) * BLOCK;
+    const half = (Math.max(maxX - minX, maxZ - minZ) * BLOCK) / 2 + 4;
+    const s = this.sun.shadow.camera;
+    s.left = -half;
+    s.right = half;
+    s.top = half;
+    s.bottom = -half;
+    s.near = 1;
+    s.far = 120;
+    s.updateProjectionMatrix();
+    this.sun.target.position.set(cx, 0, cz);
   }
-  return new THREE.CanvasTexture(c);
+
+  private applyLook(): void {
+    const l = this.look;
+    (this.scene.background as THREE.Color).copy(l.background);
+    const fog = this.scene.fog as THREE.FogExp2;
+    fog.color.copy(l.fogColor);
+    fog.density = l.fogDensity;
+    this.renderer.toneMappingExposure = l.exposure;
+    this.hemi.color.copy(l.hemiSky);
+    this.hemi.groundColor.copy(l.hemiGround);
+    this.hemi.intensity = l.hemiIntensity;
+    this.sun.color.copy(l.sunColor);
+    this.sun.intensity = l.sunIntensity;
+    const t = this.sun.target.position;
+    this.sun.position.set(t.x + l.sunDir.x * 60, t.y + l.sunDir.y * 60, t.z + l.sunDir.z * 60);
+    if (this.bloomNode) {
+      this.bloomNode.strength.value = l.bloomStrength;
+      this.bloomNode.radius.value = l.bloomRadius;
+      this.bloomNode.threshold.value = l.bloomThreshold;
+    }
+    this.uTint.value.copy(l.tint);
+    this.uSaturation.value = l.saturation;
+    if (this.vignette) this.vignette.style.opacity = String(Math.min(1, l.vignette * 1.6));
+  }
+
+  /** The fire light pool follows the nearest braziers. */
+  private updateFireLights(eye: Vec3): void {
+    const fires = this.props?.fires ?? [];
+    const sorted = [...fires].sort(
+      (a, b) =>
+        (a.pos.x - eye.x) ** 2 + (a.pos.z - eye.z) ** 2 - ((b.pos.x - eye.x) ** 2 + (b.pos.z - eye.z) ** 2),
+    );
+    this.fireLights.forEach((light, i) => {
+      const f = sorted[i];
+      if (!f) {
+        light.intensity = 0;
+        return;
+      }
+      const t = this.time;
+      const flick =
+        1 - this.look.flicker * (0.5 + 0.5 * Math.sin(t * 13 + f.phase) * Math.sin(t * 7.3 + f.phase * 1.7));
+      light.position.set(f.pos.x, f.pos.y + 0.3, f.pos.z);
+      light.color.copy(this.look.fireColor);
+      // Look values are per-brazier candela; the pool lights stand in for several fires, so they run hotter.
+      light.intensity = Math.max(this.look.fireIntensity, 20) * 2.5 * flick;
+    });
+  }
+
+  private updateShafts(dt: number): void {
+    for (const b of this.bounces) {
+      const target = this.currentRoom === b.room ? b.strength * 9 : 0;
+      b.light.intensity += (target - b.light.intensity) * Math.min(1, dt * 1.5);
+    }
+    for (const s of this.shafts) {
+      const on = this.currentRoom === s.room ? 1 : 0.35;
+      for (const child of s.mesh.children) {
+        const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
+        m.opacity += (on - m.opacity) * Math.min(1, dt * 2);
+      }
+      const attr = s.dust.geometry.getAttribute('position') as THREE.BufferAttribute;
+      const base = s.dust.geometry.userData.base as Float32Array;
+      for (let i = 0; i < attr.count; i++) {
+        const ph = i * 1.3;
+        attr.setXYZ(
+          i,
+          (base[i * 3] ?? 0) + Math.sin(this.time * 0.13 + ph) * 0.25,
+          (base[i * 3 + 1] ?? 0) + Math.sin(this.time * 0.07 + ph * 0.7) * 0.4,
+          (base[i * 3 + 2] ?? 0) + Math.cos(this.time * 0.11 + ph) * 0.25,
+        );
+      }
+      attr.needsUpdate = true;
+    }
+  }
 }

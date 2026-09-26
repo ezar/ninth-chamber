@@ -1,115 +1,237 @@
 /**
- * Single simulation state. Milestone 1: a box that runs and jumps on a flat
- * floor. The grid and Nora's state machine arrive in milestones 2 and 3.
+ * The single simulation state (spec §3 "Estado único"): level geometry,
+ * dynamic actors, logic signals and the player. Advanced by stepWorld at 60 Hz.
  */
+import { clone } from '../core/clone';
 import { EventQueue } from '../core/events';
-import { isPressed, isHeld, type InputFrame } from '../core/input-frame';
-import { Rng } from '../core/rng';
+import type { InputFrame } from '../core/input-frame';
 import { TICK_DT } from '../core/loop';
-import { tuning } from './player/tuning';
+import { Rng } from '../core/rng';
+import type { GridQuery } from './grid/collision';
+import { Level, sectorTop } from './grid/level';
+import { BLOCK, DIR_YAW, cellCenter } from './grid/units';
+import { compileRules, runLogic, type CompiledRule } from './logic/rules';
+import { updateActors } from './actors/update';
+import { stepPlayer } from './player/controller';
+import { mechanics, tuning } from './player/tuning';
+import type { Actor, BlockActor, DoorActor, DynamicState, PlayerState, Stats } from './state';
 
-export interface Vec3 {
-  x: number;
-  y: number;
-  z: number;
-}
-
-export interface PlayerState {
-  pos: Vec3;
-  vel: Vec3;
-  /** Facing (rad), 0 = looking towards -Z. */
-  yaw: number;
-  grounded: boolean;
-}
+export type { Vec3 } from './state';
 
 export interface World {
   tick: number;
   rng: Rng;
-  player: PlayerState;
+  level: Level;
   events: EventQueue;
+  state: DynamicState;
+  /** Dynamic state saved at the last checkpoint. */
+  checkpoint: DynamicState;
+  rules: CompiledRule[];
+  stats: Stats;
+  ended: boolean;
+  grid: GridQuery;
 }
 
-export function createWorld(seed = 1): World {
+const tileKey = (cx: number, cz: number): string => `${cx},${cz}`;
+
+function createActors(level: Level): Actor[] {
+  const actors: Actor[] = [];
+  for (const e of level.entities) {
+    const [cx, cz] = e.at;
+    const floor = level.sector(cx, cz);
+    const y = floor ? sectorTop(floor) : 0;
+    switch (e.type) {
+      case 'block':
+        actors.push({ kind: 'block', id: e.id, cx, cz, y, fallTo: null, from: null, t: 0 });
+        break;
+      case 'door':
+        actors.push({
+          kind: 'door',
+          id: e.id,
+          cx,
+          cz,
+          height: e.height * 0.5,
+          open: e.open ? 1 : 0,
+          target: e.open ? 1 : 0,
+          closeIn: null,
+        });
+        break;
+      case 'lever':
+        actors.push({ kind: 'lever', id: e.id, cx, cz, wall: e.wall, used: false });
+        break;
+      case 'plate':
+        actors.push({ kind: 'plate', id: e.id, cx, cz, pressed: false });
+        break;
+      case 'secret':
+        actors.push({ kind: 'secret', id: e.id, cx, cz, taken: false, variant: e.idol });
+        break;
+      case 'relic':
+        actors.push({ kind: 'relic', id: e.id, cx, cz, taken: false, variant: 'amber' });
+        break;
+      case 'medkit':
+        actors.push({ kind: 'medkit', id: e.id, cx, cz, taken: false, variant: e.size });
+        break;
+      case 'zone':
+        actors.push({ kind: 'zone', id: e.id, cx, cz, w: e.size[0], h: e.size[1], inside: false });
+        break;
+      case 'brazier':
+        break;
+    }
+  }
+  return actors;
+}
+
+function createPlayer(level: Level): PlayerState {
+  const { x, z, dir } = level.start;
+  const px = cellCenter(x);
+  const pz = cellCenter(z);
   return {
-    tick: 0,
-    rng: new Rng(seed),
-    player: {
-      pos: { x: 0, y: 0, z: 0 },
-      vel: { x: 0, y: 0, z: 0 },
-      yaw: 0,
-      grounded: true,
-    },
-    events: new EventQueue(),
+    pos: { x: px, y: level.floorAt(px, pz), z: pz },
+    vel: { x: 0, y: 0, z: 0 },
+    yaw: DIR_YAW[dir],
+    mode: 'ground',
+    modeTime: 0,
+    runTime: 0,
+    sinceGround: 0,
+    sinceJumpPressed: Infinity,
+    sinceRelease: Infinity,
+    jumped: false,
+    fallFrom: 0,
+    airSpeedCap: 0,
+    health: tuning.maxHealth,
+    ledge: null,
+    move: null,
+    target: null,
+    dir: null,
   };
 }
 
-const wrapAngle = (a: number): number => {
-  while (a > Math.PI) a -= 2 * Math.PI;
-  while (a < -Math.PI) a += 2 * Math.PI;
-  return a;
-};
+export function createWorld(level: Level, seed = 1): World {
+  const state: DynamicState = {
+    player: createPlayer(level),
+    actors: createActors(level),
+    tiles: {},
+    signals: {},
+    flags: [],
+    fired: [],
+    pending: [],
+    inventory: {},
+  };
+  const world: World = {
+    tick: 0,
+    rng: new Rng(seed),
+    level,
+    events: new EventQueue(),
+    state,
+    checkpoint: clone(state),
+    rules: compileRules(level.logic),
+    stats: { time: 0, distance: 0, deaths: 0, secrets: 0, medkits: 0 },
+    ended: false,
+    grid: null as unknown as GridQuery,
+  };
+  world.grid = makeGrid(world);
+  return world;
+}
+
+/** Grid heights with dynamic objects layered over the static level. */
+function makeGrid(world: World): GridQuery {
+  const { level } = world;
+  return {
+    cellFloor: (cx, cz) => floorWith(world, cx, cz, null),
+    cellCeil: (cx, cz) => {
+      const s = level.sector(cx, cz);
+      return !s || s.wall ? -Infinity : s.ceil;
+    },
+    floorAt: (x, z) => {
+      const cx = Math.floor(x / BLOCK);
+      const cz = Math.floor(z / BLOCK);
+      const s = level.sector(cx, cz);
+      if (!s || s.wall) return Infinity;
+      const f = floorWith(world, cx, cz, null);
+      // Slopes only apply to the bare static floor.
+      return f === sectorTop(s) ? level.floorAt(x, z) : f;
+    },
+    grabbable: (cx, cz) => !level.sector(cx, cz)?.flags.has('noGrab'),
+  };
+}
+
+/** Effective floor top of a cell, optionally ignoring one block (the one being moved). */
+export function floorWith(world: World, cx: number, cz: number, excludeBlock: string | null): number {
+  const s = world.level.sector(cx, cz);
+  if (!s || s.wall) return Infinity;
+  for (const a of world.state.actors) {
+    if (a.kind === 'door' && a.cx === cx && a.cz === cz && a.open < mechanics.doorPassable) return Infinity;
+  }
+  let h = sectorTop(s);
+  if (world.state.tiles[tileKey(cx, cz)]?.fallen) h = s.pitFloor;
+  for (const a of world.state.actors) {
+    if (a.kind !== 'block' || a.id === excludeBlock) continue;
+    if ((a.cx === cx && a.cz === cz) || (a.from && a.from.cx === cx && a.from.cz === cz)) {
+      h = Math.max(h, a.y + mechanics.blockHeight);
+    }
+  }
+  return h;
+}
+
+export function findActor<K extends Actor['kind']>(
+  world: World,
+  id: string,
+  kind?: K,
+): Extract<Actor, { kind: K }> | undefined {
+  return world.state.actors.find((a) => a.id === id && (!kind || a.kind === kind)) as
+    Extract<Actor, { kind: K }> | undefined;
+}
+
+export function blockAt(world: World, cx: number, cz: number): BlockActor | undefined {
+  return world.state.actors.find(
+    (a): a is BlockActor =>
+      a.kind === 'block' && a.cx === cx && a.cz === cz && a.from === null && a.fallTo === null,
+  );
+}
+
+export function doorAt(world: World, cx: number, cz: number): DoorActor | undefined {
+  return world.state.actors.find((a): a is DoorActor => a.kind === 'door' && a.cx === cx && a.cz === cz);
+}
+
+export function tileState(world: World, cx: number, cz: number): { cracked: number | null; fallen: boolean } {
+  const k = tileKey(cx, cz);
+  return (world.state.tiles[k] ??= { cracked: null, fallen: false });
+}
+
+/** Saves the dynamic state as the respawn point. */
+export function saveCheckpoint(world: World): void {
+  world.checkpoint = clone(world.state);
+  world.events.emit({ type: 'checkpoint', tick: world.tick });
+}
+
+/** Restores the last checkpoint after a death. */
+export function respawn(world: World): void {
+  world.state = clone(world.checkpoint);
+  const p = world.state.player;
+  p.mode = 'ground';
+  p.modeTime = 0;
+  p.vel = { x: 0, y: 0, z: 0 };
+  p.health = Math.max(p.health, tuning.maxHealth / 2);
+  world.events.emit({ type: 'player.respawned', tick: world.tick });
+}
 
 /** Advances the simulation by one 1/60 s tick. */
 export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
-  const p = world.player;
-
-  // Desired direction, camera-relative: forward = where the camera looks.
-  const sin = Math.sin(input.camYaw);
-  const cos = Math.cos(input.camYaw);
-  const dirX = input.moveX * cos - input.moveY * sin;
-  const dirZ = -input.moveX * sin - input.moveY * cos;
-  const mag = Math.hypot(dirX, dirZ);
-
-  if (p.grounded) {
-    const speed = isHeld(input, 'walk') ? tuning.walkSpeed : tuning.runSpeed;
-    const k = Math.min(1, tuning.accel * dt);
-    p.vel.x += (dirX * speed - p.vel.x) * k;
-    p.vel.z += (dirZ * speed - p.vel.z) * k;
-
-    if (isPressed(input, 'jump')) {
-      p.vel.y = tuning.jumpSpeed;
-      p.grounded = false;
-      world.events.emit({ type: 'player.jumped', tick: world.tick });
-    }
-  } else {
-    p.vel.x += dirX * tuning.airControl * dt;
-    p.vel.z += dirZ * tuning.airControl * dt;
-    const h = Math.hypot(p.vel.x, p.vel.z);
-    if (h > tuning.airMaxSpeed) {
-      p.vel.x *= tuning.airMaxSpeed / h;
-      p.vel.z *= tuning.airMaxSpeed / h;
-    }
+  if (!world.ended) {
+    const before = { ...world.state.player.pos };
+    stepPlayer(world, input, dt);
+    updateActors(world, dt);
+    runLogic(world, dt);
+    const p = world.state.player.pos;
+    world.stats.distance += Math.hypot(p.x - before.x, p.z - before.z);
+    world.stats.time += dt;
   }
-
-  if (mag > 0.01) {
-    const target = Math.atan2(-dirX, -dirZ);
-    const diff = wrapAngle(target - p.yaw);
-    const maxTurn = tuning.turnSpeed * dt;
-    p.yaw = wrapAngle(p.yaw + Math.max(-maxTurn, Math.min(maxTurn, diff)));
-  }
-
-  // Gravity integrated exactly (constant acceleration): jump height and air time
-  // match the spec's formulas regardless of the step size.
-  p.pos.x += p.vel.x * dt;
-  p.pos.z += p.vel.z * dt;
-  if (!p.grounded) {
-    p.pos.y += p.vel.y * dt - 0.5 * tuning.gravity * dt * dt;
-    p.vel.y -= tuning.gravity * dt;
-  }
-
-  if (!p.grounded && p.pos.y <= 0) {
-    p.pos.y = 0;
-    p.vel.y = 0;
-    p.grounded = true;
-    world.events.emit({ type: 'player.landed', tick: world.tick });
-  }
-
   world.tick++;
 }
 
 /** Serializable World snapshot (for saves, tests and replays). */
 export function snapshot(world: World): object {
-  return { tick: world.tick, rng: world.rng.state, player: world.player };
+  return { tick: world.tick, rng: world.rng.state, state: world.state };
 }
 
 /** FNV-1a hash of the snapshot, for comparing golden replays. */

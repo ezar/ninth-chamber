@@ -1,0 +1,11 @@
+{
+  "id": "brazier_hall",
+  "background": "#0a0705",
+  "exposure": 1.0,
+  "hemi": { "sky": "#3b2a1e", "ground": "#120c08", "intensity": 0.12 },
+  "fog": { "color": "#3a2416", "density": 0.035 },
+  "sun": null,
+  "fire": { "color": "#ff8a3d", "intensity": 45, "flicker": 0.3 },
+  "bloom": { "strength": 0.7, "radius": 0.45, "threshold": 0.75 },
+  "grade": { "tint": "#ffd9b0", "saturation": 1.05, "contrast": 1.15, "vignette": 0.45 }
+}
