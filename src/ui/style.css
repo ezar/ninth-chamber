@@ -17,6 +17,11 @@ body {
   -webkit-touch-callout: none;
 }
 
+/*
+ * Stacking: scene, HUD, death fade, touch controls, pause button, end
+ * screen, title, menu. Vignette and film grain are part of the render
+ * pipeline (src/render/post.ts), not overlays.
+ */
 #game {
   position: fixed;
   inset: 0;
@@ -25,51 +30,26 @@ body {
   display: block;
   touch-action: none;
   outline: none;
+  opacity: 0;
+  transition: opacity 1.6s ease;
 }
 
-/* Film vignette and grain, subtle (art bible). */
-#vignette {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
-  opacity: 0.5;
-  transition: opacity 1.5s;
-}
-
-#grain {
-  position: fixed;
-  inset: -50%;
-  pointer-events: none;
-  opacity: 0.05;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  animation: grain 0.8s steps(4) infinite;
-}
-
-@keyframes grain {
-  0% {
-    transform: translate(0, 0);
-  }
-  25% {
-    transform: translate(-3%, 2%);
-  }
-  50% {
-    transform: translate(2%, -3%);
-  }
-  75% {
-    transform: translate(-2%, -1%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #grain {
-    animation: none;
-  }
+#game.ready {
+  opacity: 1;
 }
 
 #hud {
   position: fixed;
   inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+body.paused #hud,
+body.paused #touch,
+body.paused #pause-button {
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -146,6 +126,33 @@ body {
     opacity: 0;
     letter-spacing: 0.18em;
   }
+}
+
+/* Reduced motion (options, or the system setting on first run): fades only. */
+@keyframes title-still {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  20%,
+  75% {
+    opacity: 1;
+  }
+}
+
+body.reduce-motion #hud-title.show {
+  animation-name: title-still;
+}
+
+body.reduce-motion #hud-notice,
+body.reduce-motion .menu-item,
+body.reduce-motion .opt {
+  transform: none;
+  transition-property: opacity, color, background-color;
+}
+
+body.reduce-motion #hud-health.low #hud-health-fill {
+  animation: none;
 }
 
 #hud-notice {
@@ -232,6 +239,7 @@ body {
 #fade {
   position: fixed;
   inset: 0;
+  z-index: 2;
   background: #000;
   opacity: 0;
   pointer-events: none;
@@ -247,10 +255,15 @@ body {
 #end {
   position: fixed;
   inset: 0;
+  z-index: 6;
   display: grid;
   place-items: center;
   background: radial-gradient(ellipse at 50% 60%, rgba(15, 13, 11, 0.35), rgba(15, 13, 11, 0.9));
   transition: opacity 0.8s;
+}
+
+#end {
+  z-index: 5;
 }
 
 #start.hidden {
@@ -317,9 +330,80 @@ body {
 }
 
 .panel button:hover,
-.panel button:focus-visible {
+.panel button:focus {
   background: rgba(232, 163, 61, 0.2);
   outline: none;
+}
+
+.panel button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.25);
+}
+
+.panel button:disabled {
+  opacity: 0.32;
+  background: transparent;
+  cursor: default;
+}
+
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel button.ghost {
+  min-width: 0;
+  padding: 10px 22px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--ui-dust);
+  font-size: 12px;
+  letter-spacing: 0.28em;
+}
+
+.panel button.ghost:hover,
+.panel button.ghost:focus {
+  color: var(--ui-bone);
+  background: transparent;
+  border-color: var(--ui-line);
+}
+
+body.loading .panel button.ghost {
+  visibility: hidden;
+}
+
+/* Loading: a hairline that fills in amber, and a line of small caps. */
+#loading {
+  width: min(260px, 70vw);
+  margin: 18px auto 0;
+  transition: opacity 0.8s;
+}
+
+#loading.done {
+  opacity: 0;
+}
+
+.load-track {
+  height: 1px;
+  overflow: hidden;
+  background: var(--ui-line);
+}
+
+#loading-fill {
+  height: 100%;
+  background: var(--ui-amber);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease-out;
+}
+
+#loading-label {
+  margin: 10px 0 0;
+  color: var(--ui-dust);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .seal {
@@ -350,9 +434,45 @@ body {
 
 #touch {
   display: none;
+  position: relative;
+  z-index: 3;
 }
 body.touch #touch {
   display: block;
+}
+
+/* Pause on touch screens (spec §13: 56 px minimum), top right, clear of the health bar. */
+#pause-button {
+  position: fixed;
+  z-index: 4;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  display: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1.5px solid rgba(236, 227, 208, 0.35);
+  border-radius: 50%;
+  background: var(--ui-veil);
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+body.touch.playing #pause-button {
+  display: grid;
+}
+
+#pause-button span {
+  width: 13px;
+  height: 15px;
+  border-left: 3px solid var(--ui-bone);
+  border-right: 3px solid var(--ui-bone);
+}
+
+#pause-button:focus-visible {
+  outline: 2px solid var(--ui-amber);
+  outline-offset: 3px;
 }
 body.touch .panel .help {
   display: none;
@@ -412,9 +532,407 @@ body.touch .panel .help {
   bottom: 112px;
 }
 
+/* ─────────────────────────── Pause menu and options ───────────────────────────
+ * Cinematic and restrained (Claude Design artboard e): the frozen scene stays
+ * visible behind a veil that deepens towards the left, where a single column
+ * of text sits. The focused item is the selected one: amber bar, warm wash.
+ */
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.menu[hidden] {
+  display: none;
+}
+
+.menu.show {
+  opacity: 1;
+}
+
+.menu-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(12, 10, 8, 0.94) 0%,
+      rgba(12, 10, 8, 0.86) 32%,
+      rgba(12, 10, 8, 0.5) 62%,
+      rgba(12, 10, 8, 0.22) 100%
+    ),
+    radial-gradient(ellipse at 75% 50%, transparent 40%, rgba(0, 0, 0, 0.35));
+  -webkit-backdrop-filter: blur(3px) saturate(0.75);
+  backdrop-filter: blur(3px) saturate(0.75);
+}
+
+.menu[data-context='title'] .menu-veil {
+  background: rgba(12, 10, 8, 0.9);
+}
+
+.menu-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  padding: max(32px, env(safe-area-inset-top)) max(24px, 8vw) 16px max(24px, 8vw, env(safe-area-inset-left));
+}
+
+.menu-panel {
+  width: min(380px, 100%);
+}
+
+.menu-panel[hidden] {
+  display: none;
+}
+
+.menu-panel-wide {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 100%);
+  max-height: 100%;
+}
+
+.menu-kicker {
+  margin: 0 0 6px;
+  color: var(--ui-dust);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.menu-title {
+  position: relative;
+  margin: 0 0 26px;
+  padding-bottom: 18px;
+  font: 600 clamp(40px, 6vw, 64px) / 1 var(--font-display);
+  font-variant: small-caps;
+  letter-spacing: 0.1em;
+}
+
+.menu-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 48px;
+  height: 1px;
+  background: var(--ui-amber);
+}
+
+.menu-title-small {
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.1;
+}
+
+.menu-text {
+  max-width: 36ch;
+  margin: -8px 0 24px;
+  color: var(--ui-dust);
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-list-foot {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ui-line);
+}
+
+.menu-item,
+.opt {
+  position: relative;
+  outline: none;
+  transition:
+    color 0.18s,
+    background-color 0.18s,
+    padding-left 0.18s;
+}
+
+.menu-item::before,
+.opt::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--ui-amber);
+  transform: scaleY(0);
+  transition: transform 0.18s;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px 12px 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(236, 227, 208, 0.6);
+  font: 600 14px var(--font-ui);
+  letter-spacing: 0.22em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.menu-item:focus,
+.opt:focus {
+  background: linear-gradient(90deg, rgba(232, 163, 61, 0.15), rgba(232, 163, 61, 0) 85%);
+}
+
+.menu-item:focus {
+  padding-left: 26px;
+  color: var(--ui-bone);
+}
+
+.menu-item:focus::before,
+.opt:focus::before {
+  transform: scaleY(1);
+}
+
+/* Options */
+.options {
+  min-height: 0;
+  margin: 0 -8px;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-line) transparent;
+}
+
+.opt-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 20px 0 4px;
+  color: var(--ui-dust);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.opt-group:first-child {
+  margin-top: 0;
+}
+
+.opt-group::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ui-line);
+}
+
+.opt {
+  padding: 8px 8px 8px 18px;
+}
+
+.opt-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 32px;
+}
+
+.opt-label {
+  color: rgba(236, 227, 208, 0.78);
+  font-weight: 500;
+}
+
+.opt:focus .opt-label {
+  color: var(--ui-bone);
+}
+
+.opt-control {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.opt-arrow {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--ui-dust);
+  cursor: pointer;
+}
+
+.opt-arrow::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-left: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateX(2px) rotate(45deg);
+}
+
+.opt-arrow[data-step='1']::before {
+  transform: translateX(-2px) rotate(-135deg);
+}
+
+.opt:focus .opt-arrow {
+  color: var(--ui-amber);
+}
+
+.opt-arrow.off {
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.opt-value {
+  min-width: 10em;
+  color: var(--ui-bone);
+  font: 600 13px var(--font-ui);
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+[role='switch'] .opt-value:not(.is-on) {
+  color: var(--ui-dust);
+}
+
+.opt-range {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.opt-bar {
+  display: flex;
+  gap: 3px;
+  padding: 10px 0;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.opt-bar i {
+  width: 9px;
+  height: 5px;
+  background: var(--ui-line);
+  transition: background-color 0.15s;
+}
+
+.opt-bar i.on {
+  background: rgba(236, 227, 208, 0.85);
+}
+
+.opt:focus .opt-bar i.on {
+  background: var(--ui-amber);
+}
+
+.opt-num {
+  min-width: 3.4em;
+  color: var(--ui-dust);
+  font: 500 12px var(--font-mono);
+  letter-spacing: 0;
+  text-align: right;
+}
+
+.opt-hint {
+  max-width: 54ch;
+  margin: 2px 0 2px;
+  color: var(--ui-dust);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.opt-hint[hidden] {
+  display: none;
+}
+
+.menu-foot {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 max(24px, 8vw) max(18px, env(safe-area-inset-bottom));
+}
+
+.menu-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  color: var(--ui-dust);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.menu-hints kbd {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--ui-line);
+  border-radius: 4px;
+  color: var(--ui-bone);
+  font: 500 11px var(--font-mono);
+}
+
+.menu[data-device='touch'] .menu-hints {
+  visibility: hidden;
+}
+
+.menu-version {
+  color: rgba(168, 156, 136, 0.5);
+  font: 500 11px var(--font-mono);
+}
+
+/* Phones in landscape: less air, same hierarchy. */
+@media (max-height: 520px) {
+  .menu-body {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: 8px;
+  }
+  .menu-title {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    font-size: 36px;
+  }
+  .menu-kicker {
+    margin-bottom: 2px;
+  }
+  .menu-item {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .opt-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .menu-veil {
+    background: rgba(12, 10, 8, 0.9);
+  }
+  .opt-value {
+    min-width: 7.5em;
+  }
+  .opt-bar i {
+    width: 6px;
+  }
+}
+
 #fatal {
   position: fixed;
   inset: 0;
+  z-index: 20;
   display: grid;
   place-items: center;
   padding: 24px;

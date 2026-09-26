@@ -17,17 +17,19 @@
   </head>
   <body>
     <canvas id="game" tabindex="0"></canvas>
-    <div id="vignette" aria-hidden="true"></div>
-    <div id="grain" aria-hidden="true"></div>
 
     <div id="hud">
-      <div id="hud-health" role="meter" aria-label="Health"><div id="hud-health-fill"></div></div>
+      <div id="hud-health" role="meter" data-i18n-label="hud.health"><div id="hud-health-fill"></div></div>
       <div id="hud-stats"></div>
       <div id="hud-title"></div>
       <div id="hud-notice" role="status"></div>
       <div id="hud-hint" role="status"></div>
       <div id="hud-prompt"></div>
     </div>
+
+    <button id="pause-button" type="button" data-i18n-label="pause.button">
+      <span aria-hidden="true"></span>
+    </button>
 
     <div id="fade" aria-hidden="true"></div>
 
@@ -36,7 +38,7 @@
         <div class="seal" aria-hidden="true"></div>
         <h1 id="end-title"></h1>
         <div id="end-stats"></div>
-        <button id="end-restart"></button>
+        <button id="end-restart" data-nav></button>
       </div>
     </div>
 
@@ -45,9 +47,89 @@
         <p class="kicker" data-i18n="start.kicker"></p>
         <h1 data-i18n="title"></h1>
         <p class="sub" data-i18n="level.antechamber"></p>
-        <button id="start-button" data-i18n="start.play"></button>
+        <div class="start-actions">
+          <button id="start-button" data-nav data-i18n="start.play"></button>
+          <button id="start-options" class="ghost" data-nav data-i18n="start.options"></button>
+        </div>
+        <div id="loading" role="status" aria-live="polite">
+          <div class="load-track"><div id="loading-fill"></div></div>
+          <p id="loading-label"></p>
+        </div>
         <p class="help" data-i18n="help"></p>
       </div>
+    </div>
+
+    <div id="menu" class="menu" role="dialog" aria-modal="true" hidden>
+      <div class="menu-veil" aria-hidden="true"></div>
+      <div class="menu-body">
+        <section class="menu-panel" data-panel="pause">
+          <p class="menu-kicker" data-i18n="level.antechamber"></p>
+          <h2 class="menu-title" id="menu-pause-title" data-i18n="pause.title"></h2>
+          <div class="menu-list">
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="resume"
+              data-i18n="pause.resume"
+            ></button>
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="restart"
+              data-i18n="pause.restart"
+            ></button>
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="options"
+              data-i18n="pause.options"
+            ></button>
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="quit"
+              data-i18n="pause.quit"
+            ></button>
+          </div>
+        </section>
+        <section class="menu-panel menu-panel-wide" data-panel="options" hidden>
+          <p class="menu-kicker" data-i18n="title"></p>
+          <h2 class="menu-title" id="menu-options-title" data-i18n="options.title"></h2>
+          <div class="options" id="options-list"></div>
+          <div class="menu-list menu-list-foot">
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="back"
+              data-i18n="options.back"
+            ></button>
+          </div>
+        </section>
+        <section class="menu-panel" data-panel="confirm" hidden>
+          <p class="menu-kicker" data-i18n="pause.title"></p>
+          <h2 class="menu-title menu-title-small" id="confirm-title"></h2>
+          <p class="menu-text" id="confirm-body"></p>
+          <div class="menu-list">
+            <button class="menu-item" type="button" data-nav data-action="confirm" id="confirm-ok"></button>
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="cancel"
+              data-i18n="confirm.cancel"
+            ></button>
+          </div>
+        </section>
+      </div>
+      <footer class="menu-foot">
+        <div class="menu-hints" id="menu-hints"></div>
+        <div class="menu-version" id="menu-version"></div>
+      </footer>
     </div>
 
     <div id="touch" aria-hidden="true">

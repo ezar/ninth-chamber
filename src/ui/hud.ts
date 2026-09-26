@@ -111,6 +111,22 @@ export class Hud {
     this.end.hidden = true;
   }
 
+  get endVisible(): boolean {
+    return !this.end.hidden;
+  }
+
+  /** Clears everything on screen (back to the title). */
+  reset(): void {
+    this.hideEnd();
+    this.fade.classList.remove('dark');
+    for (const el of [this.notice, this.hint, this.prompt, this.title, this.health])
+      el.classList.remove('show');
+    this.noticeTimer = 0;
+    this.hintTimer = 0;
+    this.healthShownFor = 0;
+    this.lastHealth = 100;
+  }
+
   update(world: World, dt: number): void {
     const p = world.state.player;
     if (p.health !== this.lastHealth) {

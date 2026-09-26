@@ -19,21 +19,28 @@ export function pickLocale(preferred: readonly string[]): string {
 }
 
 let current: Strings = en;
+let currentName = 'en';
 
 export function setLocale(locale: string): void {
   current = locales[locale] ?? en;
-  document.documentElement.lang = locale in locales ? locale : 'en';
+  currentName = locale in locales ? locale : 'en';
+  document.documentElement.lang = currentName;
 }
+
+export const currentLocale = (): string => currentName;
 
 /** Translates `key`, replacing `{name}` placeholders with `params`. */
 export function t(key: StringKey, params: Record<string, string | number> = {}): string {
   return current[key].replace(/\{(\w+)\}/g, (m, name: string) => String(params[name] ?? m));
 }
 
-/** Fills every element carrying a data-i18n attribute. */
+/** Fills every element carrying a data-i18n (text) or data-i18n-label (aria-label) attribute. */
 export function applyStaticStrings(root: ParentNode = document): void {
   for (const el of root.querySelectorAll<HTMLElement>('[data-i18n]')) {
     el.textContent = t(el.dataset.i18n as StringKey);
+  }
+  for (const el of root.querySelectorAll<HTMLElement>('[data-i18n-label]')) {
+    el.setAttribute('aria-label', t(el.dataset.i18nLabel as StringKey));
   }
   document.title = t('title');
 }

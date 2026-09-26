@@ -18,6 +18,8 @@ export const cameraTuning = {
   follow: 10,
   /** Radians per mouse pixel. */
   sensitivity: 0.005,
+  /** Options menu: pushing up looks down (flight-stick style). */
+  invertY: false,
   /** Clearance kept between the camera and walls (m). */
   radius: 0.25,
   /** Time to recover the full distance after a collision (s). */
@@ -42,15 +44,14 @@ export class OrbitCamera {
   readonly eye = { x: 0, y: 0, z: 0 };
   readonly lookAt = { x: 0, y: 0, z: 0 };
   private focus: { at: Vec3; left: number; blend: number } | null = null;
+  private focusEase = 0;
   private autoYaw: number | null = null;
 
   look(dx: number, dy: number, zoom: number): void {
     if (dx !== 0 || dy !== 0) this.autoYaw = null;
     this.yaw -= dx * cameraTuning.sensitivity;
-    this.pitch = Math.max(
-      cameraTuning.minPitch,
-      Math.min(cameraTuning.maxPitch, this.pitch + dy * cameraTuning.sensitivity),
-    );
+    const pitchDelta = (cameraTuning.invertY ? -dy : dy) * cameraTuning.sensitivity;
+    this.pitch = Math.max(cameraTuning.minPitch, Math.min(cameraTuning.maxPitch, this.pitch + pitchDelta));
     this.distance = Math.max(
       cameraTuning.minDistance,
       Math.min(cameraTuning.maxDistance, this.distance + zoom * 0.5),
@@ -78,6 +79,16 @@ export class OrbitCamera {
 
   get focusing(): boolean {
     return this.focus !== null;
+  }
+
+  /** The point a focus shot looks at, for depth of field (null outside focus shots). */
+  get focusPoint(): Vec3 | null {
+    return this.focus?.at ?? null;
+  }
+
+  /** How far the current focus shot has blended in (0..1, eased). */
+  get focusWeight(): number {
+    return this.focusEase;
   }
 
   update(player: Vec3, hanging: boolean, grid: GridQuery, dt: number): void {
@@ -128,10 +139,13 @@ export class OrbitCamera {
       f.blend = Math.min(1, f.blend + dt * 1.5);
       const b = f.left > 0 ? f.blend : Math.max(0, f.blend - (0 - f.left) * 2);
       const e = b * b * (3 - 2 * b);
+      this.focusEase = e;
       this.lookAt.x += (f.at.x - this.lookAt.x) * e;
       this.lookAt.y += (f.at.y - this.lookAt.y) * e;
       this.lookAt.z += (f.at.z - this.lookAt.z) * e;
       if (f.left < -0.5) this.focus = null;
+    } else {
+      this.focusEase = 0;
     }
   }
 

@@ -116,4 +116,15 @@ export class AudioEngine {
     this.muted = muted;
     this.graph?.mixer.setMuted(muted);
   }
+
+  /**
+   * Pause menu: suspends the whole audio context, so loops, reverb tails and
+   * scheduled music stop in place and continue where they were on resume.
+   */
+  setPaused(paused: boolean): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (paused) void ctx.suspend().catch(() => undefined);
+    else void ctx.resume().catch(() => undefined);
+  }
 }
