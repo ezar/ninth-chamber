@@ -150,9 +150,11 @@ export class OrbitCamera {
       case 'block.landed':
         this.shake(0.45 * near(e.id, 14));
         break;
-      case 'tile.fell':
-        this.shake(0.3 * near(e.id, 12));
+      case 'tile.fell': {
+        const d = Math.hypot(Number(e.cx) * 2 + 1 - player.x, Number(e.cz) * 2 + 1 - player.z);
+        this.shake(0.3 * Math.max(0, 1 - (Number.isFinite(d) ? d : 99) / 12));
         break;
+      }
       case 'door.opening':
       case 'door.closing':
         this.shake(0.22 * near(e.id, 18));

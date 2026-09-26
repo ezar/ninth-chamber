@@ -6,6 +6,7 @@ import { EventBus, type SimEvent } from './core/events';
 import { GamepadDevice, KeyboardMouseDevice, TouchDevice, mergeDevices } from './core/input';
 import { InputFramer, emptyFrame, isPressed } from './core/input-frame';
 import { FixedStepLoop } from './core/loop';
+import { GroundFx } from './render/fx';
 import { GameRenderer, type PlayerPose } from './render/scene';
 import { Level } from './sim/grid/level';
 import { BLOCK } from './sim/grid/units';
@@ -57,6 +58,7 @@ async function main(): Promise<void> {
 
   const bus = new EventBus();
   const camera = new OrbitCamera();
+  const fx = new GroundFx(renderer.scene);
   const hud = new Hud(() => restart());
   const keyboard = new KeyboardMouseDevice(canvas);
   const gamepad = new GamepadDevice();
@@ -116,9 +118,33 @@ async function main(): Promise<void> {
     }
     if (e.type === 'player.grabbed') camera.swingBehind(world.state.player.yaw);
     camera.onEvent(e, p, (id) => renderer.entityPosition(id));
+    groundFx(e);
     if (e.type === 'level.end') document.body.classList.remove('playing');
   };
   bus.on('*', onEvent);
+
+  /** Dust and footprints for events that move stone or bodies. */
+  const groundFx = (e: SimEvent): void => {
+    const cell = (cx: number, cz: number): { x: number; y: number; z: number } => {
+      const x = cx * BLOCK + BLOCK / 2;
+      const z = cz * BLOCK + BLOCK / 2;
+      return { x, y: level.floorAt(x, z), z };
+    };
+    const p = world.state.player;
+    if (e.type === 'player.landed') {
+      const s = level.sector(Math.floor(p.pos.x / BLOCK), Math.floor(p.pos.z / BLOCK));
+      fx.land(p.pos, Number(e.fall) || 0, s?.mat ?? 'stone');
+    } else if (e.type === 'block.landed') {
+      const b = world.state.actors.find((a) => a.kind === 'block' && a.id === e.id);
+      if (b && b.kind === 'block') fx.impact({ ...cell(b.cx, b.cz), y: b.y }, 1);
+    } else if (e.type === 'tile.fell') {
+      const at = cell(Number(e.cx), Number(e.cz));
+      fx.impact({ ...at, y: at.y - 0.4 }, 0.7);
+    } else if (e.type === 'door.opening' || e.type === 'door.closing') {
+      const at = renderer.entityPosition(String(e.id));
+      if (at) fx.sift({ ...at, y: at.y - 1.5 });
+    }
+  };
 
   const loop = new FixedStepLoop(() => {
     prev = pose();
@@ -141,6 +167,7 @@ async function main(): Promise<void> {
         const s = level.sector(Math.floor(p.pos.x / BLOCK), Math.floor(p.pos.z / BLOCK));
         lastMaterial = s?.mat ?? lastMaterial;
         audio.onEvent({ type: 'footstep', tick: world.tick, material: lastMaterial, run: running }, p.pos);
+        fx.footstep(p.pos, p.yaw, lastMaterial, running);
       }
     }
   });
@@ -211,6 +238,7 @@ async function main(): Promise<void> {
       dt,
     );
     hud.update(world, dt);
+    fx.update(dt);
 
     const r = level.roomAt(Math.floor(at.x / BLOCK), Math.floor(at.z / BLOCK));
     if (r && r.id !== room) {
@@ -237,6 +265,7 @@ async function main(): Promise<void> {
     camera,
     start,
     renderer,
+    fx,
   };
 }
 
