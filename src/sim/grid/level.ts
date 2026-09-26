@@ -53,6 +53,8 @@ const key = (cx: number, cz: number): number => (cx + 32768) * 65536 + (cz + 327
 export class Level {
   readonly id: string;
   readonly name: string;
+  /** Par time (s) for the end-of-level rating, if the level sets one. */
+  readonly par: number | null;
   readonly rooms: RoomInfo[] = [];
   readonly entities: EntityFile[];
   readonly logic: RuleFile[];
@@ -62,6 +64,7 @@ export class Level {
   constructor(file: LevelFile) {
     this.id = file.id;
     this.name = file.name;
+    this.par = file.par ?? null;
     this.entities = file.entities.map((e) => ({ ...e, at: this.toWorld(file, e.room, e.at) }));
     this.logic = file.logic;
 

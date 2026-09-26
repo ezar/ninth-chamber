@@ -136,6 +136,33 @@ describe('traps and pickups', () => {
     run(w, frame(), ticks(tuning.pickupTime));
     expect(w.stats.secrets).toBe(1);
   });
+
+  it('a secret found after the last checkpoint counts once and stays found after a death', () => {
+    const w = testLevel(['#####', '#...#', '#.X.#', '#.S.#', '#####'], {
+      entities: [{ id: 's1', type: 'secret', room: 'r', at: [2, 3], idol: 'jade' }],
+      legend: { X: { floor: 0, flags: ['death'] } },
+    });
+    stepWorld(w, frame({ pressed: ['action'] }));
+    run(w, frame(), ticks(tuning.pickupTime));
+    expect(w.stats.secrets).toBe(1);
+    expect(w.stats.secretsFound).toEqual(['s1']);
+
+    // Die on the spikes: the respawn restores the checkpoint taken before the secret.
+    run(w, frame({ y: 1 }), 30);
+    expect(w.state.player.mode).toBe('dead');
+    run(w, frame(), ticks(tuning.respawnDelay) + 10);
+    expect(w.state.player.mode).toBe('ground');
+    const idol = w.state.actors.find((a) => a.id === 's1');
+    expect(idol?.kind === 'secret' && idol.taken).toBe(true);
+    expect(w.state.signals['s1.taken']).toBe(true);
+
+    // Action on its sector finds nothing to pick up and counts nothing.
+    w.events.drain();
+    stepWorld(w, frame({ pressed: ['action'] }));
+    run(w, frame(), ticks(tuning.pickupTime));
+    expect(w.events.drain().some((e) => e.type === 'secret.found')).toBe(false);
+    expect(w.stats.secrets).toBe(1);
+  });
 });
 
 describe('plate-held and timed gates', () => {

@@ -1,0 +1,28 @@
+{
+  "//": "Quaternius Universal Animation Library (Standard, CC0). Source folder: 'Universal Animation Library[Standard]/Unreal-Godot'.",
+  "rig": "ual",
+  "source": "Quaternius Universal Animation Library",
+  "rest": { "file": "UAL1_Standard.glb", "anim": "A_TPose" },
+  "clips": [
+    { "name": "idle", "file": "UAL1_Standard.glb", "anim": "Idle_Loop", "loop": true },
+    {
+      "name": "walk",
+      "file": "UAL1_Standard.glb",
+      "anim": "Walk_Loop",
+      "loop": true,
+      "gait": true,
+      "speedFrom": { "file": "UAL1_Standard_RM.glb", "node": "root" }
+    },
+    {
+      "name": "run",
+      "file": "UAL1_Standard.glb",
+      "anim": "Jog_Fwd_Loop",
+      "loop": true,
+      "gait": true,
+      "speedFrom": { "file": "UAL1_Standard_RM.glb", "node": "root" }
+    },
+    { "name": "jump_start", "file": "UAL1_Standard.glb", "anim": "Jump_Start", "loop": false },
+    { "name": "jump_loop", "file": "UAL1_Standard.glb", "anim": "Jump_Loop", "loop": true },
+    { "name": "jump_land", "file": "UAL1_Standard.glb", "anim": "Jump_Land", "loop": false }
+  ]
+}

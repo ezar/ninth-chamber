@@ -10,6 +10,8 @@ import { ENEMY_TYPES } from '../player/tuning';
 export const MATERIALS = ['sand', 'stone', 'metal', 'wood', 'water'] as const;
 export const SECTOR_FLAGS = ['climbN', 'climbE', 'climbS', 'climbW', 'death', 'crumble', 'noGrab'] as const;
 export const FACINGS = ['N', 'E', 'S', 'W'] as const;
+/** How a journal note is presented: a typed expedition log, a handwritten page or a carving. */
+export const NOTE_STYLES = ['diary', 'letter', 'carving'] as const;
 
 const cell = z.tuple([z.number().int(), z.number().int()]);
 const clicks = z.number().int();
@@ -87,6 +89,17 @@ const entity = z.discriminatedUnion('type', [
     .strict(),
   z.object({ ...entityBase, type: z.literal('plate') }).strict(),
   z.object({ ...entityBase, type: z.literal('secret'), idol: z.enum(['gold', 'jade', 'stone']) }).strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('note'),
+      /** i18n key prefix: `<text>.meta`, `<text>.title` and `<text>.body` hold the note. */
+      text: z.string().min(1),
+      style: z.enum(NOTE_STYLES),
+      /** The note lies against this wall of its sector (carvings on a wall, pages in a corner). */
+      wall: z.enum(FACINGS).optional(),
+    })
+    .strict(),
   z.object({ ...entityBase, type: z.literal('relic') }).strict(),
   z.object({ ...entityBase, type: z.literal('medkit'), size: z.enum(['small', 'large']) }).strict(),
   z.object({ ...entityBase, type: z.literal('brazier') }).strict(),
@@ -125,6 +138,8 @@ export const levelSchema = z
     id: z.string().min(1),
     /** Key into i18n/*.json for the level name. */
     name: z.string().min(1),
+    /** Par time in seconds for the end-of-level rating. */
+    par: z.number().positive().optional(),
     start: z.object({ room: z.string(), at: cell, face: z.enum(FACINGS) }).strict(),
     rooms: z.array(room).min(1),
     entities: z.array(entity).default([]),
@@ -140,3 +155,4 @@ export type RuleFile = LevelFile['logic'][number];
 export type Material = (typeof MATERIALS)[number];
 export type SectorFlag = (typeof SECTOR_FLAGS)[number];
 export type Facing = (typeof FACINGS)[number];
+export type NoteStyle = (typeof NOTE_STYLES)[number];

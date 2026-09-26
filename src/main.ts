@@ -1,6 +1,8 @@
 import './ui/style.css';
+import './ui/screens.css';
 import levelJson from '../levels/antechamber.level.json';
 import { AudioEngine, type ReverbPreset } from './audio/engine';
+import { entranceShots, shotYaw, titleShot, type Shot } from './camera/cinematic';
 import { OrbitCamera, cameraTuning } from './camera/orbit';
 import { EventBus, type SimEvent } from './core/events';
 import { Haptics, hapticsEnabled, setHapticsEnabled } from './core/haptics';
@@ -19,23 +21,21 @@ import {
 } from './render/quality';
 import { GameRenderer, type PlayerPose } from './render/scene';
 import { Level } from './sim/grid/level';
+import type { NoteStyle } from './sim/grid/schema';
 import { BLOCK } from './sim/grid/units';
 import { createWorld, respawn, stepWorld, type World } from './sim/world';
+import { chamberOf } from './ui/campaign';
+import { EndScreen } from './ui/end-screen';
 import { Hud, type Device } from './ui/hud';
 import { applyStaticStrings, pickLocale, setLocale, type StringKey } from './ui/i18n';
+import { Intro } from './ui/intro';
 import { LoadingScreen } from './ui/loading';
 import { Menu } from './ui/menu';
-import {
-  DirectionRepeat,
-  PAD,
-  PadReader,
-  focusItem,
-  moveFocus,
-  navItems,
-  padDirection,
-  padHas,
-} from './ui/pad';
+import { PadEdgeReader } from './ui/nav';
+import { PAD, PadReader, focusItem, padHas } from './ui/pad';
+import { Reader } from './ui/reader';
 import { browserStorage, defaultSettings, loadSettings, saveSettings, type Settings } from './ui/settings';
+import { TitleScreen } from './ui/title';
 
 const $ = <T extends HTMLElement>(sel: string): T => {
   const el = document.querySelector<T>(sel);
@@ -44,6 +44,9 @@ const $ = <T extends HTMLElement>(sel: string): T => {
 };
 
 const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(() => r()));
+
+/** Title screen → intro → play (the pause menu and the note reader stop it) → end of the level. */
+type Phase = 'title' | 'intro' | 'play' | 'end';
 
 function deviceHints(): DeviceHints {
   const nav = navigator as Navigator & { deviceMemory?: number };
@@ -86,6 +89,7 @@ async function main(): Promise<void> {
   }
 
   const level = Level.parse(levelJson);
+  const chamber = chamberOf(level.id);
   let world: World = createWorld(level, 1);
   renderer.setWorld(world);
 
@@ -111,22 +115,39 @@ async function main(): Promise<void> {
   const fx = new GroundFx(renderer.scene);
   const haptics = new Haptics();
   const baseSensitivity = cameraTuning.sensitivity;
-  const hud = new Hud(() => restart());
+  const hud = new Hud();
   const keyboard = new KeyboardMouseDevice(canvas);
   const gamepad = new GamepadDevice();
   const touch = new TouchDevice(canvas, $('#touch'), { base: $('#stick'), knob: $('#stick-knob') });
   const devices = [keyboard, gamepad, touch];
   const framer = new InputFramer();
   const pads = new PadReader();
-  const titleRepeat = new DirectionRepeat();
+  const padEdges = new PadEdgeReader();
   const drs = new DynamicResolution(QUALITY[tier].minRenderScale);
   let benchmark: TierBenchmark | null = null;
-  let playing = false;
+
+  let phase: Phase = 'title';
+  const setPhase = (p: Phase): void => {
+    phase = p;
+    document.body.dataset.phase = p;
+    document.body.classList.toggle('playing', p === 'play');
+  };
+  setPhase('title');
   let paused = false;
   /** Re-render once while paused (resize, options changes). */
   let redraw = false;
+  /** After a menu, the reader or the intro closes, ignore the presses that closed it until every button is up. */
+  let swallow = false;
   // The keyboard belongs to the page (buttons, Tab) until the game starts.
   keyboard.setEnabled(false);
+
+  /**
+   * UI cues (intro, reader, end screen) go through the same bus as simulation
+   * events, so audio and the HUD can react to them: see ui/intro.ts,
+   * ui/end-screen.ts and `note.closed` below.
+   */
+  const cue = (type: string, data: Record<string, unknown> = {}): void =>
+    bus.dispatch([{ type, tick: world.tick, ...data }]);
 
   const setDevice = (d: Device): void => {
     hud.device = d;
@@ -211,29 +232,45 @@ async function main(): Promise<void> {
     for (const d of devices) d.takeLook();
     const { raw } = mergeDevices(devices);
     framer.next(raw, 0, camera.yaw);
+    swallow = true;
   };
+
+  // Cinematic shots in the entrance: the title drifts on the first, the intro runs through all.
+  let shots = entranceShots(level, world.state.player.pos, world.state.player.yaw);
+  let clock = 0;
+  let view: Shot = titleShot(shots[0] ?? { eye: camera.eye, look: camera.lookAt }, 0);
+
+  /** The intro has landed behind Nora: control to the player, and the level title. */
+  const beginPlay = (): void => {
+    setPhase('play');
+    keyboard.setEnabled(true);
+    flushInput();
+    hud.showTitle(level.name as StringKey, chamber?.kicker);
+    canvas.focus({ preventScroll: true });
+  };
+  const intro = new Intro(beginPlay, cue);
 
   /**
    * Entering the tomb: the button answers at once (press flash, busy), the
-   * screen cuts to black, play begins under the curtain with the camera
-   * already behind Nora, and the curtain lifts on the level title.
+   * screen cuts to black, the intro begins under the curtain from the title's
+   * shot, and the curtain lifts on the first story card.
    */
   let starting = false;
   const curtain = $('#curtain');
   // The first gesture on the title screen unlocks audio and brings in the title theme.
   const titleMusic = (): void => {
-    if (playing) return;
+    if (phase !== 'title') return;
     void audio.unlock();
     audio.playTrack('title', 3);
   };
   window.addEventListener('pointerdown', titleMusic, { capture: true });
   window.addEventListener('keydown', titleMusic, { capture: true });
-  for (const b of document.querySelectorAll<HTMLButtonElement>('#start-button, #end-restart')) {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#start button, #end button')) {
     b.addEventListener('pointerenter', () => audio.ui('hover'));
   }
 
   const start = (): void => {
-    if (playing || starting || !loading.isReady || menu.isOpen) return;
+    if (phase !== 'title' || starting || !loading.isReady || menu.isOpen) return;
     starting = true;
     // Audio and fullscreen must be requested inside the gesture itself.
     void audio.unlock();
@@ -250,32 +287,34 @@ async function main(): Promise<void> {
     curtain.classList.add('in');
     window.setTimeout(() => {
       starting = false;
-      playing = true;
-      $('#start').classList.add('hidden');
+      title.hide();
       startButton.classList.remove('pressed');
       startButton.removeAttribute('aria-busy');
-      document.body.classList.add('playing');
+      // The orbit camera waits behind Nora; the intro lands on it.
       camera.yaw = world.state.player.yaw;
       camera.recenter(world.state.player.yaw);
-      keyboard.setEnabled(true);
-      flushInput();
-      canvas.focus();
-      // Two frames of play under the curtain, then lift it on the title.
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          curtain.classList.remove('in');
-          hud.showTitle(level.name as StringKey);
-        }),
+      setPhase('intro');
+      intro.start(
+        [view, ...shots.slice(1)],
+        chamber?.intro ?? [],
+        document.body.classList.contains('touch'),
+        settings.reducedMotion,
       );
+      // Two frames of the intro under the curtain, then lift it.
+      requestAnimationFrame(() => requestAnimationFrame(() => curtain.classList.remove('in')));
     }, 480);
   };
-  startButton.addEventListener('click', start);
+  const title = new TitleScreen(
+    start,
+    (type) => cue(type),
+    () => menu.isOpen || !loading.isReady,
+  );
   $('#start-options').addEventListener('click', () => {
     if (!menu.isOpen) menu.open('title');
   });
 
   const pause = (): void => {
-    if (!playing || paused || world.ended) return;
+    if (phase !== 'play' || paused || world.ended || reader.isOpen) return;
     paused = true;
     keyboard.setEnabled(false);
     audio.setPaused(true);
@@ -305,32 +344,45 @@ async function main(): Promise<void> {
     resume();
   };
 
+  /** Play again from the end screen: a fresh world, straight into play. */
   const restart = (): void => {
     audio.ui('confirm');
     world = createWorld(level, 1);
-    renderer.setWorld(world);
+    renderer.resetWorld(world);
     prev = pose();
-    hud.hideEnd();
+    hud.reset();
+    endScreen.hide();
+    camera.yaw = world.state.player.yaw;
     camera.recenter(world.state.player.yaw);
-    flushInput();
-    playing = true;
-    document.body.classList.add('playing');
+    beginPlay();
   };
 
   const quitToTitle = (): void => {
     paused = false;
-    playing = false;
     menu.close();
-    document.body.classList.remove('paused', 'playing');
+    document.body.classList.remove('paused');
     world = createWorld(level, 1);
-    renderer.setWorld(world);
+    renderer.resetWorld(world);
     prev = pose();
+    shots = entranceShots(level, world.state.player.pos, world.state.player.yaw);
     hud.reset();
+    endScreen.hide();
     audio.setPaused(false);
     keyboard.setEnabled(false);
-    $('#start').classList.remove('hidden');
+    setPhase('title');
+    title.show();
     focusItem(startButton);
   };
+  const endScreen = new EndScreen(restart, quitToTitle, cue);
+
+  const reader = new Reader(
+    (note) => {
+      flushInput();
+      canvas.focus({ preventScroll: true });
+      cue('note.closed', { id: note.id, first: note.first, count: note.count, total: note.total });
+    },
+    () => hud.device,
+  );
 
   // ───────────────────────────── Input routing ─────────────────────────────
 
@@ -345,50 +397,35 @@ async function main(): Promise<void> {
     } else if (e.pointerType === 'mouse') {
       setDevice('keyboard');
     }
+    // Any click or tap skips the intro (after half a second).
+    if (phase === 'intro') intro.skip();
   });
   window.addEventListener('keydown', (e) => {
     setDevice('keyboard');
     if (menu.handleKey(e)) return;
-    if (e.code === 'Escape') {
-      if (!e.repeat) pause();
+    // Any key skips the intro (after half a second).
+    if (phase === 'intro') {
+      intro.skip();
       return;
     }
-    if (playing || !loading.isReady) return;
-    const title = $('#start');
-    if (e.code === 'ArrowDown' || e.code === 'ArrowUp') {
-      moveFocus(title, e.code === 'ArrowDown' ? 1 : -1);
-      e.preventDefault();
-    } else if ((e.code === 'Enter' || e.code === 'Space') && !e.repeat) {
-      // A focused title button handles its own activation.
-      if (document.activeElement instanceof HTMLButtonElement) return;
-      e.preventDefault();
-      start();
-    }
+    if (e.code === 'Escape' && !e.repeat) pause();
+    // The title screen, the credits, the reader and the end screen handle their own keys.
   });
 
-  /** Gamepad outside the game: title and end screens, the pause menu, Start to pause. */
-  const routePad = (dt: number): void => {
+  /** Gamepad: the pause menu and Start to pause (their PadReader); the other screens read `padEdges`. */
+  const routePad = (dt: number): boolean => {
     const pad = pads.read();
-    if (!pad.connected) return;
+    if (!pad.connected) return false;
     if (pad.pressed) setDevice('gamepad');
     if (menu.isOpen) {
       menu.update(pad, dt);
-      return;
+      return true;
     }
-    if (playing && !world.ended) {
-      if (padHas(pad.pressed, PAD.START)) pause();
-      return;
+    if (phase === 'play' && !world.ended && !reader.isOpen && padHas(pad.pressed, PAD.START)) {
+      pause();
+      return true;
     }
-    const screen = hud.endVisible ? $('#end') : !playing && loading.isReady ? $('#start') : null;
-    if (!screen) return;
-    const dir = titleRepeat.update(padDirection(pad), dt);
-    if (dir === 'up' || dir === 'down') moveFocus(screen, dir === 'down' ? 1 : -1);
-    if (padHas(pad.pressed, PAD.A)) {
-      const focused = document.activeElement;
-      const target =
-        focused instanceof HTMLButtonElement && screen.contains(focused) ? focused : navItems(screen)[0];
-      target?.click();
-    }
+    return false;
   };
 
   // ───────────────────────────── Simulation ─────────────────────────────
@@ -423,7 +460,22 @@ async function main(): Promise<void> {
     groundFx(e);
     haptics.device = hud.device;
     haptics.onEvent(e, p, (id) => renderer.entityPosition(id));
-    if (e.type === 'level.end') document.body.classList.remove('playing');
+    if (e.type === 'note.read') {
+      reader.open({
+        id: String(e.id),
+        text: String(e.text),
+        style: e.style as NoteStyle,
+        first: e.first === true,
+        count: Number(e.count),
+        total: Number(e.total),
+      });
+    }
+    if (e.type === 'level.end') {
+      setPhase('end');
+      // The page owns the keyboard again (Tab, Enter on the end screen's buttons).
+      keyboard.setEnabled(false);
+      endScreen.show(world, (id) => id === level.id);
+    }
   };
   bus.on('*', onEvent);
 
@@ -453,10 +505,18 @@ async function main(): Promise<void> {
   const loop = new FixedStepLoop(() => {
     prev = pose();
     const { raw, tapped } = mergeDevices(devices);
-    const input = playing && !camera.focusing ? framer.next(raw, tapped, camera.yaw) : emptyFrame();
-    if (camera.focusing && (tapped !== 0 || Math.hypot(raw.moveX, raw.moveY) > 0.5)) camera.skipFocus();
+    // Framed every tick, even when stopped, so edges stay in step with the devices.
+    const live = framer.next(raw, tapped, camera.yaw);
+    const running = phase === 'play' && !reader.isOpen;
+    const input = running && !camera.focusing ? live : emptyFrame();
+    if (swallow) {
+      input.pressed = 0;
+      if (live.held === 0) swallow = false;
+    }
+    if (running && camera.focusing && (tapped !== 0 || Math.hypot(raw.moveX, raw.moveY) > 0.5))
+      camera.skipFocus();
     if (isPressed(input, 'recenter')) camera.recenter(world.state.player.yaw);
-    if (playing) stepWorld(world, input);
+    if (running) stepWorld(world, input);
     bus.dispatch(world.events.drain());
 
     // Footsteps from ground distance travelled (a stride every ~0.8 m running, 0.6 m walking).
@@ -484,8 +544,11 @@ async function main(): Promise<void> {
   // ───────────────────────────── Frame ─────────────────────────────
 
   let alpha = 0;
-  /** Renders the interpolated state; `cameraDt` lets the first frame snap the camera into place. */
-  const draw = (dt: number, cameraDt = dt): void => {
+  /**
+   * Renders the interpolated state; `cameraDt` lets the first frame snap the
+   * camera into place, and `gameplay` forces the view behind Nora (warm-up).
+   */
+  const draw = (dt: number, cameraDt = dt, gameplay = false): void => {
     const curr = pose();
     const p = world.state.player;
     const at = {
@@ -510,6 +573,17 @@ async function main(): Promise<void> {
       renderer.camera.fov = fov;
       renderer.camera.updateProjectionMatrix();
     }
+    // The title drifts on the entrance shot (held still with reduced motion); the intro flies its path.
+    const orbit: Shot = { eye: { ...camera.eye }, look: { ...camera.lookAt } };
+    view = gameplay
+      ? orbit
+      : phase === 'title'
+        ? titleShot(shots[0] ?? orbit, settings.reducedMotion ? 0 : clock)
+        : phase === 'intro'
+          ? intro.update(dt, orbit)
+          : orbit;
+    const cinematic = view !== orbit;
+    const toNora = Math.hypot(view.eye.x - at.x, view.eye.y - at.y - 1.4, view.eye.z - at.z);
     renderer.render(
       prev,
       curr,
@@ -523,12 +597,14 @@ async function main(): Promise<void> {
         health: p.health,
         ...renderer.combat.aimPose(world),
       },
-      camera.eye,
-      camera.lookAt,
-      camera.currentDistance,
+      view.eye,
+      view.look,
+      cinematic ? toNora : camera.currentDistance,
       dt,
     );
     fx.update(dt);
+    // The listener follows the view, with the player's yaw convention.
+    audio.update({ ...view.eye, yaw: cinematic ? shotYaw(view) : camera.yaw }, dt);
   };
 
   // First frames behind the loading screen compile every shader the opening
@@ -536,10 +612,9 @@ async function main(): Promise<void> {
   loading.setStage('loading.prepare', 0.8);
   await nextFrame();
   camera.yaw = world.state.player.yaw;
-  draw(0, 1);
+  draw(0, 1, true);
   renderer.warmup();
   await nextFrame();
-  camera.yaw = world.state.player.yaw + Math.PI * 0.85;
   draw(0, 1);
   canvas.classList.add('ready');
 
@@ -571,7 +646,6 @@ async function main(): Promise<void> {
   let last = performance.now();
   let fpsFrames = 0;
   let fpsTime = 0;
-  let introYaw = 0;
   let room: string | null = null;
 
   renderer.renderer.setAnimationLoop((now: number) => {
@@ -579,7 +653,7 @@ async function main(): Promise<void> {
     const dt = Math.min(0.1, rawDt);
     last = now;
 
-    routePad(dt);
+    const menuOwnsPad = routePad(dt);
     if (paused) {
       gamepad.update(0);
       if (redraw) {
@@ -588,23 +662,30 @@ async function main(): Promise<void> {
       }
       return;
     }
+    clock += dt;
 
     gamepad.update(dt);
-    if (gamepad.poll().held !== 0) setDevice('gamepad');
+    const padState = gamepad.poll();
+    if (padState.held !== 0) setDevice('gamepad');
+    const pad = padEdges.next(padState);
+    if (!menuOwnsPad) {
+      if (phase === 'title') title.pad(pad);
+      else if (phase === 'intro' && pad.any) intro.skip();
+      else if (phase === 'end') endScreen.pad(pad);
+      else reader.pad(pad);
+    }
+    reader.update(dt);
+
+    const looking = phase === 'play' && !reader.isOpen;
     for (const d of devices) {
       const l = d.takeLook();
-      if (playing) camera.look(l.x, l.y, l.zoom);
-    }
-    if (!playing) {
-      // Slow cinematic orbit behind the start screen (held still with reduced motion).
-      if (!settings.reducedMotion) introYaw += dt * 0.08;
-      camera.yaw = world.state.player.yaw + Math.PI * 0.85 + Math.sin(introYaw) * 0.6;
+      if (looking) camera.look(l.x, l.y, l.zoom);
     }
 
     alpha = loop.advance(dt).alpha;
     draw(dt);
     redraw = false;
-    if (playing) hud.update(world, dt);
+    if (phase === 'play') hud.update(world, dt);
 
     const p = world.state.player.pos;
     const r = level.roomAt(Math.floor(p.x / BLOCK), Math.floor(p.z / BLOCK));
@@ -612,8 +693,6 @@ async function main(): Promise<void> {
       room = r.id;
       audio.setRoom((r.reverb as ReverbPreset | null) ?? null);
     }
-    // The camera looks along the same yaw convention as the player.
-    audio.update({ ...camera.eye, yaw: camera.yaw }, dt);
 
     // Quality: the first-run benchmark, then dynamic resolution (spec §14).
     if (benchmark) {
@@ -649,6 +728,13 @@ async function main(): Promise<void> {
     get world() {
       return world;
     },
+    get phase() {
+      return phase;
+    },
+    /** The entrance camera shots (title drift and intro path), editable for framing tests. */
+    get shots() {
+      return shots;
+    },
     camera,
     start,
     pause,
@@ -658,6 +744,11 @@ async function main(): Promise<void> {
     menu,
     settings,
     drs,
+    loading,
+    intro,
+    reader,
+    endScreen,
+    skipIntro: () => intro.skip(),
     setQuality: (t: QualityTier) => {
       settings.quality = t;
       settings.qualitySource = 'user';

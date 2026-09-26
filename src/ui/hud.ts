@@ -1,11 +1,13 @@
 /**
  * Minimal, near-diegetic HUD (spec §13, Claude Design artboard e): health only
- * when it matters, a context prompt, big brief notices, tutorial hints, the
- * death fade and the end-of-level screen. It only listens to sim events.
+ * when it matters, a context prompt, big brief notices, tutorial hints and the
+ * death fade. It only listens to sim events (the end of the level has its own
+ * screen, ui/end-screen.ts).
  */
 import type { SimEvent } from '../core/events';
 import { BLOCK, DIR_VEC, yawToDir } from '../sim/grid/units';
 import { blockAt, type World } from '../sim/world';
+import { chamberOf } from './campaign';
 import { t, type StringKey } from './i18n';
 
 export type Device = 'keyboard' | 'gamepad' | 'touch';
@@ -24,7 +26,6 @@ export class Hud {
   private readonly hint = $('hud-hint');
   private readonly title = $('hud-title');
   private readonly fade = $('fade');
-  private readonly end = $('end');
   /** Red edges when Nora takes damage (spec §7 "Salud"); created here so the page markup stays as is. */
   private readonly hurtFlash = document.createElement('div');
   private readonly weaponsButton = document.querySelector<HTMLElement>('#touch [data-button="weapons"]');
@@ -35,15 +36,22 @@ export class Hud {
   private lastHealth = 100;
   device: Device = 'keyboard';
 
-  constructor(private readonly onRestart: () => void) {
-    $('end-restart').addEventListener('click', () => this.onRestart());
+  constructor() {
     this.hurtFlash.id = 'hurt-flash';
     this.hurtFlash.setAttribute('aria-hidden', 'true');
     $('hud').append(this.hurtFlash);
   }
 
-  showTitle(key: StringKey): void {
-    this.title.textContent = t(key);
+  /** The level title, with an optional kicker line above it (e.g. the tomb and chamber). */
+  showTitle(key: StringKey, kicker?: StringKey): void {
+    this.title.replaceChildren();
+    if (kicker) {
+      const k = document.createElement('span');
+      k.className = 'kicker';
+      k.textContent = t(kicker);
+      this.title.append(k);
+    }
+    this.title.append(t(key));
     this.title.classList.remove('show');
     void this.title.offsetWidth;
     this.title.classList.add('show');
@@ -57,9 +65,11 @@ export class Hud {
       case 'secret.found':
         this.showNotice(t('notice.secret'), 'amber');
         break;
-      case 'relic.taken':
-        this.showNotice(t('notice.relic'), 'amber');
+      case 'relic.taken': {
+        const relic = chamberOf(world.level.id)?.relic;
+        if (relic) this.showNotice(t(relic.name), 'amber');
         break;
+      }
       case 'hint':
         this.showHint(t(String(e.key) as StringKey));
         break;
@@ -76,8 +86,10 @@ export class Hud {
       case 'player.respawned':
         this.fade.classList.remove('dark');
         break;
-      case 'level.end':
-        this.showEnd(world);
+      // Dispatched by the note reader when it closes.
+      case 'note.closed':
+        if (e.first === true)
+          this.showNotice(t('notice.journal', { n: Number(e.count), total: Number(e.total) }), 'amber');
         break;
       default:
         break;
@@ -97,49 +109,8 @@ export class Hud {
     this.hintTimer = 7;
   }
 
-  private showEnd(world: World): void {
-    const s = world.stats;
-    const mins = Math.floor(s.time / 60);
-    const secs = Math.floor(s.time % 60)
-      .toString()
-      .padStart(2, '0');
-    const secretsTotal = world.level.entities.filter((e) => e.type === 'secret').length;
-    const rows: [StringKey, string][] = [
-      ['end.time', `${mins}:${secs}`],
-      ['end.secrets', `${s.secrets} / ${secretsTotal}`],
-      ['end.deaths', String(s.deaths)],
-      ['end.distance', `${Math.round(s.distance)} m`],
-    ];
-    const enemies = world.state.enemies;
-    if (enemies.length > 0) {
-      const dead = enemies.filter((e) => e.mode === 'dead').length;
-      rows.push(['end.enemies', `${dead} / ${enemies.length}`]);
-    }
-    if (s.shots > 0) rows.push(['end.accuracy', `${Math.round((100 * s.hits) / s.shots)} %`]);
-    rows.push(['end.medkits', String(s.medkitsUsed)]);
-    $('end-title').textContent = t('end.title');
-    $('end-stats').innerHTML = rows
-      .map(([k, v]) => `<div class="row"><span>${t(k)}</span><b>${v}</b></div>`)
-      .join('');
-    $('end-restart').textContent = t('end.restart');
-    this.end.hidden = false;
-    requestAnimationFrame(() => this.end.classList.add('show'));
-    // Enter, Space or the pad's A replays straight away.
-    $('end-restart').focus({ preventScroll: true });
-  }
-
-  hideEnd(): void {
-    this.end.classList.remove('show');
-    this.end.hidden = true;
-  }
-
-  get endVisible(): boolean {
-    return !this.end.hidden;
-  }
-
   /** Clears everything on screen (back to the title). */
   reset(): void {
-    this.hideEnd();
     this.fade.classList.remove('dark');
     for (const el of [this.notice, this.hint, this.prompt, this.title, this.health])
       el.classList.remove('show');
@@ -194,6 +165,7 @@ export class Hud {
       if (a.cx !== cx || a.cz !== cz) continue;
       if (a.kind === 'lever' && !a.used) return 'prompt.lever';
       if ((a.kind === 'secret' || a.kind === 'relic') && !a.taken) return 'prompt.pickup';
+      if (a.kind === 'note') return 'prompt.read';
     }
     const v = DIR_VEC[yawToDir(p.yaw)];
     const b = blockAt(world, cx + v.x, cz + v.z);

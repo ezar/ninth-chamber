@@ -110,7 +110,7 @@ export class GameRenderer {
     await this.renderer.init();
     [this.surfaces] = await Promise.all([
       loadSurfaces(),
-      this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`),
+      this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`, `${import.meta.env.BASE_URL}anim/`),
       this.post.load(),
     ]);
     this.nora.root.traverse((o) => {
@@ -277,6 +277,15 @@ export class GameRenderer {
     this.buildShafts(meshes.skylights, sunRooms);
     void this.loadLightmap(level.id);
     this.applyParticleBudget();
+  }
+
+  /**
+   * Draws a fresh World of the level already built (restart, back to the
+   * title) without rebuilding the geometry; another level goes through setWorld.
+   */
+  resetWorld(world: World): void {
+    if (world.level === this.world?.level) this.world = world;
+    else this.setWorld(world);
   }
 
   /**

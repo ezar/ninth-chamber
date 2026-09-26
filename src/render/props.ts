@@ -4,6 +4,8 @@
  */
 import * as THREE from 'three/webgpu';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { glyphRows } from '../core/glyphs';
+import type { NoteStyle } from '../sim/grid/schema';
 import type { Level } from '../sim/grid/level';
 import { BLOCK, DIR_VEC, DIR_YAW } from '../sim/grid/units';
 import { mechanics } from '../sim/player/tuning';
@@ -44,6 +46,7 @@ export class Props {
   /** Emissive gain of the current relic view (the baked gem needs more than the stand-in). */
   private relicGain = 1;
   private relicBase = new THREE.Vector3();
+  private glintTexture: THREE.Texture | null = null;
   /** Baked models once loaded (see prop-models.ts); null while the stand-ins show. */
   private lib: PropLibrary | null = null;
   private readonly brazierViews: THREE.Group[] = [];
@@ -269,6 +272,23 @@ export class Props {
       case 'medkit':
         obj = medkit();
         break;
+      case 'note': {
+        const e = this.level.entities.find((x) => x.id === a.id);
+        if (e?.type !== 'note') return null;
+        obj = e.style === 'carving' ? carving(a.id, this.mats, !!e.wall) : paper(e.style);
+        // Against its wall when it has one, facing the room; otherwise lying where it fell.
+        const d = e.wall ? DIR_VEC[e.wall] : { x: 0, z: 0 };
+        const inset = e.style === 'carving' ? 0.32 : 0.5;
+        obj.position.set(
+          center(a.cx) + d.x * (BLOCK / 2 - inset),
+          this.level.floorAt(center(a.cx), center(a.cz)),
+          center(a.cz) + d.z * (BLOCK / 2 - inset),
+        );
+        obj.rotation.y = e.wall ? DIR_YAW[e.wall] : 0.35;
+        this.glintTexture ??= glintTexture();
+        obj.add(glint(this.glintTexture, e.style === 'carving' && !!e.wall ? 0.9 : 0.4));
+        break;
+      }
       case 'zone':
         return null;
     }
@@ -339,6 +359,15 @@ export class Props {
           v.position.set(center(a.cx), floorY + (a.kind === 'secret' ? 0.05 : 0), center(a.cz));
           if (a.kind === 'secret') v.rotation.y = time * 0.6;
           break;
+        case 'note': {
+          // A faint amber glint marks a note until it has been read (art bible: amber = interaction hint).
+          const g = v.getObjectByName('glint');
+          if (g instanceof THREE.Sprite) {
+            g.visible = !world.stats.notes.includes(a.id);
+            g.material.opacity = 0.5 + Math.sin(time * 2.2 + a.cx * 1.7) * 0.25;
+          }
+          break;
+        }
         case 'relic':
           v.visible = !a.taken;
           this.relicBase.set(center(a.cx), floorY + 1.05 + Math.sin(time * 1.3) * 0.05, center(a.cz));
@@ -585,5 +614,192 @@ function medkit(): THREE.Group {
   mark.rotation.x = -Math.PI / 2;
   mark.position.set(0, 0.227, 0.03);
   g.add(bag, flap, mark);
+  return g;
+}
+
+/** Soft amber point for the note glint. */
+function glintTexture(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  if (g) {
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,236,190,1)');
+    grad.addColorStop(0.18, 'rgba(242,169,59,0.75)');
+    grad.addColorStop(1, 'rgba(242,169,59,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function glint(map: THREE.Texture, height: number): THREE.Sprite {
+  const s = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map,
+      color: '#ffc46b',
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      fog: false,
+    }),
+  );
+  s.name = 'glint';
+  s.scale.set(0.32, 0.32, 1);
+  s.position.y = height;
+  return s;
+}
+
+/** Paper with rows of writing: typed for the expedition log, handwritten for letters. */
+function writingTexture(style: NoteStyle): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const g = c.getContext('2d');
+  if (g) {
+    g.fillStyle = style === 'diary' ? '#e3d3b0' : '#ebe1ca';
+    g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = style === 'diary' ? 'rgba(40,32,26,0.75)' : 'rgba(52,44,70,0.6)';
+    g.lineWidth = style === 'diary' ? 3 : 2;
+    let seed = style === 'diary' ? 7 : 3;
+    const rand = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let y = 30; y < 236; y += style === 'diary' ? 16 : 20) {
+      let x = 22;
+      const end = 234 - rand() * 50;
+      while (x < end) {
+        const w = 8 + rand() * 26;
+        g.beginPath();
+        g.moveTo(x, y + (style === 'letter' ? Math.sin(x * 0.2) * 1.5 : 0));
+        g.lineTo(Math.min(end, x + w), y);
+        g.stroke();
+        x += w + 6;
+      }
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** An expedition notebook left open, or a folded page held down by a pebble. */
+function paper(style: NoteStyle): THREE.Group {
+  const g = new THREE.Group();
+  const page = new THREE.MeshStandardMaterial({ map: writingTexture(style), roughness: 0.95 });
+  if (style === 'diary') {
+    const cover = new THREE.Mesh(
+      new RoundedBoxGeometry(0.4, 0.014, 0.27, 1, 0.005),
+      new THREE.MeshStandardMaterial({ color: '#4a3526', roughness: 0.7 }),
+    );
+    cover.position.y = 0.007;
+    g.add(cover);
+    for (const side of [-1, 1]) {
+      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.185, 0.018, 0.25), page);
+      leaf.position.set(side * 0.095, 0.022, 0);
+      leaf.rotation.z = side * -0.06;
+      g.add(leaf);
+    }
+    const pencil = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.005, 0.005, 0.17, 6),
+      new THREE.MeshStandardMaterial({ color: '#c9a24a', roughness: 0.6 }),
+    );
+    pencil.rotation.set(Math.PI / 2, 0, 0.4);
+    pencil.position.set(0.26, 0.008, 0.05);
+    g.add(pencil);
+  } else {
+    for (const side of [-1, 1]) {
+      const half = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.003, 0.15), page);
+      half.position.set(side * 0.099, 0.012, 0);
+      half.rotation.z = side * -0.12;
+      g.add(half);
+    }
+    const pebble = new THREE.Mesh(
+      new THREE.DodecahedronGeometry(0.045, 0),
+      new THREE.MeshStandardMaterial({ color: '#8c7a62', roughness: 0.9 }),
+    );
+    pebble.scale.set(1, 0.6, 0.85);
+    pebble.position.set(0.05, 0.035, 0.02);
+    g.add(pebble);
+  }
+  return g;
+}
+
+/** Incised glyphs on a transparent canvas (the same signs as the reader's rubbing). */
+function glyphTexture(seed: string, rows: number, perRow: number): THREE.Texture {
+  const cell = 64;
+  const c = document.createElement('canvas');
+  c.width = perRow * cell + 32;
+  c.height = rows * cell + 32;
+  const g = c.getContext('2d');
+  if (g) {
+    g.lineCap = 'square';
+    g.lineJoin = 'miter';
+    const draw = (dx: number, dy: number, color: string, width: number): void => {
+      g.strokeStyle = color;
+      g.lineWidth = width;
+      glyphRows(seed, rows, perRow).forEach((row, r) =>
+        row.forEach((glyph, k) => {
+          for (const stroke of glyph) {
+            g.beginPath();
+            stroke.forEach(([x, y], i) => {
+              const px = 16 + (k + 0.12 + x * 0.76) * cell + dx;
+              const py = 16 + (r + 0.12 + y * 0.76) * cell + dy;
+              if (i) g.lineTo(px, py);
+              else g.moveTo(px, py);
+            });
+            g.stroke();
+          }
+        }),
+      );
+    };
+    // Light catching the lower lip of each groove, then the shadowed cut.
+    draw(1.5, 2, 'rgba(250,236,205,0.45)', 5);
+    draw(0, 0, 'rgba(38,27,18,0.9)', 5);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/**
+ * A carved inscription: a fallen lintel leaning on the wall, or an inscribed
+ * slab set into the floor (at the foot of the dais).
+ */
+function carving(seed: string, m: PropMaterials, onWall: boolean): THREE.Group {
+  const g = new THREE.Group();
+  const stone = new THREE.MeshStandardMaterial({ ...surfaceParams(m.block), color: '#e6d6ba' });
+  const [w, h, d] = onWall ? [1.7, 0.62, 0.36] : [1.3, 0.1, 0.9];
+  const slab = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, 0.04), stone);
+  // Same 2 × 9 signs as the reader's rubbing, in a band sized to the texture.
+  const glyphs = glyphTexture(seed, 2, 9);
+  const img = glyphs.image as HTMLCanvasElement;
+  const faceW = w * 0.86;
+  const face = new THREE.Mesh(
+    new THREE.PlaneGeometry(faceW, (faceW * img.height) / img.width),
+    new THREE.MeshStandardMaterial({
+      map: glyphs,
+      transparent: true,
+      roughness: 0.9,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    }),
+  );
+  if (onWall) {
+    // Leaning back against the wall behind it (local -Z), its carved face to the room.
+    const lean = new THREE.Group();
+    lean.rotation.x = -0.32;
+    slab.position.y = h / 2;
+    face.position.set(0, h / 2, d / 2 + 0.002);
+    lean.add(slab, face);
+    lean.position.z = -0.02;
+    g.add(lean);
+  } else {
+    slab.position.y = -h / 2 + 0.03;
+    face.rotation.x = -Math.PI / 2;
+    face.position.y = 0.032;
+    g.add(slab, face);
+  }
   return g;
 }

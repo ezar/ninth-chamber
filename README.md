@@ -13,7 +13,10 @@ pnpm test       # simulation tests (Vitest)
 pnpm lint       # ESLint
 pnpm typecheck  # types, including the check that src/sim does not use the DOM
 pnpm build      # production build in dist/
+pnpm anim:build <manifest> <folder>  # rebuild Nora's motion clips (docs/animation.md)
 ```
+
+Credits for third-party assets are in [CREDITS.md](CREDITS.md).
 
 ## Controls (milestone 1)
 
@@ -23,4 +26,4 @@ pnpm build      # production build in dist/
 
 The UI language follows the browser (English or Spanish for now).
 
-Status: see [docs/changelog.md](docs/changelog.md).
+Status: see [docs/changelog.md](docs/changelog.md). Credits: [CREDITS.md](CREDITS.md). Licence: all rights reserved for now; the choice is still open ([docs/license.md](docs/license.md)).

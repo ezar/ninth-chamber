@@ -1,4 +1,4 @@
-/** Block, push, pull, lever, pickup and dead modes. */
+/** Block, push, pull, lever, pickup (and note reading) and dead modes. */
 import { blocks } from '../../grid/collision';
 import { BLOCK, DIR_VEC } from '../../grid/units';
 import { setSignal } from '../../logic/rules';
@@ -130,7 +130,7 @@ export function lever(c: Ctx): void {
   }
 }
 
-/** Crouching to pick up a secret or the relic. */
+/** Crouching to pick up a secret or the relic, or to read a journal note. */
 export function pickup(c: Ctx): void {
   const { p, world } = c;
   const a = world.state.actors.find((x) => x.id === p.target);
@@ -138,13 +138,41 @@ export function pickup(c: Ctx): void {
     a.taken = true;
     setSignal(world, `${a.id}.taken`, true);
     if (a.kind === 'secret') {
-      world.stats.secrets++;
+      // Counted once per id: a death cannot hand the same idol back (see respawn()).
+      if (!world.stats.secretsFound.includes(a.id)) {
+        world.stats.secretsFound.push(a.id);
+        world.stats.secrets = world.stats.secretsFound.length;
+      }
       emit(c, 'secret.found', { id: a.id, idol: a.variant });
     } else {
       emit(c, 'relic.taken', { id: a.id });
     }
   }
+  if (a?.kind === 'note' && p.modeTime >= tuning.pickupTime / 2) readNote(c, a.id);
   if (p.modeTime >= tuning.pickupTime) release(c);
+}
+
+/**
+ * Reads a note: the UI opens the reader on `note.read` and pauses the
+ * simulation while it is open. Notes are counted once and stay in place.
+ */
+function readNote(c: Ctx, id: string): void {
+  const { world } = c;
+  const entity = world.level.entities.find((e) => e.id === id);
+  if (entity?.type !== 'note') return;
+  const first = !world.stats.notes.includes(id);
+  if (first) world.stats.notes.push(id);
+  setSignal(world, `${id}.read`, true);
+  // The crouch goes on, but the note is read only once per Action.
+  c.p.target = null;
+  emit(c, 'note.read', {
+    id,
+    text: entity.text,
+    style: entity.style,
+    first,
+    count: world.stats.notes.length,
+    total: world.level.entities.filter((e) => e.type === 'note').length,
+  });
 }
 
 export function dead(c: Ctx): void {

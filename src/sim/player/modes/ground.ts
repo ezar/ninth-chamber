@@ -109,7 +109,7 @@ export function jump(c: Ctx): void {
   emit(c, 'player.jumped', { kind });
 }
 
-/** Levers and pickups in the player's sector. */
+/** Levers, pickups and journal notes in the player's sector. */
 function tryInteract(c: Ctx): boolean {
   const { p, world } = c;
   const cx = Math.floor(p.pos.x / BLOCK);
@@ -123,7 +123,7 @@ function tryInteract(c: Ctx): boolean {
       setMode(p, 'lever');
       return true;
     }
-    if ((a.kind === 'secret' || a.kind === 'relic') && !a.taken) {
+    if (((a.kind === 'secret' || a.kind === 'relic') && !a.taken) || a.kind === 'note') {
       p.vel = { x: 0, y: 0, z: 0 };
       p.target = a.id;
       setMode(p, 'pickup');

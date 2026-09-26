@@ -17,7 +17,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "validate:levels": "tsx scripts/validate-levels.ts"
+    "validate:levels": "tsx scripts/validate-levels.ts",
+    "anim:build": "tsx scripts/anim/build-clips.ts"
   },
   "dependencies": {
     "three": "^0.186.1",
