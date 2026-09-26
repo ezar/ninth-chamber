@@ -1,5 +1,16 @@
 # Changelog
 
+## The Antechamber grows to ten rooms
+
+- The level now runs entrance → brazier hall → **Hall of Weights** → **Hourglass** → **Well of Light** → (terrace over the Hall of Weights) → **Sunken Causeway** → **Chamber of Scales** → **Descent** → gallery → relic chamber. The gallery and the relic chamber moved 48 rows north; their contents are unchanged.
+- The level's new mechanic is the **weight plate**, introduced alone and then combined (spec §8, principle 2): in the Hall of Weights a plate holds its gate only while weighed down, so the hall's block has to hold it; in the Hourglass the gate lingers 12 s after the weight leaves, ticking, for a sprint with two jumps; in the Chamber of Scales two plates must be weighed at once, one block has to be pushed off a high shelf and the other is needed first as a step, with a spring lever that resets both blocks.
+- Vertical exploration: the Well of Light is a 24 m sunlit shaft climbed with a block and a spiral of ledges; its top opens onto a terrace 12 m above the Hall of Weights, looking back over the plate and gate solved below. The Descent teaches lowering into a hang over a sunlit spike pit.
+- Secrets: jade (entrance) and gold (brazier hall) stay; the stone idol moved from the gallery to a lone pillar in the Well, a standing jump away from the top walkway. A small medkit now sits on the gallery ledge where it was. Checkpoints precede every hard section; medkits follow the Well and the Causeway.
+- New hints (`i18n/en.json`, `i18n/es.json`) for plates, holding weight, the ticking gate, the standing jump, filling a gap with a block, the two plates, the reset lever and lowering into a hang. New looks in `art/looks/`: `plate_hall`, `hourglass`, `well` (with a skylight), `causeway`, `scales`, `descent` (with a skylight).
+- Sim: timed doors emit `door.tick` every second (a stone click in audio, doubled in the last three seconds); door actions only announce a move when the target changes; `"spring": true` levers can be pulled again; `<block>.reset` returns a block to its start; blocks fall when their support goes away; walking never drops off an edge the body already overhangs.
+- Tests: the walkthrough bot (`tests/bot.ts`) plays the whole route through all ten rooms with the three secrets and no deaths (about 13 400 ticks); `tests/antechamber.test.ts` proves that each puzzle is needed, cannot be cheesed and never dead-ends.
+- The baked lightmap (`public/levels/antechamber.lightmap.png`) predates the new geometry and must be re-baked.
+
 ## Milestones 2–4 · The Antechamber (in progress)
 
 - Nora is the Meshy scan provided by the owner, turned into a game asset by `scripts/character/rig_nora.py` (Blender): 1.5 M → 45 k triangles, scaled to 1.72 m, facing -Z, a 19-bone humanoid skeleton fitted to the scan with automatic weights, then compressed with meshopt and WebP (65 MB → 1.2 MB, `public/models/nora.glb`). `src/render/nora-scan.ts` retargets the procedural animation in `src/render/nora.ts` onto it, with rest-pose corrections for the A-pose limbs; the procedural body remains the fallback.

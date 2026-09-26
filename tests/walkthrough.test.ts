@@ -1,101 +1,181 @@
 /**
  * Golden path through The Antechamber with scripted input: proves the level
- * can be finished and shows the intended route. Camera yaw is 0, so input
- * y+ is north (-Z) and x+ is east (+X).
+ * can be finished through every room with every secret and no deaths, and
+ * shows the intended route. Camera yaw is 0, so input y+ is north (-Z) and
+ * x+ is east (+X). Cells below are world cells (room origin + position).
  */
 import { describe, expect, it } from 'vitest';
 import levelJson from '../levels/antechamber.level.json';
 import { Level } from '../src/sim/grid/level';
 import { validateLevel } from '../src/sim/grid/validate';
-import type { Dir } from '../src/sim/grid/units';
-import { createWorld, stepWorld, type World } from '../src/sim/world';
+import { createWorld, findActor } from '../src/sim/world';
 import en from '../i18n/en.json';
+import { Bot } from './bot';
 import { frame } from './helpers';
 
-const DIRS: Record<Dir, { x: number; y: number }> = {
-  N: { x: 0, y: 1 },
-  S: { x: 0, y: -1 },
-  E: { x: 1, y: 0 },
-  W: { x: -1, y: 0 },
-};
+/** Plays the whole level; returns the bot for inspection. */
+function playAntechamber(): Bot {
+  const w = createWorld(Level.parse(levelJson));
+  const bot = new Bot(w);
+  const pressed = (id: string): boolean => findActor(w, id, 'plate')?.pressed === true;
 
-class Bot {
-  constructor(readonly w: World) {}
+  // Entrance: climb the terrace, detour for the jade idol.
+  bot.goTo(8, 3);
+  bot.climb('N');
+  bot.climb('N');
+  bot.action();
+  expect(w.stats.secrets).toBe(1);
+  bot.goTo(8, 2, { slow: true });
+  bot.goTo(4, 1);
+  bot.goTo(4, -1);
 
-  get p() {
-    return this.w.state.player;
-  }
+  // Brazier hall: gold idol in the north-east niche.
+  bot.goTo(8, -11);
+  bot.goTo(8, -13);
+  bot.climb('E');
+  bot.action();
+  expect(w.stats.secrets).toBe(2);
+  bot.goTo(8, -13, { slow: true });
+  bot.goTo(8, -10);
 
-  tick(f = frame()): void {
-    stepWorld(this.w, f);
-  }
+  // Push the block against the platform, climb up and pull the lever.
+  bot.goTo(3, -4);
+  bot.push('W');
+  bot.goTo(2, -4);
+  bot.climb('W');
+  bot.climb('W');
+  bot.goTo(-1, -5);
+  bot.action();
+  bot.wait(260);
+  expect(w.grid.cellFloor(4, -14)).toBe(2);
+  bot.goTo(-1, -4);
+  bot.goTo(3, -4);
+  bot.goTo(4, -13);
 
-  wait(ticks: number): void {
-    for (let i = 0; i < ticks; i++) this.tick();
-  }
+  // Hall of Weights: the plate holds the gate only under weight, so the block goes on it.
+  bot.goTo(4, -17);
+  bot.goTo(4, -20);
+  bot.goTo(2, -20);
+  bot.push('S');
+  bot.push('S');
+  bot.push('S');
+  expect(pressed('plate1')).toBe(true);
+  bot.wait(130);
+  bot.goTo(-1, -16);
+  bot.goTo(-3, -16);
 
-  waitMode(mode: string, max = 400): void {
-    for (let i = 0; i < max && this.p.mode !== mode; i++) this.tick();
-    expect(this.p.mode, `waiting for ${mode}`).toBe(mode);
-  }
+  // Hourglass: learn the course southwards, then the timed run back north.
+  bot.goTo(-4, -16);
+  bot.goTo(-7, -14);
+  bot.standingJump('S');
+  bot.goTo(-7, -10);
+  bot.runningJump('S', -16);
+  bot.goTo(-7, -2);
+  expect(pressed('plate2')).toBe(true);
+  bot.wait(140);
+  const released = w.tick;
+  bot.runningJump('N', -12);
+  bot.runningJump('N', -22);
+  for (let i = 0; i < 200 && bot.p.pos.z > -29.2; i++) bot.tick(frame({ y: 1 }));
+  bot.tick(frame({ y: 1, pressed: ['jump'] }));
+  for (let i = 0; i < 100 && bot.p.mode !== 'ground'; i++) bot.tick(frame({ y: 1 }));
+  for (let i = 0; i < 200 && bot.p.pos.z > -37; i++) bot.tick(frame({ y: 1 }));
+  // Through the gate with seconds to spare out of twelve.
+  expect(w.level.roomAt(-7, Math.floor(bot.p.pos.z / 2))?.id).toBe('well');
+  expect((w.tick - released) / 60).toBeLessThan(9);
 
-  /** Steers to the centre of a world cell on the ground. */
-  goTo(cx: number, cz: number, opts: { walk?: boolean; slow?: boolean; max?: number } = {}): void {
-    const tx = cx * 2 + 1;
-    const tz = cz * 2 + 1;
-    for (let i = 0; i < (opts.max ?? 900); i++) {
-      const dx = tx - this.p.pos.x;
-      const dz = tz - this.p.pos.z;
-      const d = Math.hypot(dx, dz);
-      if (d < 0.12 && this.p.mode === 'ground') {
-        this.wait(20);
-        return;
-      }
-      const s = Math.min(opts.slow ? 0.4 : 1, d / 0.8);
-      this.tick(frame({ x: (dx / d) * s, y: (-dz / d) * s, held: opts.walk ? ['walk'] : [] }));
-      if (this.p.mode === 'dead') throw new Error(`died on the way to ${cx},${cz}`);
-    }
-    throw new Error(
-      `could not reach ${cx},${cz}; at ${this.p.pos.x.toFixed(2)},${this.p.pos.z.toFixed(2)} (${this.p.mode})`,
-    );
-  }
+  // Well of Light: the block is the first step; the spiral climbs to the sun.
+  bot.goTo(-7, -20);
+  bot.goTo(-7, -21);
+  bot.goTo(-4, -21);
+  bot.goTo(-4, -20);
+  bot.push('W');
+  bot.push('W');
+  bot.climb('W');
+  bot.climb('W');
+  bot.goTo(-9, -20, { walk: true });
+  bot.climb('N');
+  bot.goTo(-9, -22, { walk: true });
+  bot.standingJump('N');
+  bot.climb('N');
+  bot.goTo(-8, -25, { walk: true });
+  bot.climb('E');
+  expect(bot.p.pos.y).toBe(14);
+  // The stone idol waits on a lone pillar in the light: a standing jump there and back.
+  bot.goTo(-4, -25, { walk: true });
+  bot.goTo(-4, -24, { walk: true });
+  bot.standingJump('S');
+  bot.action();
+  expect(w.stats.secrets).toBe(3);
+  bot.standingJump('N');
+  bot.goTo(-4, -25, { walk: true });
 
-  /** Walks into the wall in `dir`, jumps, grabs and climbs onto the ledge. */
-  climb(dir: Dir): void {
-    const v = DIRS[dir];
-    for (let i = 0; i < 30; i++) this.tick(frame({ x: v.x, y: v.y, held: ['walk'] }));
-    this.tick(frame({ pressed: ['jump'] }));
-    for (let i = 0; i < 90 && this.p.mode !== 'hang' && this.p.mode !== 'climb'; i++)
-      this.tick(frame({ held: ['action'] }));
-    if (this.p.mode === 'hang') for (let i = 0; i < 20; i++) this.tick(frame({ x: v.x, y: v.y }));
-    this.waitMode('ground');
-  }
+  // The terrace high above the Hall of Weights, to the doorway.
+  bot.goTo(-2, -25, { walk: true });
+  bot.goTo(9, -25);
+  bot.goTo(9, -26, { walk: true });
+  bot.goTo(9, -27, { walk: true });
 
-  action(): void {
-    this.tick(frame({ pressed: ['action'] }));
-    this.waitMode('ground');
-  }
+  // Sunken Causeway: the block fills the socket, then a running jump over the chasm.
+  bot.push('N');
+  bot.push('N');
+  bot.push('N');
+  bot.wait(30);
+  expect(w.grid.cellFloor(9, -31)).toBe(14);
+  bot.goTo(9, -27, { walk: true });
+  bot.runningJump('N', -62);
+  bot.goTo(9, -38);
+  bot.goTo(9, -41);
 
-  /** Grabs the block in `dir` and pushes it one sector. */
-  push(dir: Dir): void {
-    const v = DIRS[dir];
-    for (let i = 0; i < 30; i++) this.tick(frame({ x: v.x, y: v.y, held: ['walk'] }));
-    this.tick(frame({ held: ['action'] }));
-    expect(this.p.mode).toBe('block');
-    for (let i = 0; i < 5; i++) this.tick(frame({ x: v.x, y: v.y, held: ['action'] }));
-    expect(this.p.mode).toBe('push');
-    for (let i = 0; i < 120 && this.p.mode !== 'block'; i++) this.tick(frame({ held: ['action'] }));
-    this.tick();
-    this.waitMode('ground');
-  }
+  // Chamber of Scales: block_a is first the step to the shelf, then the weight on plate_a.
+  bot.goTo(4, -44);
+  bot.goTo(4, -45);
+  for (let i = 0; i < 5; i++) bot.push('E');
+  bot.climb('E');
+  bot.climb('E');
+  bot.goTo(12, -45, { walk: true });
+  bot.push('N');
+  bot.wait(40);
+  expect(pressed('plate_b')).toBe(true);
+  bot.goTo(11, -45, { walk: true });
+  bot.goTo(10, -45, { slow: true });
+  bot.goTo(9, -45, { slow: true });
+  for (let i = 0; i < 5; i++) bot.pull('E');
+  bot.goTo(4, -44);
+  bot.goTo(5, -44);
+  bot.push('N');
+  bot.push('N');
+  expect(pressed('plate_a')).toBe(true);
+  bot.wait(130);
+  bot.goTo(8, -50);
+  bot.goTo(8, -53);
 
-  /** Runs north from the current position and jumps at `edgeZ` (metres). */
-  runningJumpNorth(edgeZ: number): void {
-    for (let i = 0; i < 300 && this.p.pos.z > edgeZ + 0.15; i++) this.tick(frame({ y: 1 }));
-    this.tick(frame({ y: 1, pressed: ['jump'] }));
-    for (let i = 0; i < 200 && this.p.mode !== 'ground'; i++) this.tick(frame({ y: 1, held: ['action'] }));
-    expect(this.p.mode).toBe('ground');
-  }
+  // Descent: lower yourself twice instead of jumping down.
+  bot.goTo(3, -55, { walk: true });
+  const health = bot.p.health;
+  bot.lowerAndDrop('N');
+  bot.goTo(3, -58, { walk: true });
+  bot.lowerAndDrop('N');
+  expect(bot.p.health).toBe(health);
+  bot.goTo(3, -60);
+  bot.goTo(4, -61);
+  bot.goTo(4, -63);
+
+  // Gallery: the running jump over the spikes, then sprint over the collapsing tiles.
+  bot.goTo(1, -64);
+  bot.runningJump('N', -140);
+  expect(bot.p.pos.y).toBe(2);
+  for (let i = 0; i < 90; i++) bot.tick(frame({ y: 1, x: 0.3 }));
+
+  // Relic chamber.
+  bot.goTo(3, -78);
+  bot.goTo(3, -83);
+  bot.tick(frame({ y: 1, pressed: ['jump'] }));
+  bot.wait(60);
+  bot.goTo(3, -85);
+  bot.action();
+  bot.wait(200);
+  return bot;
 }
 
 describe('The Antechamber', () => {
@@ -104,69 +184,15 @@ describe('The Antechamber', () => {
     expect(errors).toEqual([]);
   });
 
-  it('can be finished with all three secrets', () => {
-    const w = createWorld(Level.parse(levelJson));
-    const bot = new Bot(w);
-
-    // Entrance: climb the terrace, detour for the jade idol.
-    bot.goTo(8, 3);
-    bot.climb('N');
-    bot.climb('N');
-    bot.action();
-    expect(w.stats.secrets).toBe(1);
-    bot.goTo(8, 2, { slow: true });
-    bot.goTo(4, 1);
-    bot.goTo(4, -1);
-
-    // Brazier hall: gold idol in the north-east niche.
-    bot.goTo(8, -11);
-    bot.goTo(8, -13);
-    bot.climb('E');
-    bot.action();
-    expect(w.stats.secrets).toBe(2);
-    bot.goTo(8, -13, { slow: true });
-    bot.goTo(8, -10);
-
-    // Push the block against the platform, climb up and pull the lever.
-    bot.goTo(3, -4);
-    bot.push('W');
-    bot.goTo(2, -4);
-    bot.climb('W');
-    bot.climb('W');
-    bot.goTo(-1, -5);
-    bot.action();
-    bot.wait(260);
-    expect(w.grid.cellFloor(4, -14)).toBe(2);
-    bot.goTo(-1, -4);
-    bot.goTo(3, -4);
-    bot.goTo(4, -13);
-
-    // Gallery: stone idol on the west ledges, then the running jump over the spikes.
-    bot.goTo(4, -15);
-    bot.goTo(0, -19);
-    bot.climb('W');
-    expect(w.state.player.pos.y).toBeCloseTo(4, 3);
-    bot.climb('N');
-    bot.action();
-    expect(w.stats.secrets).toBe(3);
-    bot.goTo(-1, -19, { slow: true });
-    bot.goTo(0, -19, { slow: true });
-    bot.goTo(1, -16);
-    bot.runningJumpNorth(-44);
-    expect(w.state.player.pos.y).toBe(2);
-    // Sprint over the collapsing tiles.
-    for (let i = 0; i < 90; i++) bot.tick(frame({ y: 1, x: 0.3 }));
-    expect(w.state.player.mode).not.toBe('dead');
-
-    // Relic chamber.
-    bot.goTo(3, -30);
-    bot.goTo(3, -35);
-    bot.tick(frame({ y: 1, pressed: ['jump'] }));
-    bot.wait(60);
-    bot.goTo(3, -37);
-    bot.action();
-    bot.wait(200);
+  it('can be finished through every room with all three secrets and no deaths', () => {
+    const bot = playAntechamber();
+    const w = bot.w;
     expect(w.ended).toBe(true);
     expect(w.stats.deaths).toBe(0);
+    expect(w.stats.secrets).toBe(3);
+    expect([...bot.rooms].sort()).toEqual(w.level.rooms.map((r) => r.id).sort());
+    // The scripted route is ~3.7 minutes of game time; people take about four times longer.
+    expect(w.tick).toBeGreaterThan(12000);
+    expect(w.tick).toBeLessThan(15000);
   });
 });

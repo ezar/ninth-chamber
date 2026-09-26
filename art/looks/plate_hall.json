@@ -1,0 +1,11 @@
+{
+  "id": "plate_hall",
+  "background": "#0b0806",
+  "exposure": 1.1,
+  "hemi": { "sky": "#4a3624", "ground": "#140d08", "intensity": 0.24 },
+  "fog": { "color": "#3d2818", "density": 0.028 },
+  "sun": null,
+  "fire": { "color": "#ff9442", "intensity": 50, "flicker": 0.28 },
+  "bloom": { "strength": 0.65, "radius": 0.5, "threshold": 0.78 },
+  "grade": { "tint": "#ffdcb4", "saturation": 1.05, "contrast": 1.14, "vignette": 0.4 }
+}

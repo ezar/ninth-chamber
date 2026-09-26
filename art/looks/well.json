@@ -1,0 +1,11 @@
+{
+  "id": "well",
+  "background": "#0a0d12",
+  "exposure": 1.2,
+  "hemi": { "sky": "#7f97b0", "ground": "#1d2430", "intensity": 0.42 },
+  "fog": { "color": "#4f6478", "density": 0.02 },
+  "sun": { "color": "#e4eefa", "intensity": 5.5, "direction": [0.08, 0.99, 0.06] },
+  "fire": { "color": "#ff9a4a", "intensity": 18, "flicker": 0.2 },
+  "bloom": { "strength": 0.55, "radius": 0.55, "threshold": 0.8 },
+  "grade": { "tint": "#cfdcea", "saturation": 0.82, "contrast": 1.15, "vignette": 0.4 }
+}
