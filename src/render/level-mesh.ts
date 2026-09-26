@@ -10,26 +10,84 @@ import { BLOCK } from '../sim/grid/units';
 
 export type Surface = 'wall' | 'floorStone' | 'floorSand' | 'ceiling' | 'lip';
 
+/** Lightmap texels per metre. Indirect light is low frequency, so this can be coarse. */
+export const LIGHTMAP_DENSITY = 5;
+const LIGHTMAP_WIDTH = 1024;
+const LIGHTMAP_PAD = 2;
+
+/**
+ * Shelf packer for the lightmap atlas (second UV set). Every face is an
+ * axis-aligned rectangle, so a simple shelf packing is tight enough. Works in
+ * texels; UVs are normalised once the final atlas height is known.
+ */
+class Atlas {
+  private x = 0;
+  private y = 0;
+  private shelf = 0;
+  height = 0;
+
+  /** Reserves a rectangle for a face of w × h metres; returns its texel origin and size. */
+  allocate(w: number, h: number): { x: number; y: number; w: number; h: number } {
+    const tw = Math.max(1, Math.ceil(w * LIGHTMAP_DENSITY));
+    const th = Math.max(1, Math.ceil(h * LIGHTMAP_DENSITY));
+    const pw = tw + LIGHTMAP_PAD * 2;
+    const ph = th + LIGHTMAP_PAD * 2;
+    if (this.x + pw > LIGHTMAP_WIDTH) {
+      this.x = 0;
+      this.y += this.shelf;
+      this.shelf = 0;
+    }
+    const r = { x: this.x + LIGHTMAP_PAD, y: this.y + LIGHTMAP_PAD, w: tw, h: th };
+    this.x += pw;
+    this.shelf = Math.max(this.shelf, ph);
+    this.height = Math.max(this.height, this.y + this.shelf);
+    return r;
+  }
+
+  get size(): { width: number; height: number } {
+    let h = 1;
+    while (h < this.height) h *= 2;
+    return { width: LIGHTMAP_WIDTH, height: h };
+  }
+}
+
+type Rect = { x: number; y: number; w: number; h: number };
+
 class Builder {
   readonly pos: number[] = [];
   readonly nor: number[] = [];
   readonly uv: number[] = [];
+  /** Lightmap UVs, in texels until finish() normalises them. */
+  readonly uv1: number[] = [];
   readonly col: number[] = [];
   readonly idx: number[] = [];
 
-  vertex(p: THREE.Vector3, n: THREE.Vector3, u: number, v: number, ao: number): number {
+  /** `s`, `t` in [0, 1] locate the vertex inside its face's lightmap rectangle. */
+  vertex(
+    p: THREE.Vector3,
+    n: THREE.Vector3,
+    u: number,
+    v: number,
+    ao: number,
+    rect?: Rect,
+    s = 0,
+    t = 0,
+  ): number {
     this.pos.push(p.x, p.y, p.z);
     this.nor.push(n.x, n.y, n.z);
     this.uv.push(u, v);
+    this.uv1.push(rect ? rect.x + s * rect.w : 0, rect ? rect.y + t * rect.h : 0);
     this.col.push(ao, ao, ao);
     return this.pos.length / 3 - 1;
   }
 
-  geometry(): THREE.BufferGeometry {
+  geometry(size: { width: number; height: number }): THREE.BufferGeometry {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(this.nor, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
+    const uv1 = this.uv1.map((c, i) => (i % 2 === 0 ? c / size.width : 1 - c / size.height));
+    g.setAttribute('uv1', new THREE.Float32BufferAttribute(uv1, 2));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
     g.setIndex(this.idx);
     g.computeBoundingSphere();
@@ -45,6 +103,8 @@ function noise3(x: number, y: number, z: number): number {
 
 export interface LevelMeshes {
   surfaces: Record<Surface, THREE.BufferGeometry>;
+  /** Lightmap atlas size in texels (the second UV set covers it). */
+  lightmapSize: { width: number; height: number };
   /** Cells that are sky holes in the ceiling, per room. */
   skylights: { x: number; z: number; ceil: number }[];
 }
@@ -61,6 +121,7 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
     ceiling: new Builder(),
     lip: new Builder(),
   };
+  const atlas = new Atlas();
   const sector = (cx: number, cz: number): Sector | undefined => level.sector(cx, cz);
   /** Visible floor of a sector: collapsing tiles are drawn separately, over their pit. */
   const floorTop = (s: Sector): number => (s.flags.has('crumble') ? s.pitFloor : Math.max(...s.floor));
@@ -110,6 +171,7 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
 
     // Floor: a 4 × 4 grid per sector so corner AO has room to fade.
     const fb = s.mat === 'sand' ? b.floorSand : b.floorStone;
+    const floorRect = atlas.allocate(BLOCK, BLOCK);
     const N = 4;
     const base = fb.pos.length / 3;
     for (let j = 0; j <= N; j++) {
@@ -133,6 +195,9 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
           x / BLOCK,
           z / BLOCK,
           ao * (0.85 + 0.15 * edgeFade),
+          floorRect,
+          u,
+          v,
         );
       }
     }
@@ -159,15 +224,19 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
       const c0 = cb.pos.length / 3;
       const y = s.ceil;
       const n = new THREE.Vector3(0, -1, 0);
-      cb.vertex(new THREE.Vector3(x0, y, z0), n, x0 / BLOCK, z0 / BLOCK, 0.8);
-      cb.vertex(new THREE.Vector3(x0 + BLOCK, y, z0), n, (x0 + BLOCK) / BLOCK, z0 / BLOCK, 0.8);
-      cb.vertex(new THREE.Vector3(x0, y, z0 + BLOCK), n, x0 / BLOCK, (z0 + BLOCK) / BLOCK, 0.8);
+      const r = atlas.allocate(BLOCK, BLOCK);
+      cb.vertex(new THREE.Vector3(x0, y, z0), n, x0 / BLOCK, z0 / BLOCK, 0.8, r, 0, 0);
+      cb.vertex(new THREE.Vector3(x0 + BLOCK, y, z0), n, (x0 + BLOCK) / BLOCK, z0 / BLOCK, 0.8, r, 1, 0);
+      cb.vertex(new THREE.Vector3(x0, y, z0 + BLOCK), n, x0 / BLOCK, (z0 + BLOCK) / BLOCK, 0.8, r, 0, 1);
       cb.vertex(
         new THREE.Vector3(x0 + BLOCK, y, z0 + BLOCK),
         n,
         (x0 + BLOCK) / BLOCK,
         (z0 + BLOCK) / BLOCK,
         0.8,
+        r,
+        1,
+        1,
       );
       cb.idx.push(c0, c0 + 1, c0 + 2, c0 + 1, c0 + 3, c0 + 2);
     }
@@ -187,26 +256,28 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
       else if (nb) upper = Math.min(floorTop(nb), s.ceil);
       else upper = s.ceil;
       if (upper > bottom + 1e-3) {
-        wallQuad(b.wall, side.a, side.b, bottom, upper, side.n);
+        wallQuad(b.wall, atlas, side.a, side.b, bottom, upper, side.n);
         // A grabbable ledge gets a pale, hand-polished lip (legibility, art bible).
         if (nb && !solid(nb) && upper < s.ceil - 0.5 && upper - bottom >= 0.75)
-          lip(b.lip, side.a, side.b, upper, side.n);
+          lip(b.lip, atlas, side.a, side.b, upper, side.n);
       }
       // Ceiling steps: where the neighbour's ceiling is lower, close the gap.
       if (nb && !solid(nb) && nb.ceil < s.ceil - 1e-3) {
-        wallQuad(b.wall, side.a, side.b, Math.max(nb.ceil, top), s.ceil, side.n);
+        wallQuad(b.wall, atlas, side.a, side.b, Math.max(nb.ceil, top), s.ceil, side.n);
       }
     }
   }
 
+  const size = atlas.size;
   return {
     surfaces: {
-      wall: b.wall.geometry(),
-      floorStone: b.floorStone.geometry(),
-      floorSand: b.floorSand.geometry(),
-      ceiling: b.ceiling.geometry(),
-      lip: b.lip.geometry(),
+      wall: b.wall.geometry(size),
+      floorStone: b.floorStone.geometry(size),
+      floorSand: b.floorSand.geometry(size),
+      ceiling: b.ceiling.geometry(size),
+      lip: b.lip.geometry(size),
     },
+    lightmapSize: size,
     skylights,
   };
 }
@@ -218,6 +289,7 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
  */
 function wallQuad(
   wb: Builder,
+  atlas: Atlas,
   a: readonly [number, number],
   bb: readonly [number, number],
   y0: number,
@@ -229,6 +301,7 @@ function wallQuad(
   const normal = new THREE.Vector3(n[0], 0, n[1]);
   const base = wb.pos.length / 3;
   const along = Math.abs(bb[0] - a[0]) > 0 ? 'x' : 'z';
+  const rect = atlas.allocate(Math.hypot(bb[0] - a[0], bb[1] - a[1]), y1 - y0);
   for (let j = 0; j <= rows; j++) {
     for (let i = 0; i <= cols; i++) {
       const u = i / cols;
@@ -243,7 +316,7 @@ function wallQuad(
       const foot = Math.min(1, (y - y0) / 0.9);
       const ao = 0.62 + 0.38 * foot;
       const uCoord = (along === 'x' ? x : z) / BLOCK;
-      wb.vertex(p, normal, uCoord, y / BLOCK, ao);
+      wb.vertex(p, normal, uCoord, y / BLOCK, ao, rect, u, v);
     }
   }
   for (let j = 0; j < rows; j++) {
@@ -257,6 +330,7 @@ function wallQuad(
 /** A worn stone lip along a ledge edge: 6 cm proud of the face, 10 cm tall, bevelled. */
 function lip(
   lb: Builder,
+  atlas: Atlas,
   a: readonly [number, number],
   bb: readonly [number, number],
   y: number,
@@ -275,25 +349,28 @@ function lip(
   const front = new THREE.Vector3(nx, 0, nz);
   const up = new THREE.Vector3(nx * 0.4, 1, nz * 0.4).normalize();
   const len = Math.hypot(bx - ax, bz - az) / BLOCK;
+  const rf = atlas.allocate(len * BLOCK, h);
+  const rt = atlas.allocate(len * BLOCK, 0.15);
+  const ru = atlas.allocate(len * BLOCK, out);
   // Front face.
-  lb.vertex(p(ax + nx * out, y - h, az + nz * out), front, 0, 0, 0.85);
-  lb.vertex(p(bx + nx * out, y - h, bz + nz * out), front, len, 0, 0.85);
-  lb.vertex(p(ax + nx * out, y - 0.02, az + nz * out), front, 0, 0.05, 1);
-  lb.vertex(p(bx + nx * out, y - 0.02, bz + nz * out), front, len, 0.05, 1);
+  lb.vertex(p(ax + nx * out, y - h, az + nz * out), front, 0, 0, 0.85, rf, 0, 0);
+  lb.vertex(p(bx + nx * out, y - h, bz + nz * out), front, len, 0, 0.85, rf, 1, 0);
+  lb.vertex(p(ax + nx * out, y - 0.02, az + nz * out), front, 0, 0.05, 1, rf, 0, 1);
+  lb.vertex(p(bx + nx * out, y - 0.02, bz + nz * out), front, len, 0.05, 1, rf, 1, 1);
   lb.idx.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
   // Bevelled top, sloping back onto the ledge.
   const t = lb.pos.length / 3;
-  lb.vertex(p(ax + nx * out, y - 0.02, az + nz * out), up, 0, 0, 1);
-  lb.vertex(p(bx + nx * out, y - 0.02, bz + nz * out), up, len, 0, 1);
-  lb.vertex(p(ax - nx * 0.08, y + 0.005, az - nz * 0.08), up, 0, 0.07, 1);
-  lb.vertex(p(bx - nx * 0.08, y + 0.005, bz - nz * 0.08), up, len, 0.07, 1);
+  lb.vertex(p(ax + nx * out, y - 0.02, az + nz * out), up, 0, 0, 1, rt, 0, 0);
+  lb.vertex(p(bx + nx * out, y - 0.02, bz + nz * out), up, len, 0, 1, rt, 1, 0);
+  lb.vertex(p(ax - nx * 0.08, y + 0.005, az - nz * 0.08), up, 0, 0.07, 1, rt, 0, 1);
+  lb.vertex(p(bx - nx * 0.08, y + 0.005, bz - nz * 0.08), up, len, 0.07, 1, rt, 1, 1);
   lb.idx.push(t, t + 2, t + 1, t + 1, t + 2, t + 3);
   // Underside.
   const u = lb.pos.length / 3;
   const down = new THREE.Vector3(0, -1, 0);
-  lb.vertex(p(ax, y - h, az), down, 0, 0, 0.6);
-  lb.vertex(p(bx, y - h, bz), down, len, 0, 0.6);
-  lb.vertex(p(ax + nx * out, y - h, az + nz * out), down, 0, 0.03, 0.6);
-  lb.vertex(p(bx + nx * out, y - h, bz + nz * out), down, len, 0.03, 0.6);
+  lb.vertex(p(ax, y - h, az), down, 0, 0, 0.6, ru, 0, 0);
+  lb.vertex(p(bx, y - h, bz), down, len, 0, 0.6, ru, 1, 0);
+  lb.vertex(p(ax + nx * out, y - h, az + nz * out), down, 0, 0.03, 0.6, ru, 0, 1);
+  lb.vertex(p(bx + nx * out, y - h, bz + nz * out), down, len, 0.03, 0.6, ru, 1, 1);
   lb.idx.push(u, u + 2, u + 1, u + 1, u + 2, u + 3);
 }
