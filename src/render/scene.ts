@@ -636,19 +636,20 @@ function makeContactShadow(): THREE.Mesh {
   c.width = c.height = 64;
   const g = c.getContext('2d');
   if (g) {
-    // alphaMap reads the green channel: an opaque grey gradient.
+    // Black with a soft alpha falloff (an alphaMap does not draw on the WebGL2 backend here).
     const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    r.addColorStop(0, 'rgb(217,217,217)');
-    r.addColorStop(0.45, 'rgb(115,115,115)');
-    r.addColorStop(1, 'rgb(0,0,0)');
+    r.addColorStop(0, 'rgba(0,0,0,0.85)');
+    r.addColorStop(0.45, 'rgba(0,0,0,0.45)');
+    r.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = r;
     g.fillRect(0, 0, 64, 64);
   }
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(1.1, 1.1),
     new THREE.MeshBasicMaterial({
-      color: '#000000',
-      alphaMap: new THREE.CanvasTexture(c),
+      map,
       transparent: true,
       depthWrite: false,
       polygonOffset: true,

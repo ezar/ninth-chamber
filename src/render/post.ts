@@ -272,7 +272,7 @@ export class PostStack {
     this.aoTexel.value.set(1 / Math.max(1, width * AO_SCALE), 1 / Math.max(1, height * AO_SCALE));
     this.raysTexel.value.set(1 / Math.max(1, width * RAYS_SCALE), 1 / Math.max(1, height * RAYS_SCALE));
     // Bokeh radius in full-resolution pixels, tuned at 1080p.
-    this.bokehScale.value = 7 * (height / 1080);
+    this.bokehScale.value = 10 * (height / 1080);
   }
 
   render(dt: number): void {

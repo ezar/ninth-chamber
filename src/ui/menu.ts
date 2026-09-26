@@ -34,6 +34,11 @@ export interface MenuCallbacks {
   closed(): void;
   /** A setting changed (already written into the settings object). */
   change(key: keyof Settings): void;
+  /**
+   * Phone vibration and gamepad rumble, which persist themselves
+   * (core/haptics.ts: hapticsEnabled / setHapticsEnabled). No row without it.
+   */
+  vibration?: { get(): boolean; set(on: boolean): void };
 }
 
 interface OptionRow {
@@ -361,6 +366,17 @@ export class Menu {
         },
       ),
     );
+    const vibration = this.cb.vibration;
+    if (vibration) {
+      this.addRow(
+        toggleRow(
+          'options.vibration',
+          () => vibration.get(),
+          (v) => vibration.set(v),
+          () => t('options.vibration.hint'),
+        ),
+      );
+    }
 
     group('options.group.access');
     this.addRow(

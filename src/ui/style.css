@@ -920,16 +920,37 @@ body.touch .panel .help {
 /* Phones in landscape: less air, same hierarchy. */
 @media (max-height: 520px) {
   .menu-body {
-    padding-top: max(16px, env(safe-area-inset-top));
-    padding-bottom: 8px;
+    align-items: stretch;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: 4px;
+  }
+  .menu-panel {
+    align-self: center;
+  }
+  .menu-panel-wide {
+    align-self: stretch;
   }
   .menu-title {
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    font-size: 36px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    font-size: 32px;
   }
-  .menu-kicker {
-    margin-bottom: 2px;
+  .menu-panel-wide .menu-kicker {
+    display: none;
+  }
+  .opt {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+  .opt-group {
+    margin: 10px 0 0;
+  }
+  .menu-list-foot {
+    margin-top: 4px;
+    padding-top: 4px;
+  }
+  .menu-foot {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
   .menu-item {
     min-height: 44px;
