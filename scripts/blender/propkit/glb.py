@@ -94,3 +94,56 @@ def summary(path: str) -> dict[str, Any]:
         "materials": mats,
         "textures": js.get("textures", []),
     }
+
+
+def orientation_report(path: str) -> dict[str, float]:
+    """Per mesh: fraction of triangles whose outward ray escapes (higher = facing outwards).
+
+    A cheap check for single-sided glTF materials: for each triangle, look along
+    its normal and test whether any other triangle of the same file is hit within
+    a short distance (brute force on a sample). Flipped open surfaces score low.
+    """
+    import numpy as np
+
+    js, binc = read_glb(path)
+    tris_all = []
+    per_mesh = []
+    node_of_mesh = {n["mesh"]: n for n in js.get("nodes", []) if "mesh" in n}
+    for mi, mesh in enumerate(js["meshes"]):
+        t = np.array(node_of_mesh.get(mi, {}).get("translation", [0, 0, 0]))
+        for prim in mesh["primitives"]:
+            pos = _accessor_array(js, binc, prim["attributes"]["POSITION"]).astype(np.float64) + t
+            idx = _accessor_array(js, binc, prim["indices"]).astype(np.int64).reshape(-1, 3)
+            tri = pos[idx]
+            tris_all.append(tri)
+            per_mesh.append((mesh.get("name"), tri))
+    allt = np.concatenate(tris_all)
+    out = {}
+    rng = np.random.default_rng(0)
+    size = np.ptp(allt.reshape(-1, 3), axis=0).max()
+    for name, tri in per_mesh:
+        k = min(len(tri), 300)
+        sel = tri[rng.choice(len(tri), k, replace=False)]
+        c = sel.mean(1)
+        n = np.cross(sel[:, 1] - sel[:, 0], sel[:, 2] - sel[:, 0])
+        area = np.linalg.norm(n, axis=1)
+        n = n / np.maximum(area[:, None], 1e-12)
+        # Ignore the floor contact: rays going down from z=0 faces are fine either way.
+        origins = c + n * size * 1e-3
+        escaped = 0
+        v0, v1, v2 = allt[:, 0], allt[:, 1], allt[:, 2]
+        e1, e2 = v1 - v0, v2 - v0
+        for o, d in zip(origins, n):
+            pvec = np.cross(d, e2)
+            det = (e1 * pvec).sum(1)
+            ok = np.abs(det) > 1e-12
+            inv = np.where(ok, 1.0 / np.where(ok, det, 1.0), 0.0)
+            tvec = o - v0
+            u = (tvec * pvec).sum(1) * inv
+            qvec = np.cross(tvec, e1)
+            v = (d * qvec).sum(1) * inv
+            tt = (e2 * qvec).sum(1) * inv
+            hit = ok & (u >= 0) & (v >= 0) & (u + v <= 1) & (tt > 0)
+            escaped += 0 if hit.any() else 1
+        out[name] = escaped / k
+    return out

@@ -78,6 +78,11 @@ async function main(): Promise<void> {
     if (playing) return;
     playing = true;
     void audio.unlock();
+    document.body.classList.add('playing');
+    if (document.body.classList.contains('touch')) {
+      // Phones: reclaim the browser chrome for the game.
+      void document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+    }
     $('#start').classList.add('hidden');
     hud.showTitle(level.name as StringKey);
     camera.recenter(world.state.player.yaw);
@@ -93,6 +98,7 @@ async function main(): Promise<void> {
     renderer.setWorld(world);
     hud.hideEnd();
     playing = true;
+    document.body.classList.add('playing');
   };
 
   const pose = (): PlayerPose => ({ pos: { ...world.state.player.pos }, yaw: world.state.player.yaw });
@@ -109,6 +115,8 @@ async function main(): Promise<void> {
       if (at) camera.focusOn(at, Number(e.duration) || 2);
     }
     if (e.type === 'player.grabbed') camera.swingBehind(world.state.player.yaw);
+    camera.onEvent(e, p, (id) => renderer.entityPosition(id));
+    if (e.type === 'level.end') document.body.classList.remove('playing');
   };
   bus.on('*', onEvent);
 
@@ -170,7 +178,21 @@ async function main(): Promise<void> {
       y: prev.pos.y + (curr.pos.y - prev.pos.y) * a,
       z: prev.pos.z + (curr.pos.z - prev.pos.z) * a,
     };
-    camera.update(at, p.mode === 'hang' || p.mode === 'climb', world.grid, dt);
+    camera.update(at, p.mode === 'hang' || p.mode === 'climb', world.grid, dt, {
+      vx: p.mode === 'ground' || p.mode === 'air' ? p.vel.x : 0,
+      vz: p.mode === 'ground' || p.mode === 'air' ? p.vel.z : 0,
+      vy: p.vel.y,
+    });
+    // Narrow (portrait) screens keep a playable horizontal field of view.
+    const minHFov = (58 * Math.PI) / 180;
+    const fov = Math.max(
+      camera.fov,
+      (2 * Math.atan(Math.tan(minHFov / 2) / renderer.camera.aspect) * 180) / Math.PI,
+    );
+    if (Math.abs(renderer.camera.fov - fov) > 0.01) {
+      renderer.camera.fov = fov;
+      renderer.camera.updateProjectionMatrix();
+    }
     renderer.render(
       prev,
       curr,
