@@ -137,3 +137,112 @@ describe('traps and pickups', () => {
     expect(w.stats.secrets).toBe(1);
   });
 });
+
+describe('plate-held and timed gates', () => {
+  const HALL = ['#######', '#..D..#', '#.....#', '#.....#', '#.P.S.#', '#######'];
+  const gate = (logic: { when: string; do: string[]; once?: boolean }[]) =>
+    testLevel(HALL, {
+      legend: { D: 0, P: 0 },
+      entities: [
+        { id: 'plate1', type: 'plate', room: 'r', at: [2, 4] },
+        { id: 'gate1', type: 'door', room: 'r', at: [3, 1] },
+      ],
+      logic,
+    });
+  const onPlate = (w: ReturnType<typeof gate>): void => {
+    runUntil(w, frame({ x: -1 }), (x) => findActor(x, 'plate1', 'plate')?.pressed === true, 120);
+  };
+
+  it('opening an open door or closing a closed one emits nothing', () => {
+    const w = gate([{ when: 'not plate1.pressed', do: ['gate1.close'], once: false }]);
+    run(w, frame(), 5);
+    expect(w.events.drain().map((e) => e.type)).not.toContain('door.closing');
+  });
+
+  it('a gate held by a plate closes as soon as the weight leaves', () => {
+    const w = gate([
+      { when: 'plate1.pressed', do: ['gate1.open'], once: false },
+      { when: 'not plate1.pressed', do: ['gate1.close'], once: false },
+    ]);
+    onPlate(w);
+    run(w, frame(), ticks(1 / mechanics.doorSpeed));
+    expect(w.grid.cellFloor(3, 1)).toBe(0);
+    run(w, frame({ x: 1 }), 30);
+    run(w, frame(), ticks(1 / mechanics.doorSpeed));
+    expect(w.grid.cellFloor(3, 1)).toBe(Infinity);
+  });
+
+  it('a timed gate ticks every second, then closes', () => {
+    const w = gate([
+      { when: 'plate1.pressed', do: ['gate1.open'], once: false },
+      { when: 'gate1.open and not plate1.pressed', do: ['gate1.open 3s'], once: false },
+    ]);
+    onPlate(w);
+    run(w, frame(), ticks(1 / mechanics.doorSpeed));
+    w.events.drain();
+    run(w, frame({ x: 1 }), 30);
+    run(w, frame(), ticks(3));
+    const events = w.events.drain();
+    expect(events.filter((e) => e.type === 'door.tick').map((e) => e.left)).toEqual([2, 1]);
+    expect(events.map((e) => e.type)).toContain('door.closing');
+  });
+});
+
+describe('spring levers and block resets', () => {
+  const ROOM = ['#######', '#.....#', '#.....#', '#.....#', '#..S..#', '#######'];
+
+  it('a spring lever can be pulled again and fires its rule each time', () => {
+    const w = testLevel(ROOM, {
+      entities: [{ id: 'reset', type: 'lever', room: 'r', at: [3, 4], wall: 'S', spring: true }],
+      logic: [{ when: 'reset.used', do: ['sfx rumble'], once: false }],
+    });
+    for (let i = 0; i < 2; i++) {
+      stepWorld(w, frame({ pressed: ['action'] }));
+      expect(w.state.player.mode).toBe('lever');
+      run(w, frame(), ticks(tuning.leverTime));
+    }
+    expect(w.events.drain().filter((e) => e.type === 'sfx')).toHaveLength(2);
+    expect(findActor(w, 'reset', 'lever')?.used).toBe(false);
+  });
+
+  it('a reset returns a block to its start, even from a pit', () => {
+    const w = testLevel(['#####', '#___#', '#...#', '#...#', '#.S.#', '#####'], {
+      legend: { _: -4 },
+      entities: [
+        { id: 'b1', type: 'block', room: 'r', at: [2, 2] },
+        { id: 'reset', type: 'lever', room: 'r', at: [2, 4], wall: 'S', spring: true },
+      ],
+      logic: [{ when: 'reset.used', do: ['b1.reset'], once: false }],
+    });
+    run(w, frame({ y: 1 }), 30);
+    run(w, frame({ held: ['action'] }), 2);
+    run(w, frame({ y: 1, held: ['action'] }), ticks(tuning.pushTime) + 30);
+    expect(findActor(w, 'b1', 'block')?.y).toBe(-2);
+    runUntil(w, frame({ y: -1, held: ['walk'] }), (x) => cellZ(x) === 4, 200);
+    run(w, frame(), 10);
+    stepWorld(w, frame({ pressed: ['action'] }));
+    run(w, frame(), ticks(tuning.leverTime));
+    const b = findActor(w, 'b1', 'block');
+    expect([b?.cx, b?.cz, b?.y]).toEqual([2, 2, 0]);
+    expect(w.grid.cellFloor(2, 1)).toBe(-2);
+  });
+
+  it('a block left without support falls', () => {
+    const w = testLevel(ROOM, {
+      entities: [
+        { id: 'low', type: 'block', room: 'r', at: [2, 2] },
+        { id: 'top', type: 'block', room: 'r', at: [4, 2] },
+      ],
+    });
+    const top = findActor(w, 'top', 'block');
+    const low = findActor(w, 'low', 'block');
+    if (!top || !low) throw new Error('missing block');
+    // `top` rests on `low` (as if pushed off a shelf onto it); then `low` moves away.
+    top.cx = 2;
+    top.y = mechanics.blockHeight;
+    low.cz = 1;
+    run(w, frame(), 30);
+    expect(top.y).toBe(0);
+    expect(w.events.drain().map((e) => e.type)).toContain('block.landed');
+  });
+});

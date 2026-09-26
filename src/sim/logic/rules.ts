@@ -3,7 +3,7 @@
  * and flags. Rules fire on the rising edge of their condition.
  */
 import type { RuleFile } from '../grid/schema';
-import { findActor, saveCheckpoint, type World } from '../world';
+import { findActor, resetBlock, saveCheckpoint, type World } from '../world';
 import { evalExpr, parseExpr, parseSeconds, type Expr } from './expr';
 
 export interface CompiledRule {
@@ -110,9 +110,16 @@ function runAction(world: World, verb: string, args: string[]): void {
       const target =
         op === 'open' ? 1 : op === 'close' ? 0 : op === 'toggle' ? (door.target === 1 ? 0 : 1) : null;
       if (target === null) return;
+      const changed = door.target !== target;
       door.target = target;
+      // "open 12s" closes again after the delay; a plain "open" holds (and cancels a pending close).
       door.closeIn = target === 1 ? parseSeconds(args[0]) : null;
-      world.events.emit({ type: target === 1 ? 'door.opening' : 'door.closing', tick, id });
+      // Re-opening an open door or closing a closed one moves nothing, so it makes no sound.
+      if (changed) world.events.emit({ type: target === 1 ? 'door.opening' : 'door.closing', tick, id });
+      return;
+    }
+    if (op === 'reset' && findActor(world, id, 'block')) {
+      resetBlock(world, id);
       return;
     }
   }
