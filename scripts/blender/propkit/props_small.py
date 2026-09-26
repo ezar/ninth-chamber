@@ -428,8 +428,10 @@ def _lay(objs, pose, pre: Matrix | None = None) -> None:
     m = Euler((math.radians(tx), math.radians(ty), math.radians(yaw)), "XYZ").to_matrix().to_4x4()
     if pre is not None:
         m = Matrix.Rotation(math.radians(yaw), 4, "Z") @ pre
+    lo, hi = core.bounds(objs[:1])
+    centre = Matrix.Translation(-Vector(((lo + hi) / 2).tolist()))
     for o in objs:
-        o.data.transform(m)
+        o.data.transform(m @ centre)
     zmin = min(core.mesh_coords(o)[:, 2].min() for o in objs)
     for o in objs:
         o.data.transform(Matrix.Translation((lx, ly, -zmin)))
