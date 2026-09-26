@@ -41,8 +41,8 @@ def stone_height(g: Graph, p: S, grain: float = 1.0, pits: float = 1.0, seed: fl
     """Fine surface relief for stone: sandy grain, bedding laminae and pits (unitless)."""
     fine = g.noise(p, scale=140.0, detail=4.0, rough=0.7, w=seed) * (0.8 * grain)
     mid = g.noise(p, scale=18.0, detail=5.0, rough=0.6, w=seed + 3.1) * 1.2
-    lam = g.noise(g.scale_vec(p, 0.7, 0.7, 16.0), scale=1.0, detail=4.0, w=seed + 8.3)
-    lam = lam.smooth(0.45, 0.7) * 0.8
+    lam = g.noise(g.scale_vec(p, 0.7, 0.7, 10.0), scale=1.0, detail=4.0, w=seed + 8.3)
+    lam = lam.smooth(0.5, 0.72) * 0.45
     v1 = g.voronoi(p, scale=30.0, feature="F1", w=seed + 1.7)
     v2 = g.voronoi(p, scale=75.0, feature="F1", w=seed + 2.9)
     gate = g.noise(p, scale=5.0, w=seed + 5.5).smooth(0.45, 0.65)
@@ -102,8 +102,13 @@ def sandstone(
     sand_amount: float = 1.0,
     edge_lo: float = 4.0,
     edge_hi: float = 25.0,
+    fresh: str | None = None,
 ) -> Callable[[Graph], Look]:
-    """Weathered sandstone. ``pale`` lifts it towards limestone (pushable blocks)."""
+    """Weathered sandstone. ``pale`` lifts it towards limestone (pushable blocks).
+
+    ``fresh`` names a 0..1 point attribute marking recent fracture surfaces
+    (rubble): brighter, less patinated, rougher.
+    """
 
     def recipe(g: Graph) -> Look:
         p = g.pos()
@@ -133,6 +138,11 @@ def sandstone(
         # Worn convex edges: paler.
         base = g.mix(convex * 0.5, base, "#d4ba92")
         rough = 0.88 + (grain - 0.5) * 0.1 - convex * 0.06
+        if fresh:
+            fr = g.attr(fresh).smooth(0.05, 0.6)
+            fcol = g.mix(grain.smooth(0.3, 0.7) * 0.3, "#c08d5c", "#d3a877")
+            base = g.mix(fr * 0.75, base, fcol)
+            rough = g.mixf(fr, rough, 0.93)
         # Sand settled in joints, hollows, pits and on upward faces.
         sand_n = g.noise(p, scale=22.0, detail=3.0, w=seed + 12.0)
         sand = (concave * 1.3 - 0.1 + (sand_n - 0.5) * 0.7).clamp() * sand_amount
