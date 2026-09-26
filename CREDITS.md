@@ -36,9 +36,8 @@ Recorded sound under open licences. The full list, file by file with source link
 
 ## Animation
 
-- [Quaternius](https://quaternius.com) animation library — CC0.
-- [CMU Graphics Lab Motion Capture Database](http://mocap.cs.cmu.edu). The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
-- Procedural animation layer in `src/render/nora.ts`.
+- Nora's motion clips (`public/anim/*.json`) are retargeted from the **Universal Animation Library** (Standard) by [Quaternius](https://quaternius.com) — CC0 1.0: `Idle_Loop`, `Walk_Loop`, `Jog_Fwd_Loop`, `Jump_Start`, `Jump_Loop` and `Jump_Land`. The library itself is not in the repo; `pnpm anim:build scripts/anim/sources/ual.json <library folder>` rebuilds the clips (see `docs/animation.md`).
+- Procedural animation layer (climbing, mechanisms, aiming) in `src/render/nora.ts`.
 
 ## Fonts
 

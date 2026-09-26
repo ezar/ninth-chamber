@@ -63,6 +63,8 @@
 
 ## Unreleased
 
+- Nora walks, runs and stands with motion clips instead of the procedural gait: `Idle_Loop`, `Walk_Loop` and `Jog_Fwd_Loop` from the Quaternius Universal Animation Library (CC0, see `CREDITS.md`), retargeted by direction onto her skeleton by `scripts/anim/build-clips.ts` (`pnpm anim:build`) into compact clips in `public/anim/` (6–16 kB each). At run time (`src/render/anim/`) idle, walk and run blend by speed with a shared gait phase, speed is matched with cadence and stride length, a leg pass pins planted feet (no sliding, no spinning on turns, steps followed smoothly), rolls the feet and lowers the hips when a leg can't reach, jumps play the library's take-off, airborne and landing clips, the arms are relaxed (straighter elbows, straight wrists, arms by the sides), and the procedural rig still drives hang, climb, block, push, pull, lever, pickup and dead with 0.2 s cross-fades. Details in `docs/animation.md`; `tests/anim.test.ts` checks the clips and that planted feet don't slide.
+
 - The repo is now in English: code comments, error messages, test names, CLAUDE.md, README and this changelog. docs/spec.md stays in Spanish as the source document.
 - `main` is deployed to GitHub Pages (https://ezar.github.io/ninth-chamber/) by `.github/workflows/pages.yml`.
 - Player-facing strings moved to `i18n/en.json` and `i18n/es.json`, read through `src/ui/i18n.ts`; the locale follows the browser and falls back to English.

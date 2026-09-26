@@ -13,7 +13,10 @@ pnpm test       # simulation tests (Vitest)
 pnpm lint       # ESLint
 pnpm typecheck  # types, including the check that src/sim does not use the DOM
 pnpm build      # production build in dist/
+pnpm anim:build <manifest> <folder>  # rebuild Nora's motion clips (docs/animation.md)
 ```
+
+Credits for third-party assets are in [CREDITS.md](CREDITS.md).
 
 ## Controls (milestone 1)
 

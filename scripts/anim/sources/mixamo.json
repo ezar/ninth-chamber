@@ -1,0 +1,14 @@
+{
+  "//": "Mixamo clips made on Nora's mesh: download FBX, 30 fps, 'In Place' for locomotion, convert each with scripts/anim/fbx_to_glb.py. In-place clips have no root motion, so give each gait clip its ground speed in m/s (or add a non-in-place copy as speedFrom). Rename the files here to match the downloads.",
+  "rig": "mixamo",
+  "source": "Mixamo",
+  "rest": { "file": "idle.glb" },
+  "clips": [
+    { "name": "idle", "file": "idle.glb", "loop": true },
+    { "name": "walk", "file": "walk.glb", "loop": true, "gait": true, "speed": 1.4 },
+    { "name": "run", "file": "run.glb", "loop": true, "gait": true, "speed": 5.0 },
+    { "name": "jump_start", "file": "jump_start.glb", "loop": false },
+    { "name": "jump_loop", "file": "jump_loop.glb", "loop": true },
+    { "name": "jump_land", "file": "jump_land.glb", "loop": false }
+  ]
+}

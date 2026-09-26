@@ -3,3 +3,4 @@ pnpm-lock.yaml
 docs/spec.md
 .claude
 public/models/*.glb
+public/anim/*.json

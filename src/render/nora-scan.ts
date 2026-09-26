@@ -1,47 +1,39 @@
 /**
  * Nora's scanned model (public/models/nora.glb, a Meshy scan rigged by
- * scripts/character/rig_nora.py) driven by the procedural animation in
- * nora.ts. The procedural rig keeps animating hidden; every frame its joint
- * rotations are retargeted onto the scan's skeleton.
+ * scripts/character/rig_nora.py). On the ground she plays motion clips
+ * (public/anim/*.json, see src/render/anim/); in the other modes she follows
+ * the procedural animation in nora.ts, whose rig keeps animating hidden and is
+ * retargeted onto the scan's skeleton every frame.
  *
- * The scan is bound in an A-pose (arms ~30° out, legs slightly apart) while
- * the procedural rig's bind pose has limbs straight down, so each limb gets a
- * fixed correction that rotates its bind direction onto the procedural one.
+ * Both sources meet in the canonical space of anim/skeleton.ts: model-space
+ * joint rotations relative to a rest pose with the limbs straight down. The
+ * scan is bound in an A-pose (arms ~30° out, legs slightly apart), so each
+ * limb gets a fixed correction that rotates its bind direction onto the rest
+ * direction: bone rotation = canonical × correction × bind.
  */
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { NoraModel, type NoraPose, type RetargetJoint } from './nora';
+import { NoraAnimator, type AirClips, type LocomotionClips, type PoseLayer } from './anim/animator';
+import { Clip, type ClipFile } from './anim/clip';
+import { AnimPose } from './anim/pose';
+import {
+  JOINTS,
+  JOINT_COUNT,
+  JOINT_INDEX,
+  PARENT_INDEX,
+  ScanSkeleton,
+  UPPER_BODY,
+  type BindJoint,
+} from './anim/skeleton';
 
-interface Target {
-  bone: THREE.Bone;
-  /** Bind rotation in model space. */
-  bind: THREE.Quaternion;
-  /** Rotates the bind direction onto the procedural rig's rest direction. */
-  correction: THREE.Quaternion;
-  parent: RetargetJoint | null;
-  /** Model-space rotation of the bone's parent when it is not a retargeted joint. */
-  staticParent: THREE.Quaternion;
-}
-
-/** Limbs whose bind direction differs between the rigs, with the joint that marks their far end. */
-const LIMBS: Partial<Record<RetargetJoint, RetargetJoint>> = {
-  upperArm_L: 'lowerArm_L',
-  lowerArm_L: 'hand_L',
-  upperArm_R: 'lowerArm_R',
-  lowerArm_R: 'hand_R',
-  thigh_L: 'shin_L',
-  shin_L: 'foot_L',
-  thigh_R: 'shin_R',
-  shin_R: 'foot_R',
-};
-
-const ORDER: RetargetJoint[] = [
-  'hips',
+const _q = new THREE.Quaternion();
+const _v = new THREE.Vector3();
+/** Joints the procedural aiming layer drives (nora.ts AIM_JOINTS). */
+const AIM_JOINTS: readonly RetargetJoint[] = [
   'spine',
   'chest',
-  'neck',
-  'head',
   'shoulder_L',
   'upperArm_L',
   'lowerArm_L',
@@ -50,44 +42,20 @@ const ORDER: RetargetJoint[] = [
   'upperArm_R',
   'lowerArm_R',
   'hand_R',
-  'thigh_L',
-  'shin_L',
-  'foot_L',
-  'thigh_R',
-  'shin_R',
-  'foot_R',
 ];
 
-const PARENT: Partial<Record<RetargetJoint, RetargetJoint>> = {
-  spine: 'hips',
-  chest: 'spine',
-  neck: 'chest',
-  head: 'neck',
-  shoulder_L: 'chest',
-  upperArm_L: 'shoulder_L',
-  lowerArm_L: 'upperArm_L',
-  hand_L: 'lowerArm_L',
-  shoulder_R: 'chest',
-  upperArm_R: 'shoulder_R',
-  lowerArm_R: 'upperArm_R',
-  hand_R: 'lowerArm_R',
-  thigh_L: 'hips',
-  shin_L: 'thigh_L',
-  foot_L: 'shin_L',
-  thigh_R: 'hips',
-  shin_R: 'thigh_R',
-  foot_R: 'shin_R',
-};
-
-const DOWN = new THREE.Vector3(0, -1, 0);
-const _q = new THREE.Quaternion();
-const _v = new THREE.Vector3();
+/** Hands follow their forearm rigidly, in the bind pose's relation. */
+const RIGID_HANDS = new Set([JOINT_INDEX.hand_L, JOINT_INDEX.hand_R]);
 
 class ScannedSkin {
-  private readonly targets = new Map<RetargetJoint, Target>();
-  private readonly pose = new Map<RetargetJoint, THREE.Quaternion>();
-  private readonly world = new Map<RetargetJoint, THREE.Quaternion>();
-  private readonly hipsOffset = new THREE.Vector3();
+  readonly skeleton: ScanSkeleton;
+  private readonly bones: THREE.Bone[] = [];
+  /** Model-space rotation of the hips bone's parent. */
+  private readonly rootParent = new THREE.Quaternion();
+  private readonly target: THREE.Quaternion[] = Array.from(
+    { length: JOINT_COUNT },
+    () => new THREE.Quaternion(),
+  );
   private readonly hipsBindLocal = new THREE.Vector3();
   private readonly hipsParentInv = new THREE.Matrix4();
   private readonly materials: THREE.Material[] = [];
@@ -105,87 +73,61 @@ class ScannedSkin {
         this.materials.push(...mats);
       }
     });
-    const modelRot = (o: THREE.Object3D): THREE.Quaternion => {
-      const q = new THREE.Quaternion();
-      o.matrixWorld.decompose(_v, q, new THREE.Vector3());
-      return q;
-    };
-    const modelPos = (o: THREE.Object3D): THREE.Vector3 =>
-      new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
-
-    for (const name of ORDER) {
+    const bind = {} as Record<RetargetJoint, BindJoint>;
+    for (const name of JOINTS) {
       const bone = bones.get(name);
       if (!bone) throw new Error(`nora.glb has no bone '${name}'`);
-      const bind = modelRot(bone);
-      const correction = new THREE.Quaternion();
-      const end = LIMBS[name];
-      if (end) {
-        const endBone = bones.get(end);
-        if (endBone) {
-          const dir = modelPos(endBone).sub(modelPos(bone)).normalize();
-          correction.setFromUnitVectors(dir, DOWN);
-        }
-      }
-      this.targets.set(name, {
-        bone,
-        bind,
-        correction,
-        parent: PARENT[name] ?? null,
-        staticParent: bone.parent ? modelRot(bone.parent) : new THREE.Quaternion(),
-      });
+      this.bones.push(bone);
+      const pos = new THREE.Vector3();
+      const rot = new THREE.Quaternion();
+      bone.matrixWorld.decompose(pos, rot, _v);
+      bind[name] = { pos, rot };
     }
-    // Hands follow their forearm's correction so they stay in line with it.
-    for (const s of ['L', 'R'] as const) {
-      const hand = this.targets.get(`hand_${s}`);
-      const fore = this.targets.get(`lowerArm_${s}`);
-      if (hand && fore) hand.correction.copy(fore.correction);
+    this.skeleton = new ScanSkeleton(bind);
+    const hips = this.bones[0];
+    if (hips?.parent) {
+      hips.parent.matrixWorld.decompose(_v, this.rootParent, new THREE.Vector3());
+      this.hipsParentInv.copy(hips.parent.matrixWorld).invert();
     }
-    const hips = this.targets.get('hips');
-    if (hips) {
-      this.hipsBindLocal.copy(hips.bone.position);
-      if (hips.bone.parent) this.hipsParentInv.copy(hips.bone.parent.matrixWorld).invert();
-    }
+    if (hips) this.hipsBindLocal.copy(hips.position);
   }
 
-  apply(driver: NoraModel): void {
-    driver.modelPose(this.pose, this.hipsOffset);
-    for (const name of ORDER) {
-      const t = this.targets.get(name);
-      const w = this.pose.get(name);
-      if (!t || !w) continue;
-      const target = (this.world.get(name) ??
-        this.world.set(name, new THREE.Quaternion()).get(name)) as THREE.Quaternion;
-      const fore = name === 'hand_L' ? 'lowerArm_L' : name === 'hand_R' ? 'lowerArm_R' : null;
-      const foreTarget = fore ? this.world.get(fore) : undefined;
-      const foreBind = fore ? this.targets.get(fore)?.bind : undefined;
-      if (foreTarget && foreBind) {
-        // Hands keep the scan's relaxed wrist relative to the forearm: the
-        // procedural wrist flex reads as bent, cupped hands on this model.
-        target.copy(foreTarget).multiply(_q.copy(foreBind).invert()).multiply(t.bind);
-      } else {
-        // Target model-space rotation: procedural delta × rest correction × bind.
-        target.copy(w).multiply(t.correction).multiply(t.bind);
-      }
-      const parent = t.parent ? this.world.get(t.parent) : t.staticParent;
-      t.bone.quaternion.copy(
+  apply(pose: AnimPose): void {
+    const sk = this.skeleton;
+    for (let i = 0; i < JOINT_COUNT; i++) {
+      const bone = this.bones[i];
+      const corr = sk.correction[i];
+      const bind = sk.bind[i];
+      const t = this.target[i];
+      if (!bone || !corr || !bind || !t) continue;
+      const p = PARENT_INDEX[i] ?? -1;
+      const foreBind = sk.bind[p];
+      const foreTarget = this.target[p];
+      if (RIGID_HANDS.has(i) && foreBind && foreTarget) {
+        // Hands keep the scan's relaxed wrist relative to the forearm: any
+        // wrist flex reads as bent, cupped hands on this model.
+        t.copy(foreTarget).multiply(_q.copy(foreBind.rot).invert()).multiply(bind.rot);
+      } else t.copy(pose.q(i)).multiply(corr).multiply(bind.rot);
+      const parent = p >= 0 ? this.target[p] : this.rootParent;
+      bone.quaternion.copy(
         _q
-          .copy(parent ?? t.staticParent)
+          .copy(parent ?? this.rootParent)
           .invert()
-          .multiply(target),
+          .multiply(t),
       );
     }
-    const hips = this.targets.get('hips');
+    const hips = this.bones[0];
     if (hips) {
-      _v.copy(this.hipsOffset)
-        .transformDirection(this.hipsParentInv)
-        .multiplyScalar(this.hipsOffset.length());
-      hips.bone.position.copy(this.hipsBindLocal).add(_v);
+      _v.subVectors(pose.hips, sk.hipsBind);
+      const len = _v.length();
+      _v.transformDirection(this.hipsParentInv).multiplyScalar(len);
+      hips.position.copy(this.hipsBindLocal).add(_v);
     }
   }
 
   /** The scan's bone for a retargeted joint. */
   bone(name: RetargetJoint): THREE.Bone | null {
-    return this.targets.get(name)?.bone ?? null;
+    return this.bones[JOINT_INDEX[name]] ?? null;
   }
 
   setOpacity(a: number): void {
@@ -203,25 +145,91 @@ class ScannedSkin {
   }
 }
 
+async function loadClip(url: string): Promise<Clip> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  return new Clip((await res.json()) as ClipFile);
+}
+
 /**
  * Nora as the renderer sees her: the procedural model until the scan loads,
- * then the scan driven by the procedural animation.
+ * then the scan driven by motion clips and the procedural animation.
  */
 export class NoraRig {
   private readonly driver = new NoraModel();
   private skin: ScannedSkin | null = null;
+  private animator: NoraAnimator | null = null;
+  private readonly procMap = new Map<RetargetJoint, THREE.Quaternion>();
+  private readonly procOffset = new THREE.Vector3();
+  private readonly procPose = new AnimPose();
+  private readonly shown = new AnimPose();
+  private readonly rootPos = new THREE.Vector3();
+  private override: { weight: number; joints: readonly RetargetJoint[] } = { weight: 0, joints: UPPER_BODY };
+  private readonly layers: PoseLayer[] = [];
+  /** Smoothed weight of the procedural aiming layer. */
+  private aimW = 0;
 
   get root(): THREE.Group {
     return this.driver.root;
   }
 
-  /** Loads the scanned model; keeps the procedural one if it is missing. */
-  async loadScan(url: string): Promise<boolean> {
+  /**
+   * Upper-body hook for clip-driven modes (e.g. aiming while running): shows
+   * the procedural rig's pose for `joints` (default: spine, head and arms)
+   * over the clips with weight 0..1.
+   */
+  setProceduralOverride(weight: number, joints: readonly RetargetJoint[] = UPPER_BODY): void {
+    this.override = { weight, joints };
+    this.animator?.setProceduralOverride(weight, joints);
+  }
+
+  /** Adds a layer that edits the clip pose before the leg pass (e.g. aim offsets). */
+  addLayer(layer: PoseLayer): void {
+    this.layers.push(layer);
+    this.animator?.layers.push(layer);
+  }
+
+  /**
+   * Loads the scanned model and the ground clips from `clipDir`; keeps the
+   * procedural model if the scan is missing, and the procedural animation if
+   * the clips are.
+   */
+  async loadScan(url: string, clipDir: string): Promise<boolean> {
     try {
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(MeshoptDecoder);
-      const gltf = await loader.loadAsync(url);
+      const [gltf, clips, air] = await Promise.all([
+        loader.loadAsync(url),
+        Promise.all([
+          loadClip(`${clipDir}idle.json`),
+          loadClip(`${clipDir}walk.json`),
+          loadClip(`${clipDir}run.json`),
+        ]).then(
+          ([idle, walk, run]): LocomotionClips => ({ idle, walk, run }),
+          (err: unknown) => {
+            console.warn('Nora clips not loaded, using the procedural animation.', err);
+            return null;
+          },
+        ),
+        Promise.all([
+          loadClip(`${clipDir}jump_start.json`),
+          loadClip(`${clipDir}jump_loop.json`),
+          loadClip(`${clipDir}jump_land.json`),
+        ]).then(
+          ([start, loop, land]): AirClips => ({ start, loop, land }),
+          (err: unknown) => {
+            console.warn('Nora jump clips not loaded, using the procedural jump.', err);
+            return null;
+          },
+        ),
+      ]);
       this.skin = new ScannedSkin(gltf.scene);
+      if (clips) {
+        const animator = new NoraAnimator(this.skin.skeleton, clips, air);
+        animator.setProceduralOverride(this.override.weight, this.override.joints);
+        animator.layers.push(...this.layers);
+        this.animator = animator;
+      }
       // Hide the procedural body first: setVisible walks the whole root.
       this.driver.setVisible(false);
       this.driver.root.add(gltf.scene);
@@ -234,7 +242,27 @@ export class NoraRig {
 
   update(pose: NoraPose, dt: number): void {
     this.driver.update(pose, dt);
-    this.skin?.apply(this.driver);
+    const skin = this.skin;
+    if (!skin) return;
+    this.driver.modelPose(this.procMap, this.procOffset);
+    JOINTS.forEach((j, i) => {
+      const q = this.procMap.get(j);
+      if (q) this.procPose.q(i).copy(q);
+    });
+    this.procPose.hips.copy(skin.skeleton.hipsBind).add(this.procOffset);
+    if (this.animator) {
+      // Pistols drawn: the procedural aiming layer (nora.ts) drives the torso and
+      // arms over the clips while the legs keep running from them.
+      const armed = pose.mode === 'ground' || pose.mode === 'air' ? pose.weapons : 0;
+      this.aimW += (armed - this.aimW) * (1 - Math.exp(-Math.max(0, dt) * 14));
+      if (this.aimW > 1e-3)
+        this.animator.setProceduralOverride(Math.max(this.aimW, this.override.weight), AIM_JOINTS);
+      else this.animator.setProceduralOverride(this.override.weight, this.override.joints);
+      const root = this.driver.root;
+      this.rootPos.copy(root.position);
+      this.animator.update(pose, dt, this.procPose, this.rootPos, root.rotation.y, this.shown);
+      skin.apply(this.shown);
+    } else skin.apply(this.procPose);
   }
 
   setOpacity(a: number): void {

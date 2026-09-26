@@ -110,7 +110,7 @@ export class GameRenderer {
     await this.renderer.init();
     [this.surfaces] = await Promise.all([
       loadSurfaces(),
-      this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`),
+      this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`, `${import.meta.env.BASE_URL}anim/`),
       this.post.load(),
     ]);
     this.nora.root.traverse((o) => {
