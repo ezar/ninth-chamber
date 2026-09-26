@@ -492,104 +492,15 @@ html[lang='es'] .fallback > [lang='en'] {
   }
 }
 
-/* Reel of in-game renders behind the title: slow Ken Burns moves, crossfading on a 28 s loop. */
-#loading-reel {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  background: var(--ui-ink);
-}
-
-#loading-reel::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 48%, rgba(15, 13, 11, 0.35) 0%, rgba(15, 13, 11, 0.82) 75%),
-    linear-gradient(to bottom, rgba(15, 13, 11, 0.4), transparent 30%, transparent 70%, rgba(15, 13, 11, 0.6));
-}
+/* The reel of in-game renders behind the story cards: see prelude.css. */
 
 #start > .panel {
   position: relative;
 }
 
-.reel {
-  position: absolute;
-  inset: -4%;
-  background: center / cover no-repeat;
-  opacity: 0;
-  animation: reel 28s linear infinite both;
-  will-change: opacity, transform;
-}
-
-.reel-1 {
-  background-image: url('/loading/reel-1.webp');
-  animation-delay: -1s;
-  --kx: -2%;
-  --ky: -1%;
-}
-.reel-2 {
-  background-image: url('/loading/reel-2.webp');
-  animation-delay: 6s;
-  --kx: 2%;
-  --ky: -1.5%;
-}
-.reel-3 {
-  background-image: url('/loading/reel-3.webp');
-  animation-delay: 13s;
-  --kx: -1.5%;
-  --ky: 1.5%;
-}
-.reel-4 {
-  background-image: url('/loading/reel-4.webp');
-  animation-delay: 20s;
-  --kx: 2%;
-  --ky: 1%;
-}
-
-/* Per layer: 1 s fade in, 7 s on screen while drifting, 1 s fade out, then waiting its turn. */
-@keyframes reel {
-  0% {
-    opacity: 0;
-    transform: scale(1.02) translate(0, 0);
-  }
-  3.6% {
-    opacity: 1;
-  }
-  28.6% {
-    opacity: 1;
-  }
-  32.1% {
-    opacity: 0;
-    transform: scale(1.12) translate(var(--kx), var(--ky));
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.12) translate(var(--kx), var(--ky));
-  }
-}
-
-#start.hidden .reel,
 #start.hidden .load-seal,
 #start.hidden .load-track::after {
   animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reel {
-    animation: none;
-  }
-  .reel-1 {
-    opacity: 1;
-  }
-}
-
-body.reduce-motion .reel {
-  animation: none;
-}
-
-body.reduce-motion .reel-1 {
-  opacity: 1;
 }
 
 /* The cut into play: black in 0.45 s, out over 1.1 s while the level title appears. */

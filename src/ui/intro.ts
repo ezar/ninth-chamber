@@ -1,7 +1,9 @@
 /**
  * The intro after "Enter the tomb": story cards over a slow camera move down
  * through the entrance's light shaft, landing behind Nora where play begins.
- * Any key, tap or button skips it after half a second.
+ * Any key, tap or button skips it after half a second. Cards already read over
+ * the loading reel (ui/prelude.ts) are left out; with none left it is a short
+ * flythrough.
  *
  * Audio hooks (dispatched through `cue` on the event bus, like sim events):
  * `intro.start` { duration, cards }, `intro.card` { index }, `intro.skip`,
@@ -9,19 +11,21 @@
  */
 import { lerpShot, samplePath, smoothstep, type Shot } from '../camera/cinematic';
 import { t, type StringKey } from './i18n';
+import { CARD_FADE, readTime } from './story-timing';
 
 /** Letterbox time before the first card (s). */
 const LEAD_IN = 1.8;
 /** Camera time after the last card, landing on Nora (s). */
 const LAND = 2.6;
 /** Card fade (s); matches the CSS transition. */
-const FADE = 1.1;
+const FADE = CARD_FADE;
+/** The flythrough alone, when every card was read during loading (s). */
+const FLIGHT = 9;
+/** Reduced motion with no cards: a held shot, then the cut to Nora (s). */
+const STILL_CUT = 2.4;
 const SKIP_AFTER = 0.5;
 /** Blend from wherever the camera is to the gameplay camera after a skip (s). */
 const SKIP_BLEND = 1.2;
-
-/** Time on screen for a card, from its length (a slow reading pace for a cinematic). */
-const readTime = (text: string): number => Math.min(10.5, Math.max(5.5, 2.4 + text.length * 0.048));
 
 const $ = (id: string): HTMLElement => {
   const el = document.getElementById(id);
@@ -65,7 +69,7 @@ export class Intro {
       at = slot.end;
       return slot;
     });
-    this.duration = at + LAND;
+    this.duration = cards.length > 0 ? at + LAND : still ? STILL_CUT : FLIGHT;
     this.shots = shots;
     this.time = 0;
     this.shown = -1;

@@ -7,11 +7,21 @@
  * - `sitePlugin()`: fills `%t:<key>%` placeholders in index.html from
  *   i18n/en.json (player-facing text stays in i18n), `%site%` with the public
  *   URL, generates manifest.json from i18n, and ships CREDITS.md as credits.txt.
+ * - Before any bundle arrives the page already plays the splash and the story
+ *   prelude (src/ui/prelude.ts), so the plugin also bakes in `%tt:<key>%`
+ *   (the text in every locale, one `<span lang>` each, shown by the page's
+ *   language), `%version%`, the seal (the splash's, drawn to be carved, and
+ *   the title's), the prelude's cards and each locale's card schedule.
  */
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
+import { sealSvg } from '../src/ui/seal.js';
+import { preludeSchedule, type PreludeSchedule } from '../src/ui/story-timing.js';
+
+/** The splash's black, also the installed app's splash and status bar colour. */
+export const SPLASH_BLACK = '#0a0806';
 
 /** Public URL of the deployed game, for Open Graph tags (absolute URLs are required there). */
 export function siteUrl(env: NodeJS.ProcessEnv = process.env): string {
@@ -50,14 +60,16 @@ export function markdownSection(markdown: string, heading: string): string[] {
   return items;
 }
 
+const packageVersion = (root: string): string =>
+  (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }).version;
+
 export function defines(root: string): Record<string, string> {
-  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string };
   const credits = join(root, 'CREDITS.md');
   const md = existsSync(credits) ? readFileSync(credits, 'utf8') : '';
   // The Credits screen's sound row: recorded and synthesised audio, then music.
   const audio = [...markdownSection(md, 'Audio'), ...markdownSection(md, 'Music')];
   return {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(packageVersion(root)),
     __GIT_HASH__: JSON.stringify(gitShortHash(root)),
     __CREDITS_AUDIO__: JSON.stringify(audio),
   };
@@ -65,6 +77,61 @@ export function defines(root: string): Record<string, string> {
 
 const escapeHtml = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+type Locales = Record<string, Record<string, string>>;
+
+/** Every i18n/*.json, English first (the reference). */
+export function readLocales(root: string): Locales {
+  const dir = join(root, 'i18n');
+  const names = readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => f.slice(0, -5))
+    .sort((a, b) => (a === 'en' ? -1 : b === 'en' ? 1 : a.localeCompare(b)));
+  return Object.fromEntries(
+    names.map((n) => [n, JSON.parse(readFileSync(join(dir, `${n}.json`), 'utf8')) as Record<string, string>]),
+  );
+}
+
+/** A string in every locale, one span each; CSS shows the page language's (see .fallback). */
+export function allLocales(locales: Locales, key: string): string {
+  return Object.entries(locales)
+    .map(([lang, t]) => `<span lang="${lang}">${escapeHtml(t[key] ?? locales.en?.[key] ?? key)}</span>`)
+    .join('');
+}
+
+/**
+ * The prelude's story cards: the first chamber's intro, `intro.antechamber.N`
+ * in order (the same list as CHAMBERS[0].intro in src/ui/campaign.ts, which
+ * tests/prelude.test.ts checks; campaign.ts itself is not loaded into the Vite config).
+ */
+export function preludeKeys(locales: Locales): string[] {
+  const n = (k: string): number => Number(k.split('.').pop());
+  return Object.keys(locales.en ?? {})
+    .filter((k) => /^intro\.antechamber\.\d+$/.test(k))
+    .sort((a, b) => n(a) - n(b));
+}
+
+/** Each locale's card timeline, for the inline script that starts the prelude. */
+export function preludeSchedules(locales: Locales): Record<string, PreludeSchedule> {
+  const keys = preludeKeys(locales);
+  return Object.fromEntries(
+    Object.entries(locales).map(([lang, t]) => [
+      lang,
+      preludeSchedule(keys.map((k) => t[k] ?? locales.en?.[k] ?? '')),
+    ]),
+  );
+}
+
+/** The cards as markup: every locale's text, each card timed by its CSS variables (set by the inline script). */
+export function preludeCards(locales: Locales): string {
+  return preludeKeys(locales)
+    .map(
+      (key, i) =>
+        `<p class="prelude-card fallback" style="--at: var(--card${i + 1}-at); --out: var(--card${i + 1}-out)">` +
+        `${allLocales(locales, key)}</p>`,
+    )
+    .join('\n');
+}
 
 export function sitePlugin(root: string): Plugin {
   const strings = (): Record<string, string> =>
@@ -81,12 +148,13 @@ export function sitePlugin(root: string): Plugin {
         start_url: './',
         scope: './',
         display: 'fullscreen',
-        orientation: 'landscape',
-        background_color: '#0f0d0b',
-        theme_color: '#0f0d0b',
+        // Phones play in portrait too.
+        orientation: 'any',
+        // The install splash and status bar match the page's splash.
+        background_color: SPLASH_BLACK,
+        theme_color: SPLASH_BLACK,
         categories: ['games'],
         icons: [
-          { src: 'icons/app-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
@@ -107,9 +175,22 @@ export function sitePlugin(root: string): Plugin {
       order: 'pre',
       handler(html) {
         const t = strings();
-        return html
-          .replace(/%t:([\w.]+)%/g, (m, key: string) => (t[key] !== undefined ? escapeHtml(t[key]) : m))
-          .replace(/%site%/g, siteUrl());
+        const locales = readLocales(root);
+        return (
+          html
+            .replace('<!--%splash:seal%-->', sealSvg({ className: 'splash-seal', draw: true }))
+            // The title's seal is in the page before the script redraws the same one (ui/title.ts).
+            .replace('<!--%title:seal%-->', sealSvg())
+            .replace('<!--%prelude:cards%-->', preludeCards(locales))
+            .replace('/*%prelude:schedule%*/ null', JSON.stringify(preludeSchedules(locales)))
+            .replace(/%tt:([\w.]+)%/g, (m, key: string) =>
+              t[key] !== undefined ? allLocales(locales, key) : m,
+            )
+            .replace(/%t:([\w.]+)%/g, (m, key: string) => (t[key] !== undefined ? escapeHtml(t[key]) : m))
+            .replace(/%version%/g, `v${packageVersion(root)} · ${gitShortHash(root)}`)
+            .replace(/%splash-black%/g, SPLASH_BLACK)
+            .replace(/%site%/g, siteUrl())
+        );
       },
     },
     configureServer(server) {

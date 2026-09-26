@@ -1,7 +1,9 @@
 /**
  * The nine-segment seal (identity artboard f): a ring of nine segments, eight
  * cut in stone and the ninth only an outline, lit amber. Drawn as inline SVG
- * for the title lockup, the end-of-level rank and the favicon.
+ * for the title lockup, the end-of-level rank and the favicon, and baked into
+ * index.html for the splash (scripts/vite-site.ts), which carves it segment
+ * by segment. Pure: no DOM, so the Vite config can import it.
  */
 
 const R_OUT = 100;
@@ -32,16 +34,22 @@ export interface SealOptions {
   /** Accessible label; decorative (aria-hidden) when omitted. */
   label?: string;
   className?: string;
+  /**
+   * For the splash's carving: every path gets pathLength="1" (a unit
+   * stroke-dash) and its index as `--i`, for staggered CSS animations.
+   */
+  draw?: boolean;
 }
 
 export function sealSvg(opts: SealOptions = {}): string {
   const lit = opts.lit ?? 8;
+  const draw = (i: number): string => (opts.draw ? ` pathLength="1" style="--i:${i}"` : '');
   const segments = Array.from({ length: 8 }, (_, i) =>
     i < lit
-      ? `<path class="seal-stone" d="${segmentPath(i)}"/>`
-      : `<path class="seal-dim" d="${segmentPath(i)}"/>`,
+      ? `<path class="seal-stone" d="${segmentPath(i)}"${draw(i)}/>`
+      : `<path class="seal-dim" d="${segmentPath(i)}"${draw(i)}/>`,
   ).join('');
-  const ninth = `<path class="seal-ninth${opts.ninth === 'filled' ? ' filled' : ''}" d="${segmentPath(8)}"/>`;
+  const ninth = `<path class="seal-ninth${opts.ninth === 'filled' ? ' filled' : ''}" d="${segmentPath(8)}"${draw(8)}/>`;
   const a11y = opts.label
     ? `role="img" aria-label="${opts.label.replace(/"/g, '&quot;')}"`
     : 'aria-hidden="true"';

@@ -122,11 +122,17 @@ body:not([data-phase='play']) #touch,
   padding: 0 24px 0 max(40px, 7vw);
 }
 
+/* The seal's box is reserved before the script draws it in, so nothing moves when the game loads. */
+#start-seal {
+  width: clamp(58px, 6vw, 86px);
+  aspect-ratio: 1;
+  margin: 0 0 22px -3px;
+}
+
 #start-seal .seal-svg {
   display: block;
-  width: clamp(58px, 6vw, 86px);
-  height: auto;
-  margin: 0 0 22px -3px;
+  width: 100%;
+  height: 100%;
   filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.7));
 }
 
@@ -248,7 +254,7 @@ body:not([data-phase='play']) #touch,
     margin-top: 0;
     padding: 0 24px 0 max(24px, env(safe-area-inset-left));
   }
-  #start-seal .seal-svg {
+  #start-seal {
     width: 48px;
     margin-bottom: 12px;
   }

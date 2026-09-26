@@ -1,6 +1,8 @@
 /* Design tokens from the Claude Design art direction (docs/art/README.md). */
 :root {
   --ui-ink: #0f0d0b;
+  /* The splash's black (also the installed app's splash colour, scripts/vite-site.ts). */
+  --ui-night: #0a0806;
   --ui-veil: rgba(12, 10, 8, 0.72);
   --ui-bone: #ece3d0;
   --ui-dust: #a89c88;

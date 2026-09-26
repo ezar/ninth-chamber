@@ -67,6 +67,7 @@
   "premise.antechamber": "Seventy years after the Ferrand expedition, Nora Vidal opens the tomb of Qarrum to find the Amber Heart.",
   "intro.skip": "Press any key to skip",
   "intro.skipTouch": "Tap to skip",
+  "prelude.skip": "Skip",
   "prompt.read": "Read",
   "notice.journal": "Journal · {n} of {total}",
   "reader.counter": "Journal · {n} of {total} notes found",

@@ -9,7 +9,7 @@
     <!-- Text placeholders are filled from i18n/en.json, and the public URL, at build time (scripts/vite-site.ts). -->
     <title>%t:title%</title>
     <meta name="description" content="%t:meta.description%" />
-    <meta name="theme-color" content="#0f0d0b" />
+    <meta name="theme-color" content="%splash-black%" />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="./icons/seal.svg" type="image/svg+xml" />
     <link rel="icon" href="./icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -38,29 +38,100 @@
     <meta name="twitter:image:alt" content="%t:meta.imageAlt%" />
 
     <script>
-      // Before any bundle arrives: the language for the loading screen's fallback text
-      // (the stored choice, else the first of the browser's languages we have).
+      // Before any bundle arrives: the language (the stored choice, else the first of the
+      // browser's languages we have), reduced motion, and the splash and story prelude that
+      // play while the game loads (src/ui/prelude.css). The game's own code takes over in
+      // src/ui/prelude.ts. Each locale's card timings are baked in at build time.
       (function () {
-        var lang = 'en';
+        var d = document.documentElement;
+        var P = /*%prelude:schedule%*/ null;
+        var s = {};
         try {
-          var saved = JSON.parse(localStorage.getItem('nc.settings') || '{}').language;
-          var prefs = navigator.languages || [navigator.language || 'en'];
-          if (saved === 'en' || saved === 'es') lang = saved;
-          else
-            for (var i = 0; i < prefs.length; i++) {
-              var l = String(prefs[i]).toLowerCase().split('-')[0];
-              if (l === 'en' || l === 'es') {
-                lang = l;
-                break;
-              }
-            }
+          s = JSON.parse(localStorage.getItem('nc.settings') || '{}') || {};
         } catch (e) {
-          /* storage blocked: English */
+          /* storage blocked: the defaults */
         }
-        document.documentElement.lang = lang;
+        var has = function (l) {
+          return !!P && Object.prototype.hasOwnProperty.call(P, l);
+        };
+        var lang = 'en';
+        var prefs = navigator.languages || [navigator.language || 'en'];
+        if (has(s.language)) lang = s.language;
+        else
+          for (var i = 0; i < prefs.length; i++) {
+            var l = String(prefs[i]).toLowerCase().split('-')[0];
+            if (has(l)) {
+              lang = l;
+              break;
+            }
+          }
+        d.lang = lang;
+        var still =
+          typeof s.reducedMotion === 'boolean'
+            ? s.reducedMotion
+            : matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (still) d.classList.add('reduce-motion');
+        if (matchMedia('(pointer: coarse)').matches) d.classList.add('coarse');
+        var sch = has(lang) ? P[lang] : null;
+        if (!sch) return;
+        for (var k = 0; k < sch.cards.length; k++) {
+          var c = sch.cards[k];
+          d.style.setProperty('--card' + (k + 1) + '-at', c.at + 's');
+          d.style.setProperty('--card' + (k + 1) + '-out', c.out + 's');
+          d.style.setProperty('--img' + (k + 1) + '-at', c.image + 's');
+        }
+        d.style.setProperty('--prelude-end', sch.end + 's');
+        d.classList.add('prelude');
+        var t0 = 0;
+        var p = (window.__prelude = {
+          schedule: sch,
+          over: false,
+          seen: 0,
+          skipped: false,
+          // Seconds into the cards (their CSS clock); -1 during the splash.
+          now: function () {
+            var el = document.getElementById('prelude-clock');
+            var a = el && el.getAnimations ? el.getAnimations()[0] : null;
+            if (a && typeof a.currentTime === 'number') return a.currentTime / 1000;
+            return t0 ? (performance.now() - t0) / 1000 : -1;
+          },
+          // The splash is over: the cards start.
+          run: function () {
+            if (t0) return;
+            t0 = performance.now();
+            d.classList.add('prelude-run');
+            document.dispatchEvent(new Event('prelude-run'));
+          },
+        });
+        var finish = function (skipped) {
+          if (p.claimed || p.over || !t0) return;
+          var t = p.now();
+          p.over = true;
+          p.skipped = skipped;
+          p.seen = sch.cards.filter(function (c) {
+            return t >= c.out;
+          }).length;
+          d.classList.add('prelude-over');
+        };
+        document.addEventListener('animationend', function (e) {
+          if (e.animationName === 'splash-clock') p.run();
+          else if (e.animationName === 'prelude-clock') finish(false);
+        });
+        // Any tap or key skips the splash; Skip or Escape then skips the cards.
+        document.addEventListener('pointerdown', function () {
+          p.run();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (!t0) p.run();
+          else if (e.key === 'Escape') finish(true);
+        });
+        document.addEventListener('click', function (e) {
+          var el = e.target;
+          if (el && el.closest && el.closest('#prelude-skip')) finish(true);
+        });
       })();
     </script>
-    <link rel="preload" as="image" href="/loading/reel-1.webp" fetchpriority="high" />
+    <link rel="preload" as="image" href="/loading/reel-4.webp" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Fonts load without blocking the first paint (the fallbacks are close enough). -->
@@ -152,31 +223,41 @@
     </div>
 
     <!--
-      The start screen renders its loading state from the first paint, before
-      any script: the button is disabled and busy, the line shimmers, the seal
-      breathes and a reel of in-game renders drifts behind the title. The
-      bilingual fallbacks are replaced from i18n/*.json once the game loads.
+      The start screen plays from the first paint, before any script of the
+      game: the splash carves the seal, then the story cards play over a reel
+      of in-game renders while the game loads (the loading line small in the
+      letterbox), then the title comes up. The button stays disabled and busy
+      until the tomb can be entered. Text in every locale is baked in at build
+      time (%tt:key%, scripts/vite-site.ts) and the page's language shows; the
+      game later refills the same strings from i18n/*.json.
     -->
     <div id="start">
       <div id="loading-reel" aria-hidden="true">
-        <div class="reel reel-1"></div>
-        <div class="reel reel-2"></div>
-        <div class="reel reel-3"></div>
-        <div class="reel reel-4"></div>
+        <!-- One render per story card, in card order. -->
+        <div class="reel reel-4" style="--at: var(--img1-at)"></div>
+        <div class="reel reel-2" style="--at: var(--img2-at)"></div>
+        <div class="reel reel-1" style="--at: var(--img3-at)"></div>
+        <div class="reel reel-3" style="--at: var(--img4-at)"></div>
       </div>
       <div class="scrim" aria-hidden="true"></div>
+      <section id="prelude">
+        <div class="letterbox top" aria-hidden="true"></div>
+        <div class="letterbox bottom" aria-hidden="true"></div>
+        <!--%prelude:cards%-->
+        <div id="prelude-loading" aria-hidden="true">
+          <div class="load-track"><div id="prelude-fill"></div></div>
+          <p id="prelude-loading-label" class="fallback">%tt:loading.assets%</p>
+        </div>
+        <button id="prelude-skip" type="button" class="fallback">%tt:prelude.skip%</button>
+        <span id="prelude-clock" aria-hidden="true"></span>
+      </section>
       <main class="title-block">
         <div class="lockup">
-          <div id="start-seal"></div>
-          <h1 data-i18n="title" class="fallback">
-            <span lang="en">The Ninth Chamber</span><span lang="es">La Novena Cámara</span>
-          </h1>
-          <p class="tagline" data-i18n="tagline"></p>
+          <div id="start-seal"><!--%title:seal%--></div>
+          <h1 data-i18n="title" class="fallback">%tt:title%</h1>
+          <p class="tagline fallback" data-i18n="tagline">%tt:tagline%</p>
         </div>
-        <p class="kicker fallback" data-i18n="start.kicker">
-          <span lang="en">Tomb of Qarrum · First chamber</span
-          ><span lang="es">Tumba de Qarrum · Primera cámara</span>
-        </p>
+        <p class="kicker fallback" data-i18n="start.kicker">%tt:start.kicker%</p>
         <nav id="start-menu" class="title-menu">
           <button
             id="start-button"
@@ -187,24 +268,32 @@
             disabled
             aria-busy="true"
           >
-            <span lang="en">Enter the tomb</span><span lang="es">Entrar en la tumba</span>
+            %tt:start.play%
           </button>
-          <button id="start-options" type="button" data-nav data-i18n="start.options"></button>
-          <button id="credits-button" type="button" data-nav data-i18n="start.credits"></button>
+          <button id="start-options" type="button" class="fallback" data-nav data-i18n="start.options">
+            %tt:start.options%
+          </button>
+          <button id="credits-button" type="button" class="fallback" data-nav data-i18n="start.credits">
+            %tt:start.credits%
+          </button>
         </nav>
         <div id="loading" role="status" aria-live="polite">
           <div class="load-seal" aria-hidden="true"></div>
           <div class="load-track"><div id="loading-fill"></div></div>
-          <p id="loading-label" class="fallback">
-            <span lang="en">Loading…</span><span lang="es">Cargando…</span>
-          </p>
+          <p id="loading-label" class="fallback">%tt:loading.assets%</p>
         </div>
-        <p class="help" data-i18n="help"></p>
+        <p class="help fallback" data-i18n="help">%tt:help%</p>
       </main>
       <footer class="legal">
-        <span data-i18n="start.copyright"></span>
-        <span id="version"></span>
+        <span class="fallback" data-i18n="start.copyright">%tt:start.copyright%</span>
+        <span id="version">%version%</span>
       </footer>
+      <div id="splash" aria-hidden="true">
+        <div class="splash-mark">
+          <!--%splash:seal%-->
+          <p class="splash-word fallback">%tt:title%</p>
+        </div>
+      </div>
     </div>
 
     <div id="credits" hidden role="dialog" aria-modal="true" aria-labelledby="credits-title">
