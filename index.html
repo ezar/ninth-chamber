@@ -37,6 +37,44 @@
     <meta name="twitter:image" content="%site%og-image.jpg" />
     <meta name="twitter:image:alt" content="%t:meta.imageAlt%" />
 
+    <script id="audio-unlock">
+      // The first tap or key, even during the splash long before the game's code arrives,
+      // makes the game's AudioContext and unlocks it inside the gesture (resume, plus a
+      // silent buffer for iOS Safari). src/audio/engine.ts adopts it from
+      // window.__ncAudioCtx, so that same tap brings in the title theme.
+      (function () {
+        var w = window;
+        var unlock = function () {
+          var ctx = w.__ncAudioCtx;
+          try {
+            if (!ctx) {
+              var C = w.AudioContext || w.webkitAudioContext;
+              if (!C) return;
+              // Must match the engine: phones get a 60 ms output buffer.
+              var lite =
+                (w.matchMedia && w.matchMedia('(pointer: coarse)').matches) ||
+                /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+              ctx = new C({ latencyHint: lite ? 0.06 : 'interactive' });
+              w.__ncAudioCtx = ctx;
+              var src = ctx.createBufferSource();
+              src.buffer = ctx.createBuffer(1, 1, 22050);
+              src.connect(ctx.destination);
+              src.start(0);
+            }
+            if (ctx.state !== 'running' && ctx.state !== 'closed') {
+              var p = ctx.resume();
+              if (p && p.catch) p.catch(function () {});
+            }
+          } catch (e) {
+            /* no Web Audio: the engine stays silent */
+          }
+        };
+        ['pointerdown', 'touchend', 'keydown', 'click'].forEach(function (type) {
+          document.addEventListener(type, unlock, true);
+        });
+      })();
+    </script>
+
     <script>
       // Before any bundle arrives: the language (the stored choice, else the first of the
       // browser's languages we have), reduced motion, and the splash and story prelude that

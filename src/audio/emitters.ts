@@ -113,6 +113,8 @@ export class EmitterSet {
     private readonly ctx: BaseAudioContext,
     private readonly noise: NoiseBank,
     private readonly dest: AudioNode,
+    /** At most this many sources live at once, the nearest (phones: a few fires are plenty). */
+    private readonly maxLive = Infinity,
   ) {}
 
   /** Switches braziers to the recorded fire loop (restarting any already burning with a crossfade). */
@@ -141,12 +143,19 @@ export class EmitterSet {
 
   /** Starts sources that came into range and stops those that left it. */
   update(listener: Vec3): void {
-    for (const [id, def] of this.defs) {
-      const d = Math.hypot(def.x - listener.x, def.y - listener.y, def.z - listener.z);
-      const on = this.live.has(id);
-      if (!on && d < START_DISTANCE) this.start(def);
-      else if (on && d > STOP_DISTANCE) this.stop(id);
-    }
+    const ranked = [...this.defs.values()]
+      .map((def) => ({ def, d: Math.hypot(def.x - listener.x, def.y - listener.y, def.z - listener.z) }))
+      .sort((a, b) => a.d - b.d);
+    ranked.forEach(({ def, d }, i) => {
+      const on = this.live.has(def.id);
+      // One place of slack before a source that fell out of the nearest few is stopped (no flapping).
+      if (!on && d < START_DISTANCE && i < this.maxLive) this.start(def);
+      else if (on && (d > STOP_DISTANCE || i > this.maxLive)) this.stop(def.id);
+    });
+  }
+
+  get liveCount(): number {
+    return this.live.size;
   }
 
   private start(def: EmitterDef): void {

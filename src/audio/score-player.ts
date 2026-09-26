@@ -14,10 +14,17 @@
  *
  * Everything is lazy: loops and stingers load when the level starts (prefetch)
  * or when first asked for; nothing blocks the start of the game.
+ *
+ * Phones (`lite`): streams do not go through Web Audio at all. On Chrome for
+ * Android a MediaElementAudioSourceNode makes the real-time audio thread pull
+ * from the media pipeline; when that stalls (a busy main thread, a slow
+ * network) the whole context glitches. There the <audio> element plays
+ * directly and its volume follows the fades, the music volume and the ducking
+ * from update(). Loops and stingers also decode at lower rates.
  */
 
 import type { MusicSink, PlayOpts } from './director';
-import { holdParam, type Strip } from './dsp';
+import { DuckEnvelope, holdParam, type Strip } from './dsp';
 import { chime, secretMotif, timpani } from './music';
 import { cueInfo, type Motif } from './score';
 
@@ -34,6 +41,10 @@ interface Voice {
   stopped: boolean;
   /** Streams: the browser refused to start it (autoplay); the next request retries. */
   blocked?: boolean;
+  /** Streams: the browser paused it (audio focus, background); a gesture or visibility resumes it. */
+  interrupted?: boolean;
+  /** Direct streams (lite): the fade, applied to el.volume every frame. */
+  fade?: { from: number; to: number; t0: number; t1: number };
 }
 
 const DUCK_ATTACK = 0.12;
@@ -49,6 +60,10 @@ export interface ScorePlayerOptions {
   fetcher?: (url: string) => Promise<ArrayBuffer>;
   /** Called with a cue that cannot play (no Opus/WebM, a failed file), for a synthesised stand-in. */
   fallback?: (cue: string) => void;
+  /** Phones: direct streams, lower decode rates, no prefetch of chase and boss. */
+  lite?: boolean;
+  /** Linear music level after the options volume and mute (direct streams only). */
+  musicLevel?: () => number;
 }
 
 const decoders = new Map<number, BaseAudioContext>();
@@ -57,20 +72,25 @@ export class ScorePlayer implements MusicSink {
   private readonly out: GainNode;
   private readonly muffler: BiquadFilterNode;
   private readonly duckGain: GainNode;
+  private readonly ducker: DuckEnvelope;
   private main: Voice | null = null;
   private wanted: { cue: string | null; o: PlayOpts } | null = null;
   private readonly buffers = new Map<string, AudioBuffer>();
   private readonly loading = new Map<string, Promise<AudioBuffer | null>>();
   private readonly failed = new Set<string>();
   private readonly streams: boolean;
+  private readonly lite: boolean;
+  /** Stream elements alive (playing or fading), for the diagnostics and the leak guard. */
+  private readonly elements = new Set<HTMLAudioElement>();
   private level = 0;
   private beatBpm = 0;
   private nextBeat = 0;
   private beatCount = 0;
   private heartBpm = 0;
+  /** Direct streams fading out after release. */
+  private readonly fading = new Set<Voice>();
   private nextHeart = 0;
   private paused = false;
-  private duckEnd = 0;
   private readonly fetcher: (url: string) => Promise<ArrayBuffer>;
 
   constructor(
@@ -79,6 +99,7 @@ export class ScorePlayer implements MusicSink {
     private readonly opts: ScorePlayerOptions,
   ) {
     this.duckGain = new GainNode(ctx, { gain: 1 });
+    this.ducker = new DuckEnvelope(this.duckGain.gain);
     this.muffler = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 20000, Q: 0.4 });
     this.out = new GainNode(ctx, { gain: 1 });
     this.duckGain.connect(this.muffler).connect(this.out).connect(dest);
@@ -89,6 +110,7 @@ export class ScorePlayer implements MusicSink {
         if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
         return r.arrayBuffer();
       });
+    this.lite = opts.lite === true;
     // Streaming needs a live context and Opus in WebM; offline, streams are decoded like loops.
     this.streams =
       typeof AudioContext !== 'undefined' &&
@@ -99,7 +121,9 @@ export class ScorePlayer implements MusicSink {
 
   // ───────────────────────── Loading ─────────────────────────
 
-  private decoder(rate: number | undefined): BaseAudioContext {
+  private decoder(wanted: number | undefined): BaseAudioContext {
+    // Phones: loops and stingers at 22.05 kHz at most (a 30 s stereo loop: 5 MB instead of 11).
+    const rate = this.lite ? Math.min(wanted ?? this.ctx.sampleRate, 22050) : wanted;
     if (!rate || rate >= this.ctx.sampleRate || typeof OfflineAudioContext === 'undefined') return this.ctx;
     let d = decoders.get(rate);
     if (!d) {
@@ -136,7 +160,10 @@ export class ScorePlayer implements MusicSink {
 
   prefetch(cues: readonly string[]): void {
     // One at a time, so prefetching never competes with what the player needs now.
-    const queue = cues.filter((c) => cueInfo(c)?.kind !== 'stream');
+    // Phones load the chase and boss loops only when a level asks for them.
+    const queue = cues.filter(
+      (c) => cueInfo(c)?.kind !== 'stream' && !(this.lite && (c === 'chase' || c === 'boss')),
+    );
     const next = (): void => {
       const c = queue.shift();
       if (c) void this.load(c).then(next);
@@ -190,19 +217,38 @@ export class ScorePlayer implements MusicSink {
 
   private startStream(cue: string, at: number, o: PlayOpts): Voice {
     const info = cueInfo(cue);
+    const ctx = this.ctx as AudioContext;
+    // Chrome for Android copes badly with several media elements: never more than the two of a crossfade.
+    for (const old of [...this.elements].slice(0, Math.max(0, this.elements.size - 1))) this.dropElement(old);
     const el = new Audio();
     el.preload = 'auto';
     el.loop = o.loop;
     el.src = this.opts.base + (info?.file ?? '');
-    const ctx = this.ctx as AudioContext;
-    const node = ctx.createMediaElementSource(el);
+    this.elements.add(el);
     const gain = new GainNode(ctx, { gain: 0 });
-    node.connect(gain).connect(this.duckGain);
-    const v: Voice = { cue, gain, start: at, bar: 0, src: null, el, node, filter: null, stopped: false };
     const t = ctx.currentTime;
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.setValueAtTime(0, at);
-    gain.gain.linearRampToValueAtTime(1, at + Math.max(0.05, o.fadeIn));
+    const v: Voice = {
+      cue,
+      gain,
+      start: at,
+      bar: 0,
+      src: null,
+      el,
+      node: null,
+      filter: null,
+      stopped: false,
+    };
+    if (this.lite) {
+      el.volume = 0;
+      v.fade = { from: 0, to: 1, t0: at, t1: at + Math.max(0.05, o.fadeIn) };
+    } else {
+      const node = ctx.createMediaElementSource(el);
+      node.connect(gain).connect(this.duckGain);
+      v.node = node;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(1, at + Math.max(0.05, o.fadeIn));
+    }
     const begin = (): void => {
       if (v.stopped || this.paused) return;
       el.play().catch((err: unknown) => {
@@ -216,10 +262,30 @@ export class ScorePlayer implements MusicSink {
     el.addEventListener('error', () => {
       if (!v.stopped) this.opts.fallback?.(cue);
     });
+    // Paused by the browser (audio focus, a stall, the tab in the background), not by us.
+    el.addEventListener('pause', () => {
+      if (!v.stopped && !this.paused && !el.ended) v.interrupted = true;
+    });
+    el.addEventListener('playing', () => {
+      v.interrupted = false;
+      v.blocked = false;
+    });
+    el.addEventListener('ended', () => {
+      if (!el.loop) this.dropElement(el);
+    });
     const delay = at - t;
     if (delay > 0.03) setTimeout(begin, delay * 1000);
     else begin();
     return v;
+  }
+
+  /** Stops and frees a stream element (its node too). */
+  private dropElement(el: HTMLAudioElement): void {
+    if (!this.elements.delete(el)) return;
+    el.pause();
+    el.removeAttribute('src');
+    el.load();
+    if (this.main?.el === el) this.main.stopped = true;
   }
 
   private retryStream(v: Voice): void {
@@ -276,6 +342,20 @@ export class ScorePlayer implements MusicSink {
     if (v.stopped) return;
     v.stopped = true;
     const now = this.ctx.currentTime;
+    if (v.fade && v.el) {
+      const el = v.el;
+      const start = Math.max(now, at);
+      v.fade = { from: this.fadeValue(v, start), to: 0, t0: start, t1: start + Math.max(0.05, fade) };
+      this.fading.add(v);
+      setTimeout(
+        () => {
+          this.fading.delete(v);
+          this.dropElement(el);
+        },
+        (v.fade.t1 - now + 0.1) * 1000,
+      );
+      return;
+    }
     const g = v.gain.gain;
     holdParam(g, now);
     g.setValueAtTime(g.value, Math.max(now, at));
@@ -286,9 +366,7 @@ export class ScorePlayer implements MusicSink {
     } else if (v.el) {
       const el = v.el;
       const done = (): void => {
-        el.pause();
-        el.removeAttribute('src');
-        el.load();
+        this.dropElement(el);
         v.node?.disconnect();
         v.gain.disconnect();
       };
@@ -341,13 +419,8 @@ export class ScorePlayer implements MusicSink {
 
   private duck(db: number, seconds: number): void {
     if (db >= 0) return;
-    const g = this.duckGain.gain;
     const t = this.ctx.currentTime;
-    const end = Math.max(this.duckEnd, t + seconds);
-    holdParam(g, t);
-    g.setTargetAtTime(Math.pow(10, db / 20), t, DUCK_ATTACK / 3);
-    g.setTargetAtTime(1, end, DUCK_RELEASE / 3);
-    this.duckEnd = end;
+    this.ducker.duck(t, Math.pow(10, db / 20), DUCK_ATTACK, t + seconds, DUCK_RELEASE);
   }
 
   heartbeat(bpm: number): void {
@@ -364,15 +437,67 @@ export class ScorePlayer implements MusicSink {
 
   setPaused(paused: boolean): void {
     this.paused = paused;
-    const el = this.main?.el;
-    if (!el) return;
-    if (paused) el.pause();
-    else void el.play().catch(() => undefined);
+    for (const el of this.elements) {
+      if (paused) el.pause();
+      else if (!el.ended) void el.play().catch(() => undefined);
+    }
   }
 
-  /** Per frame: schedules the percussion layer and the heartbeat a little ahead. */
+  /** A user gesture or the page coming back: restart a stream the browser refused or paused. */
+  kick(): void {
+    const m = this.main;
+    if (this.paused || !m?.el || m.stopped) return;
+    if (m.blocked || m.interrupted || (m.el.paused && !m.el.ended)) this.retryStream(m);
+  }
+
+  /** Watchdog: a duck that never released. Returns what it fixed. */
+  recover(): string[] {
+    const t = this.ctx.currentTime;
+    // Only while something plays into the duck (an idle node's value is stale, not stuck).
+    const active = (this.main && !this.main.stopped && !this.main.fade) || this.fading.size > 0;
+    if (active && t > this.ducker.end + 3 && this.duckGain.gain.value < 0.5) {
+      this.ducker.apply(t);
+      return ['musicStingDuck'];
+    }
+    return [];
+  }
+
+  snapshot(): Record<string, unknown> {
+    const m = this.main;
+    return {
+      cue: m?.cue ?? null,
+      elements: this.elements.size,
+      streamPaused: m?.el ? m.el.paused : null,
+      streamTime: m?.el ? Math.round(m.el.currentTime * 10) / 10 : null,
+      duck: Math.round(this.ducker.value(this.ctx.currentTime) * 100) / 100,
+      muffle: Math.round(this.muffler.frequency.value),
+      decoded: this.buffers.size,
+    };
+  }
+
+  private fadeValue(v: Voice, t: number): number {
+    const f = v.fade;
+    if (!f) return 1;
+    if (t <= f.t0) return f.from;
+    if (t >= f.t1) return f.to;
+    return f.from + ((f.to - f.from) * (t - f.t0)) / (f.t1 - f.t0);
+  }
+
+  /** Direct streams: fade × music volume × ducking, applied to the element. */
+  private applyDirect(v: Voice, now: number): void {
+    if (!v.el || !v.fade) return;
+    const level = this.opts.musicLevel?.() ?? 1;
+    // Direct streams skip the muffling low-pass: at low health they dip instead.
+    const muffle = Math.min(1, this.muffler.frequency.value / 20000);
+    const vol = this.fadeValue(v, now) * level * this.ducker.value(now) * (0.55 + 0.45 * Math.sqrt(muffle));
+    v.el.volume = Math.min(1, Math.max(0, vol));
+  }
+
+  /** Per frame: schedules the percussion layer and the heartbeat a little ahead; drives direct streams. */
   update(): void {
     const now = this.ctx.currentTime;
+    if (this.main?.fade) this.applyDirect(this.main, now);
+    for (const v of this.fading) this.applyDirect(v, now);
     const ahead = now + 0.15;
     if (this.beatBpm > 0 && this.level > 0.6 && this.main?.filter && !this.main.stopped) {
       const beat = 60 / this.beatBpm;

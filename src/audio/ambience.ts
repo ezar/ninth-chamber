@@ -75,11 +75,15 @@ export class Ambience {
   private pickDrip: (() => AudioBuffer | null) | null = null;
   private nextDrip = 0;
 
+  private readonly airSources: AudioScheduledSourceNode[] = [];
+
   constructor(
     private readonly ctx: BaseAudioContext,
     noise: NoiseBank,
     dest: AudioNode,
     private readonly strip: () => Strip | null,
+    /** Phones: once the recorded beds play, the synthesised air layers stop (audio-thread load). */
+    private readonly lite = false,
   ) {
     this.out = new GainNode(ctx, { gain: 0 });
     this.out.connect(dest);
@@ -120,6 +124,7 @@ export class Ambience {
       this.lfo(gustRate, 0.35, gust.gain);
       this.airFilters.push(bp);
       this.sources.push(src);
+      this.airSources.push(src);
     }
     // A very low rumble bed under the air.
     const bed = new AudioBufferSourceNode(ctx, { buffer: noise.brown, loop: true });
@@ -127,6 +132,7 @@ export class Ambience {
     const bedGain = new GainNode(ctx, { gain: 0.25 });
     bed.connect(bedLp).connect(bedGain).connect(this.airGain);
     this.sources.push(bed);
+    this.airSources.push(bed);
   }
 
   private lfo(rate: number, depth: number, param: AudioParam): void {
@@ -162,6 +168,10 @@ export class Ambience {
     if (wind && !this.wind) this.wind = this.bed(wind.buffer, wind.end, WIND_BED_LEVEL, 0.8);
     if (this.room || this.wind) this.synth = SYNTH_WITH_BEDS;
     this.applyColour(BED_FADE);
+    if (this.lite && (this.room || this.wind) && this.started) {
+      const t = this.ctx.currentTime + BED_FADE * 2;
+      for (const s of this.airSources) s.stop(t);
+    }
   }
 
   /** A mono loop as a wide bed: two voices half a loop apart, panned to either side. */
