@@ -4,10 +4,70 @@ import {
   QUALITY,
   QUALITY_TIERS,
   TierBenchmark,
+  MOBILE_DEFAULT_PIXEL_RATIO,
+  anisotropyFor,
+  dynamicResolutionFor,
   heuristicTier,
   lowerTier,
+  mobilePixelRatioFromFrameTimes,
+  pixelRatioFor,
   tierFromFrameTimes,
 } from '../src/render/quality';
+
+describe('smoother phones', () => {
+  it('render phones with SMAA, 8× filtering and no grain by default', () => {
+    const { mobile } = QUALITY;
+    expect(mobile.antialias).toBe('smaa');
+    expect(mobile.anisotropy).toBeGreaterThanOrEqual(8);
+    expect(mobile.filmGrain).toBe(false);
+    expect(QUALITY.high.filmGrain).toBe(true);
+  });
+
+  it('let the benchmark raise the pixel ratio on phones that keep up', () => {
+    const frames = (ms: number): number[] => Array.from({ length: 180 }, () => ms);
+    expect(mobilePixelRatioFromFrameTimes(frames(16.7))).toBe(QUALITY.mobile.pixelRatioCap);
+    expect(mobilePixelRatioFromFrameTimes(frames(25))).toBe(1.75);
+    expect(mobilePixelRatioFromFrameTimes(frames(33))).toBe(1.5);
+    expect(mobilePixelRatioFromFrameTimes(frames(60))).toBe(1.25);
+    expect(mobilePixelRatioFromFrameTimes([])).toBe(MOBILE_DEFAULT_PIXEL_RATIO);
+  });
+
+  it('report a pixel ratio only from a mobile benchmark', () => {
+    const phone = new TierBenchmark('mobile');
+    while (!phone.add(1 / 60));
+    expect(phone.result()).toBe('mobile');
+    expect(phone.pixelRatio()).toBe(QUALITY.mobile.pixelRatioCap);
+    const desktop = new TierBenchmark('high');
+    while (!desktop.add(1 / 60));
+    expect(desktop.pixelRatio()).toBeNull();
+  });
+});
+
+describe('resolution and filtering options', () => {
+  it('maps each resolution mode to a pixel ratio', () => {
+    expect(pixelRatioFor('auto', 3, 2)).toBe(2);
+    expect(pixelRatioFor('auto', 1, 2)).toBe(1);
+    expect(pixelRatioFor('native', 3.5, 2)).toBe(3);
+    expect(pixelRatioFor('native', 2, 1.25)).toBe(2);
+    expect(pixelRatioFor('75', 2, 1.25)).toBe(1.5);
+    expect(pixelRatioFor('50', 3, 2)).toBe(1.5);
+    expect(pixelRatioFor('native', Number.NaN, 2)).toBe(1);
+  });
+
+  it('keeps dynamic resolution for the automatic mode only', () => {
+    expect(dynamicResolutionFor('auto')).toBe(true);
+    expect(dynamicResolutionFor('native')).toBe(false);
+    expect(dynamicResolutionFor('75')).toBe(false);
+  });
+
+  it('takes the tier anisotropy on auto and the chosen level otherwise', () => {
+    expect(anisotropyFor('auto', QUALITY.high)).toBe(16);
+    expect(anisotropyFor('auto', QUALITY.mobile)).toBe(8);
+    expect(anisotropyFor('standard', QUALITY.high)).toBe(4);
+    expect(anisotropyFor('high', QUALITY.mobile)).toBe(8);
+    expect(anisotropyFor('max', QUALITY.mobile)).toBe(16);
+  });
+});
 
 const desktop = {
   userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36',
@@ -33,7 +93,9 @@ describe('quality tiers', () => {
     expect(medium.ambientOcclusion).toBe(false);
     expect(mobile.contactShadow).toBe(true);
     expect(high.pixelRatioCap).toBeGreaterThan(medium.pixelRatioCap);
-    expect(medium.pixelRatioCap).toBeGreaterThan(mobile.pixelRatioCap);
+    // Phones start at a moderate ratio; the benchmark may raise it up to the tier's cap.
+    expect(MOBILE_DEFAULT_PIXEL_RATIO).toBeLessThanOrEqual(medium.pixelRatioCap);
+    expect(mobile.pixelRatioCap).toBeGreaterThanOrEqual(MOBILE_DEFAULT_PIXEL_RATIO);
     expect(high.fireShadows).toBeGreaterThan(medium.fireShadows);
     expect(mobile.fireShadows).toBe(0);
     expect(mobile.sun.live).toBe(false);
