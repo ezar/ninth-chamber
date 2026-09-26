@@ -1,0 +1,15 @@
+{
+  "//": "Comprueba que src/sim y el núcleo puro compilan sin DOM ni Three.js (deben correr en Node).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": [
+    "src/sim",
+    "src/core/input-frame.ts",
+    "src/core/rng.ts",
+    "src/core/events.ts",
+    "src/core/loop.ts"
+  ]
+}
