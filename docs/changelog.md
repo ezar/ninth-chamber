@@ -6,6 +6,10 @@
 - Scanned CC0 textures from Poly Haven replace the procedural ones (`public/textures`, sources in `sources.json`); the procedural textures remain the fallback.
 - Indirect light is baked with Blender Cycles (`scripts/bake`) into `public/levels/antechamber.lightmap.png` and applied on the second UV set; direct light stays dynamic.
 - Procedural Web Audio engine (`src/audio`): buses, generated reverbs, positional fire and relic loops, footsteps per material, mechanism sounds and short music cues.
+- Recorded audio replaces the procedural sounds (spec §12 "Producción"), which stay as the fallback while files load or where Opus/WebM cannot be decoded. `scripts/audio/build_audio.py` downloads the CC0 and CC-BY sources (Freesound, Kenney, incompetech), slices, cleans, levels (-18 LUFS sfx, -20 LUFS music and beds) and encodes them to Opus/WebM in `public/audio/` (1.3 MB of sfx, 5.3 MB of music), with `src/audio/samples.json` as the bank manifest and credits in `CREDITS.md` and `public/audio/CREDITS.md`.
+  - `src/audio/samples.ts` loads banks by category after the unlock gesture and picks variants without repeats, with ±4 % pitch and ±2 dB gain. Footsteps have walk and run banks for stone and sand (10 each), a cloth layer, alternating left/right pan and extra room reverb; jumps, landings (soft and hard), ledge grabs and climbs are layered from boots, hands on stone, cloth and leather (no voice).
+  - Mechanisms play at the actor or tile that emits them: stone block drags, door grinding loop with debris, lever, plates, tile cracks and collapses, the rumble. Braziers burn with a recorded fire loop; rooms get recorded air and wind beds and sparse distant drips.
+  - Music (Kevin MacLeod) streams through `<audio>` into the music bus with crossfades: a title theme that opens the level and fades, a single pass of "Lost Frontier" in the great hall, "Arcadia" in the relic chamber and "Hero Theme" when the Heart is taken; then silence. Menu buttons click.
 
 ## Unreleased
 

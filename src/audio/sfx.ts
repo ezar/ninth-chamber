@@ -236,8 +236,18 @@ export function lever(s: Strip, t: number): void {
 
 export function door(s: Strip, t: number, dur: number, closing: boolean): void {
   grind(s, t, dur, closing ? 0.66 : 0.6, 0.42, true);
+  doorWeight(s, t, dur);
+}
+
+/** The felt, sub-bass mass of a stone slab moving for `dur` seconds (also layered under recordings). */
+export function doorWeight(s: Strip, t: number, dur: number): void {
   s.tone(t, { f: 36, gain: 0.16, a: 0.3, hold: Math.max(0, dur - 0.6), d: 0.3 });
   s.tone(t, { f: 54.5, gain: 0.05, a: 0.4, hold: Math.max(0, dur - 0.7), d: 0.3 });
+}
+
+/** A low body thud, for weight under recorded impacts. */
+export function weight(s: Strip, t: number, gain: number): void {
+  s.tone(t, { f: 58, f2: 30, gain, a: 0.003, d: 0.45 });
 }
 
 export function doorStop(s: Strip, t: number, slam: boolean): void {
