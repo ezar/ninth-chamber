@@ -9,7 +9,8 @@ import { BLOCK, DIR_VEC, DIR_YAW } from '../sim/grid/units';
 import { mechanics } from '../sim/player/tuning';
 import type { Actor } from '../sim/state';
 import type { World } from '../sim/world';
-import { cracked, type PbrSet } from './textures';
+import { surfaceParams, type SurfaceSet } from './materials';
+import { cracked } from './textures';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
 
@@ -19,8 +20,9 @@ export interface FireSource {
 }
 
 export interface PropMaterials {
-  stone: PbrSet;
-  floor: PbrSet;
+  stone: SurfaceSet;
+  floor: SurfaceSet;
+  block: SurfaceSet;
   bronze: THREE.MeshStandardMaterial;
   darkMetal: THREE.MeshStandardMaterial;
   gold: THREE.MeshStandardMaterial;
@@ -136,10 +138,11 @@ export class Props {
 
   private buildCrumbleTiles(): void {
     const crackedMap = cracked(this.mats.floor);
+    crackedMap.repeat.copy(this.mats.floor.map.repeat);
     const mat = new THREE.MeshStandardMaterial({
+      ...surfaceParams(this.mats.floor),
       map: crackedMap,
-      normalMap: this.mats.floor.normalMap,
-      roughnessMap: this.mats.floor.roughnessMap,
+      color: '#d9c6a8',
     });
     for (const s of this.level.allSectors()) {
       if (!s.flags.has('crumble')) continue;
@@ -372,12 +375,7 @@ function brazier(m: PropMaterials): THREE.Group {
 function pushBlock(m: PropMaterials): THREE.Group {
   const g = new THREE.Group();
   // A single dressed monolith (floor slab texture), paler than the walls so it reads as movable.
-  const mat = new THREE.MeshStandardMaterial({
-    map: m.floor.map,
-    normalMap: m.floor.normalMap,
-    roughnessMap: m.floor.roughnessMap,
-    color: '#f0e2c8',
-  });
+  const mat = new THREE.MeshStandardMaterial({ ...surfaceParams(m.block), color: '#f3e6cf' });
   const box = new THREE.Mesh(
     new RoundedBoxGeometry(BLOCK - 0.03, mechanics.blockHeight - 0.02, BLOCK - 0.03, 3, 0.06),
     mat,
@@ -398,12 +396,7 @@ function pushBlock(m: PropMaterials): THREE.Group {
 
 function door(m: PropMaterials, height: number): THREE.Group {
   const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({
-    map: m.stone.map,
-    normalMap: m.stone.normalMap,
-    roughnessMap: m.stone.roughnessMap,
-    color: '#cbb89a',
-  });
+  const mat = new THREE.MeshStandardMaterial({ ...surfaceParams(m.block), color: '#d6c4a6' });
   const slab = new THREE.Mesh(new RoundedBoxGeometry(BLOCK, height, 0.45, 2, 0.04), mat);
   slab.position.y = height / 2;
   g.add(slab);

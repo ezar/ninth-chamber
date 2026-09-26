@@ -228,6 +228,51 @@ const RIGHT: Side = {
 };
 const SIDES: readonly Side[] = [LEFT, RIGHT];
 
+/** Joint names shared with the scanned model's skeleton (scripts/character/rig_nora.py). */
+export type RetargetJoint =
+  | 'hips'
+  | 'spine'
+  | 'chest'
+  | 'neck'
+  | 'head'
+  | 'shoulder_L'
+  | 'upperArm_L'
+  | 'lowerArm_L'
+  | 'hand_L'
+  | 'shoulder_R'
+  | 'upperArm_R'
+  | 'lowerArm_R'
+  | 'hand_R'
+  | 'thigh_L'
+  | 'shin_L'
+  | 'foot_L'
+  | 'thigh_R'
+  | 'shin_R'
+  | 'foot_R';
+
+/** Retarget name of each joint index, in joint order. */
+const RETARGET_NAMES: readonly RetargetJoint[] = [
+  'hips',
+  'spine',
+  'chest',
+  'neck',
+  'head',
+  'shoulder_L',
+  'upperArm_L',
+  'lowerArm_L',
+  'hand_L',
+  'shoulder_R',
+  'upperArm_R',
+  'lowerArm_R',
+  'hand_R',
+  'thigh_L',
+  'shin_L',
+  'foot_L',
+  'thigh_R',
+  'shin_R',
+  'foot_R',
+];
+
 // ---------------------------------------------------------------------------------------------
 // Procedural detail textures (no DOM needed)
 
@@ -499,12 +544,14 @@ function headShape(d: THREE.Vector3, out: THREE.Vector3, scale = 1): THREE.Vecto
     if (z > 0) pz *= 1 - 0.5 * t;
     else pz *= 1 - 0.08 * t;
   }
-  if (z < 0) pz *= 1 - 0.28 * x * x;
+  if (z < 0) pz *= 1 - 0.2 * x * x;
   // Brow ridge and eye sockets.
   if (z < -0.6) {
-    pz -= 0.004 * Math.exp(-Math.pow((y - 0.28) / 0.1, 2));
+    pz -= 0.005 * Math.exp(-Math.pow((y - 0.28) / 0.1, 2)) * (1 - x * x * 2);
+    // Chin.
+    pz -= 0.006 * Math.exp(-Math.pow((y + 0.9) / 0.12, 2) - Math.pow(x / 0.35, 2));
     const eye = Math.exp(-(Math.pow((Math.abs(x) - 0.36) / 0.13, 2) + Math.pow((y - 0.12) / 0.1, 2)));
-    pz += 0.006 * eye;
+    pz += 0.009 * eye;
     // Cheekbones.
     px *= 1 + 0.05 * Math.exp(-Math.pow((y + 0.05) / 0.2, 2));
   }
@@ -518,9 +565,9 @@ const JACKET: readonly Ring[] = (
   [
     [0.74, 0.203, 0.14, 0.158, 0.3],
     [0.8, 0.196, 0.134, 0.15, 0.28],
-    [0.88, 0.187, 0.127, 0.141, 0.26],
-    [0.96, 0.172, 0.119, 0.126, 0.26],
-    [1.04, 0.162, 0.113, 0.117, 0.27],
+    [0.88, 0.193, 0.128, 0.145, 0.26],
+    [0.96, 0.178, 0.12, 0.134, 0.26],
+    [1.04, 0.165, 0.114, 0.124, 0.27],
     [1.12, 0.166, 0.121, 0.117, 0.29],
     [1.2, 0.173, 0.136, 0.12, 0.28],
     [1.27, 0.179, 0.139, 0.12, 0.3],
@@ -606,7 +653,7 @@ type Weights = [number, number][];
 
 const PALETTE = {
   skin: '#b07c62',
-  lips: '#9a5c4c',
+  lips: '#a0604f',
   hair: '#2b1b12',
   jacket: '#8a8458',
   jacketEdge: '#6f6a45',
@@ -620,7 +667,7 @@ const PALETTE = {
   notebook: '#3f4637',
   paper: '#e6dcc2',
   pencil: '#cf9f3a',
-  eyeWhite: '#ddd2c4',
+  eyeWhite: '#cdbfae',
   iris: '#3b2416',
 };
 
@@ -713,8 +760,12 @@ export class NoraModel {
     // Landing dip: a damped spring on the hips height.
     const k = 140;
     const c = 2 * Math.sqrt(k) * 0.75;
-    this.dipVel += (-k * this.dipPos - c * this.dipVel) * dt;
-    this.dipPos = clamp(this.dipPos + this.dipVel * dt, -0.16, 0.05);
+    const steps = Math.ceil(dt * 120);
+    const h = dt / Math.max(1, steps);
+    for (let i = 0; i < steps; i++) {
+      this.dipVel += (-k * this.dipPos - c * this.dipVel) * h;
+      this.dipPos = clamp(this.dipPos + this.dipVel * h, -0.16, 0.05);
+    }
 
     this.evaluate(pose, dt, this.live);
     this.fade = Math.min(1, this.fade + dt / 0.15);
@@ -724,6 +775,31 @@ export class NoraModel {
     this.applyPose(this.shown);
     this.updateBag(dt);
     this.updateStrap();
+  }
+
+  /**
+   * The displayed pose in model space, for retargeting onto another rig
+   * (nora-scan.ts): each animated joint's rotation relative to its bind pose
+   * (bind rotations are identity here) and the hips offset from bind.
+   */
+  modelPose(out: Map<RetargetJoint, THREE.Quaternion>, hipsOffset: THREE.Vector3): void {
+    const world: THREE.Quaternion[] = [];
+    for (let i = 0; i < JOINTS; i++) {
+      const p = PARENT[i] ?? -1;
+      const q = (world[i] = (p >= 0 ? at(world, p).clone() : new THREE.Quaternion()).multiply(
+        at(this.shown.q, i),
+      ));
+      const name = RETARGET_NAMES[i];
+      if (name) (out.get(name) ?? out.set(name, new THREE.Quaternion()).get(name))?.copy(q);
+    }
+    hipsOffset.copy(this.shown.pos).sub(at(BIND, HIPS));
+  }
+
+  /** Hides the procedural body while it keeps animating (it drives the scanned model). */
+  setVisible(visible: boolean): void {
+    this.root.traverse((o) => {
+      if (o instanceof THREE.Mesh || o instanceof THREE.Line) o.visible = visible;
+    });
   }
 
   setOpacity(alpha: number): void {
@@ -865,23 +941,27 @@ export class NoraModel {
     );
     const leather = detailTextures(
       128,
-      3,
+      6,
       (u, v) => {
         const grain = vnoise(u, v, 48, 21);
         const wear = fbm(u, v, 3, 33);
-        return { h: grain, c: 0.72 + 0.34 * wear, r: 0.5 + 0.5 * (1 - wear) * 0.9 };
+        return { h: grain, c: 0.74 + 0.3 * wear, r: 0.55 + 0.4 * (1 - wear) };
       },
-      1.6,
+      0.5,
     );
     const hairTex = detailTextures(
       128,
       1,
       (u, v) => {
         const strand = vnoise(u, v * 0.125, 96, 41);
-        const clump = vnoise(u, v * 0.125, 16, 43);
-        return { h: strand * 0.7 + clump * 0.3, c: 0.6 + 0.4 * strand * clump + 0.1, r: 0.7 + 0.3 * strand };
+        const clump = vnoise(u, v * 0.125, 24, 43);
+        return {
+          h: strand * 0.8 + clump * 0.2,
+          c: 0.72 + 0.28 * strand * (0.6 + 0.4 * clump),
+          r: 0.8 + 0.2 * strand,
+        };
       },
-      3,
+      1.5,
     );
     const skinTex = detailTextures(
       64,
@@ -961,9 +1041,9 @@ export class NoraModel {
         roughnessMap: hairTex.rough,
         normalMap: hairTex.normal,
         normalScale: new THREE.Vector2(0.45, 0.45),
-        roughness: 0.62,
-        sheen: 0.5,
-        sheenRoughness: 0.45,
+        roughness: 0.7,
+        sheen: 0.35,
+        sheenRoughness: 0.5,
         sheenColor: new THREE.Color('#7a5236'),
       }),
     );
@@ -1012,14 +1092,14 @@ export class NoraModel {
       ringSurface(
         tubeRings(
           [
-            [0.953, 0.162],
-            [0.958, 0.166],
-            [0.987, 0.164],
-            [0.992, 0.16],
+            [0.953, 0.159],
+            [0.958, 0.163],
+            [0.987, 0.161],
+            [0.992, 0.157],
           ],
           0,
-          0.004,
-          0.72,
+          0,
+          0.73,
         ),
         32,
       ),
@@ -1118,11 +1198,11 @@ export class NoraModel {
     neck.rotation.x = -0.12;
     const kerchief = ringSurface(
       [
-        { y: -0.022, rx: 0.068, rzf: 0.072 },
-        { y: -0.01, rx: 0.074, rzf: 0.079 },
-        { y: 0.012, rx: 0.072, rzf: 0.076 },
-        { y: 0.03, rx: 0.061, rzf: 0.063 },
-        { y: 0.038, rx: 0.049, rzf: 0.05 },
+        { y: 0.0, rx: 0.056, rzf: 0.06 },
+        { y: 0.012, rx: 0.064, rzf: 0.07 },
+        { y: 0.036, rx: 0.062, rzf: 0.067 },
+        { y: 0.054, rx: 0.054, rzf: 0.057 },
+        { y: 0.062, rx: 0.046, rzf: 0.048 },
       ],
       20,
     );
@@ -1131,7 +1211,7 @@ export class NoraModel {
       roundedBox(0.034, 0.028, 0.024, 0.5, 8, 6),
       neckerchief,
       B(NECK),
-      new THREE.Vector3(-0.026, -0.006, -0.074),
+      new THREE.Vector3(-0.022, 0.022, -0.068),
     );
     knot.rotation.set(0.1, 0.4, 0.2);
     for (const [x, rz] of [
@@ -1142,9 +1222,9 @@ export class NoraModel {
         roundedBox(0.026, 0.06, 0.006, 0.4, 6, 6),
         neckerchief,
         B(NECK),
-        new THREE.Vector3(x, -0.036, -0.082),
+        new THREE.Vector3(x, -0.004, -0.074),
       );
-      tail.rotation.set(-0.35, 0.3, rz);
+      tail.rotation.set(0.3, 0.3, rz);
     }
 
     const head = B(HEAD);
@@ -1167,17 +1247,17 @@ export class NoraModel {
     );
     // Lips.
     for (const [y, r, zs] of [
-      [-0.047, 0.0042, 0.5],
-      [-0.0535, 0.0048, 0.55],
+      [-0.046, 0.0034, 0.5],
+      [-0.052, 0.004, 0.55],
     ] as const) {
-      const lip = this.rigid(new THREE.CapsuleGeometry(r, 0.016, 2, 6), lips, head, face(0, y, -0.0835));
+      const lip = this.rigid(new THREE.CapsuleGeometry(r, 0.014, 2, 6), lips, head, face(0, y, -0.0835));
       lip.rotation.z = Math.PI / 2;
       lip.scale.set(1, 1, zs);
     }
     for (const s of [-1, 1]) {
       this.rigid(new THREE.SphereGeometry(0.011, 10, 8), eyeWhite, head, face(s * 0.031, 0.008, -0.0685));
       const ir = this.rigid(
-        new THREE.SphereGeometry(0.0062, 8, 6),
+        new THREE.SphereGeometry(0.0068, 8, 6),
         iris,
         head,
         face(s * 0.0305, 0.008, -0.0785),
@@ -1352,9 +1432,9 @@ export class NoraModel {
           [0.53, 0.066, 0],
           [0.62, 0.076, 0.003],
           [0.72, 0.086, 0.006],
-          [0.8, 0.093, 0.008],
-          [0.86, 0.096, 0.01],
-          [0.92, 0.09, 0.012],
+          [0.8, 0.089, 0.002],
+          [0.86, 0.084, -0.004],
+          [0.92, 0.07, -0.008],
         ] as const
       ).map(([y, r, dx]) => ({ y, rx: r, rzf: r * 1.04, rzb: r * 1.06, cx: tx + s * dx, cz: 0 }));
       this.skinned(ringSurface(leg, 18, true, false), trousers, legW, skeleton);
@@ -1545,6 +1625,7 @@ export class NoraModel {
       add(this.bone(bone), p.sub(bind(bone)), n);
     };
     add(bag, new THREE.Vector3(0.122, 0.1, 0), new THREE.Vector3(0, 0, -1));
+    add(bag, new THREE.Vector3(0.114, 0.16, 0.004), new THREE.Vector3(0, 0, -1));
     const front: [number, number][] = [
       [-0.175, 0.985],
       [-0.13, 1.06],
@@ -1573,6 +1654,7 @@ export class NoraModel {
       [-0.155, 1.02],
     ];
     for (const [x, y] of back) onJacket(x, y, false);
+    add(bag, new THREE.Vector3(-0.114, 0.16, 0.004), new THREE.Vector3(0, 0, -1));
     add(bag, new THREE.Vector3(-0.122, 0.1, 0), new THREE.Vector3(0, 0, -1));
 
     const sections = this.strapSamples;
@@ -1631,12 +1713,16 @@ export class NoraModel {
     const k = 55;
     const damping = 5.5;
     // Pendulum: forward acceleration swings the bag back (rotation about X), sideways about Z.
-    const ax = (acc.z / L) * 0.12 - k * this.bagAngle.x - damping * this.bagVel.x;
-    const az = (-acc.x / L) * 0.12 - k * this.bagAngle.y - damping * this.bagVel.y;
-    this.bagVel.x += ax * dt;
-    this.bagVel.y += az * dt;
-    this.bagAngle.x = clamp(this.bagAngle.x + this.bagVel.x * dt, -0.7, 0.7);
-    this.bagAngle.y = clamp(this.bagAngle.y + this.bagVel.y * dt, -0.05, 0.5);
+    const steps = Math.ceil(dt * 120);
+    const h = dt / steps;
+    for (let i = 0; i < steps; i++) {
+      const ax = (acc.z / L) * 0.12 - k * this.bagAngle.x - damping * this.bagVel.x;
+      const az = (-acc.x / L) * 0.12 - k * this.bagAngle.y - damping * this.bagVel.y;
+      this.bagVel.x += ax * h;
+      this.bagVel.y += az * h;
+      this.bagAngle.x = clamp(this.bagAngle.x + this.bagVel.x * h, -0.7, 0.7);
+      this.bagAngle.y = clamp(this.bagAngle.y + this.bagVel.y * h, -0.05, 0.5);
+    }
     // Hips pitch is undone so the bag keeps hanging when the body bends.
     _e.setFromQuaternion(hips.quaternion, 'XYZ');
     this.bagPivot.rotation.set(this.bagAngle.x - _e.x * 0.7, 0, this.bagAngle.y - Math.min(0, _e.z) * 0.5);
@@ -1879,7 +1965,7 @@ export class NoraModel {
     D: number,
     back: number,
     lift: number,
-    kick: number,
+    run: number,
     roll: number,
     out: THREE.Vector3,
   ): number {
@@ -1899,12 +1985,37 @@ export class NoraModel {
     const b = _v5.copy(out);
     const pa = stance(1, a);
     const pb = stance(0, b);
-    const e = smoother(sw);
-    out.lerpVectors(a, b, e);
-    const k = Math.sin(Math.PI * Math.min(1, sw * 1.6));
-    out.y += lift * Math.sin(Math.PI * sw) + kick * k;
-    out.z += kick * 0.6 * k * Math.sign(D);
-    return lerp(pa, pb, sw) + 0.25 * roll * Math.sin(Math.PI * sw);
+    // Walking swing: a low arc between toe-off and heel strike.
+    const wy = lerp(a.y, b.y, sw) + lift * Math.sin(Math.PI * sw);
+    const wz = lerp(a.z, b.z, smoother(sw));
+    // Running swing: heel kicks up behind, knee drives forward, the foot reaches and lands.
+    const st = Math.min(1, Math.abs(D) / 0.9);
+    const ry = keys(
+      [
+        [0, a.y],
+        [0.3, 0.4 * st + a.y * (1 - st)],
+        [0.58, 0.34 * st + 0.1],
+        [0.82, 0.16],
+        [1, b.y],
+      ],
+      sw,
+    );
+    const rz = keys(
+      [
+        [0, a.z],
+        [0.3, a.z - 0.12 * st],
+        [0.58, 0.02 * st],
+        [0.82, b.z - 0.06 * st],
+        [1, b.z],
+      ],
+      sw,
+    );
+    out.set(out.x, lerp(wy, ry, run), lerp(wz, rz, run));
+    return (
+      lerp(pa, pb, sw) +
+      0.25 * roll * Math.sin(Math.PI * sw) -
+      0.5 * run * Math.sin(Math.PI * Math.min(1, sw * 1.4))
+    );
   }
 
   private idleLook(): { yaw: number; pitch: number } {
@@ -1926,9 +2037,9 @@ export class NoraModel {
     const cyc = cadence / 2;
     this.phase = frac(this.phase + dt * cyc);
     const ph = this.phase;
-    const duty = lerp(0.6, 0.34, r);
-    const D = Math.min(1.1, (v * duty) / cyc);
-    const back = lerp(0.03, 0.14, r);
+    const duty = lerp(0.6, 0.3, r);
+    const D = Math.min(lerp(1.0, 0.9, r), (v * duty) / cyc);
+    const back = lerp(0.03, 0.07, r);
     const low = smooth(35, 10, pose.health);
 
     // Breathing and idle weight shift.
@@ -1937,10 +2048,10 @@ export class NoraModel {
 
     // Hips.
     const midSt = Math.cos(2 * TAU * (ph - duty / 2));
-    const bob = lerp(0.018, -0.035, r) * midSt;
+    const bob = lerp(0.018, -0.03, r) * midSt;
     const hipsY =
       HIPS_Y +
-      w * (-lerp(0.02, 0.075, r) + bob) +
+      w * (-lerp(0.02, 0.04, r) + bob) +
       (1 - w) * (-0.008 + 0.003 * breath) +
       this.dipPos -
       low * 0.04;
@@ -1994,16 +2105,7 @@ export class NoraModel {
       const s = sd.s;
       const fph = frac(ph + (s > 0 ? 0 : 0.5));
       const gait = _v1.set(s * lerp(0.095, 0.075, r), 0, 0);
-      const pitchG = this.gaitFoot(
-        fph,
-        duty,
-        D,
-        back,
-        lerp(0.07, 0.1, r),
-        lerp(0, 0.26, r),
-        smooth(0, 0.6, D),
-        gait,
-      );
+      const pitchG = this.gaitFoot(fph, duty, D, back, lerp(0.07, 0.1, r), r, smooth(0, 0.6, D), gait);
       const idle = _v2.set(s > 0 ? 0.105 : -0.1, 0.075, s > 0 ? 0.02 : -0.045);
       const target = new THREE.Vector3().lerpVectors(idle, gait, w);
       const pitch = pitchG * w;
@@ -2348,15 +2450,15 @@ export class NoraModel {
     const t = pose.modeTime / 0.8;
     const c = smooth(0, 0.42, t) * (1 - smooth(0.55, 1, t));
     const reach = smooth(0.1, 0.42, t) * (1 - smooth(0.5, 0.85, t));
-    p.pos.set(0.01 * c, HIPS_Y - 0.4 * c, 0.1 * c);
-    this.rot(p, HIPS, -0.35 * c, 0, 0.04 * c);
-    this.rot(p, SPINE, -0.25 * c, 0, 0);
-    this.rot(p, CHEST, -0.18 * c, 0.12 * c, 0);
+    p.pos.set(0.01 * c, HIPS_Y - 0.46 * c, 0.13 * c);
+    this.rot(p, HIPS, -0.5 * c, 0, 0.04 * c);
+    this.rot(p, SPINE, -0.32 * c, 0, 0);
+    this.rot(p, CHEST, -0.2 * c, 0.12 * c, 0);
     this.rot(p, NECK, -0.1 * c, 0, 0);
     this.rot(p, HEAD, -0.2 * c, 0, 0);
     // Right hand to the floor, left forearm resting on the knee.
     const rest = new THREE.Vector3(0.21, 0.86, 0.01);
-    const floor = new THREE.Vector3(0.1, 0.1, -0.34);
+    const floor = new THREE.Vector3(0.12, 0.1, -0.3);
     this.armIK(
       p,
       RIGHT,
@@ -2374,39 +2476,36 @@ export class NoraModel {
 
   private evalDead(pose: NoraPose, p: Pose): void {
     const t = pose.modeTime;
-    const k = smooth(0, 0.22, t);
-    const fall = clamp((t - 0.1) / 0.5, 0, 1);
+    // Knees buckle (0..0.3 s), then the body topples forward onto the ground (0.3..0.6 s).
+    const k = smooth(0, 0.3, t);
+    const fall = clamp((t - 0.22) / 0.38, 0, 1);
     const f = fall * fall;
     const bounce = t > 0.6 ? 0.05 * Math.exp(-(t - 0.6) * 9) * Math.sin((t - 0.6) * 26) : 0;
-    const y = lerp(lerp(HIPS_Y, 0.6, k), 0.14, f) + bounce * 0.4;
-    const z = lerp(lerp(0, 0.05, k), -0.3, f);
-    p.pos.set(0.02 * f, y, z);
-    this.rot(p, HIPS, -1.45 * f + 0.15 * k * (1 - f) + bounce, 0.1 * f, 0.22 * f);
+    p.pos.set(
+      0.02 * f,
+      lerp(lerp(HIPS_Y, 0.56, k), 0.15, f) + bounce * 0.3,
+      lerp(lerp(0, 0.06, k), -0.22, f),
+    );
+    this.rot(p, HIPS, lerp(-0.2 * k, -1.45, f) + bounce, 0.1 * f, 0.2 * f);
     this.rot(p, SPINE, -0.15 * k * (1 - f) - 0.05 * f, 0, 0.05 * f);
-    this.rot(p, CHEST, -0.1 * k * (1 - f) + 0.05 * f, 0.1 * f, 0);
+    this.rot(p, CHEST, -0.12 * k * (1 - f) + 0.05 * f, 0.1 * f, 0);
     this.rot(p, NECK, 0.1 * f, 0.5 * f, 0);
-    this.rot(p, HEAD, 0.25 * f - 0.2 * k * (1 - f), 0.75 * f, 0.1 * f);
+    this.rot(p, HEAD, 0.25 * f - 0.25 * k * (1 - f), 0.75 * f, 0.1 * f);
     this.armFK(p, RIGHT, lerp(lerp(0.1, 1.1, k), 2.5, f), lerp(0.12, 0.55, f), lerp(0.2, 1.0, f), 0.2 * f);
     this.armFK(p, LEFT, lerp(lerp(0.1, 0.9, k), 0.6, f), lerp(0.18, 0.45, f), lerp(0.2, 0.35, f));
     this.clav(p, RIGHT, 0.15 * f, 0);
     this.clav(p, LEFT, 0, 0);
     p.curl[0] = p.curl[1] = 0.5;
-    this.legFK(
-      p,
-      RIGHT,
-      lerp(0.8 * k, 0.15, f),
-      lerp(0.05, 0.18, f),
-      lerp(1.2 * k, 0.55, f),
-      lerp(0, -0.8, f),
-    );
-    this.legFK(
-      p,
-      LEFT,
-      lerp(0.5 * k, -0.02, f),
-      lerp(0.05, 0.08, f),
-      lerp(1.0 * k, 0.15, f),
-      lerp(0, -0.9, f),
-    );
+    // Feet stay on the floor: they slide back as the knees drop, then trail behind the body.
+    for (const sd of SIDES) {
+      const s = sd.s;
+      const ankle = new THREE.Vector3(
+        s * lerp(0.1, s > 0 ? 0.15 : 0.08, f),
+        lerp(lerp(0.075, 0.1, k), 0.085, f),
+        lerp(lerp(0, 0.3, k), s > 0 ? 0.5 : 0.56, f),
+      );
+      this.legIK(p, sd, ankle, lerp(-0.9 * k, -1.35, f), s * 0.2);
+    }
   }
 }
 

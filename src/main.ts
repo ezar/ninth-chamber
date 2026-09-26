@@ -214,6 +214,7 @@ async function main(): Promise<void> {
     },
     camera,
     start,
+    renderer,
   };
 }
 

@@ -11,9 +11,10 @@ import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
 import { buildLevelMeshes } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
-import { NoraModel, type NoraPose } from './nora';
+import type { NoraPose } from './nora';
+import { NoraRig } from './nora-scan';
 import { Props } from './props';
-import { ashlar, flagstones, rock, sand } from './textures';
+import { loadSurfaces, surfaceParams, type SurfaceName, type SurfaceSet } from './materials';
 
 export interface PlayerPose {
   pos: Vec3;
@@ -33,15 +34,18 @@ export class GameRenderer {
   private readonly hemi = new THREE.HemisphereLight('#6f7f8f', '#2a1f17', 0.4);
   private readonly sun = new THREE.DirectionalLight('#ffffff', 0);
   private readonly fireLights: THREE.PointLight[] = [];
-  private readonly nora = new NoraModel();
+  private readonly characterFill = new THREE.PointLight('#ffe2c4', 1.6, 4.5, 2);
+  private readonly nora = new NoraRig();
   private props: Props | null = null;
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
   private currentRoom: string | null = null;
   private readonly shafts: { mesh: THREE.Group; dust: THREE.Points; room: string }[] = [];
   private readonly bounces: { light: THREE.PointLight; room: string; strength: number }[] = [];
+  private readonly levelMeshes: THREE.Mesh[] = [];
   private time = 0;
   private vignette: HTMLElement | null = null;
+  private surfaces: Record<SurfaceName, SurfaceSet> | null = null;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
@@ -63,12 +67,20 @@ export class GameRenderer {
       this.scene.add(l);
     }
     this.scene.add(this.nora.root);
+    // A soft fill that follows Nora so she reads against backlight (a common
+    // character-lighting cheat); short range, so it barely touches the set.
+    this.characterFill.position.set(0.6, 2.2, 1.6);
+    this.nora.root.add(this.characterFill);
     this.vignette = document.getElementById('vignette');
     this.resize();
   }
 
   async init(): Promise<void> {
     await this.renderer.init();
+    [this.surfaces] = await Promise.all([
+      loadSurfaces(),
+      this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`),
+    ]);
     const scenePass = pass(this.scene, this.camera);
     const color = scenePass.getTextureNode('output');
     this.bloomNode = bloom(color, 0.5, 0.5, 0.8);
@@ -94,38 +106,31 @@ export class GameRenderer {
     const sunRooms = new Set(level.rooms.filter((r) => lookFile(r.look)?.sun).map((r) => r.id));
     const meshes = buildLevelMeshes(level, { skylightRooms: sunRooms });
 
-    const wallTex = ashlar({ base: '#b8895a', courses: 4, seed: 11 });
-    const floorTex = flagstones({ base: '#b09a7c', slabs: 2, seed: 5 });
-    const sandTex = sand({ base: '#c8a77c' });
-    const rockTex = rock({ base: '#6d5a47' });
-    const limestone = ashlar({ base: '#cfc5b1', courses: 8, seed: 31 });
-    const pbr = (
-      t: typeof wallTex,
+    const surf = this.surfaces;
+    if (!surf) throw new Error('GameRenderer.init() must finish before setWorld()');
+    const mat = (
+      set: SurfaceSet,
       extra: THREE.MeshStandardMaterialParameters = {},
     ): THREE.MeshStandardMaterial =>
-      new THREE.MeshStandardMaterial({
-        map: t.map,
-        normalMap: t.normalMap,
-        roughnessMap: t.roughnessMap,
-        vertexColors: true,
-        ...extra,
-      });
-    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, cast = true): void => {
-      const m = new THREE.Mesh(geo, mat);
+      new THREE.MeshStandardMaterial({ ...surfaceParams(set), vertexColors: true, ...extra });
+    const add = (geo: THREE.BufferGeometry, material: THREE.Material, cast = true): void => {
+      const m = new THREE.Mesh(geo, material);
       m.castShadow = cast;
       m.receiveShadow = true;
       this.scene.add(m);
+      this.levelMeshes.push(m);
     };
-    add(meshes.surfaces.wall, pbr(wallTex, { normalScale: new THREE.Vector2(0.9, 0.9) }));
-    add(meshes.surfaces.floorStone, pbr(floorTex), false);
-    add(meshes.surfaces.floorSand, pbr(sandTex), false);
-    add(meshes.surfaces.ceiling, pbr(rockTex, { side: THREE.DoubleSide }));
-    add(meshes.surfaces.lip, pbr(limestone, { roughness: 0.55, color: '#efe6d4' }));
+    add(meshes.surfaces.wall, mat(surf.wall));
+    add(meshes.surfaces.floorStone, mat(surf.floor, { color: '#d9c6a8' }), false);
+    add(meshes.surfaces.floorSand, mat(surf.sand), false);
+    add(meshes.surfaces.ceiling, mat(surf.ceiling, { side: THREE.DoubleSide }));
+    add(meshes.surfaces.lip, mat(surf.floor, { color: '#fff4e0' }));
 
     const bronze = new THREE.MeshStandardMaterial({ color: '#5e7b68', roughness: 0.65, metalness: 0.35 });
     this.props = new Props(level, {
-      stone: wallTex,
-      floor: floorTex,
+      stone: surf.wall,
+      floor: surf.floor,
+      block: surf.block,
       bronze,
       darkMetal: new THREE.MeshStandardMaterial({ color: '#2b2622', roughness: 0.5, metalness: 0.7 }),
       gold: new THREE.MeshStandardMaterial({ color: '#e8b75a', roughness: 0.25, metalness: 1 }),
@@ -133,8 +138,40 @@ export class GameRenderer {
     this.scene.add(this.props.group);
 
     this.buildShafts(meshes.skylights, sunRooms);
+    void this.loadLightmap(level.id);
     this.currentRoom = null;
   }
+
+  /**
+   * Baked indirect light (scripts/bake): applied as the level materials'
+   * lightMap on the second UV set. Direct light stays dynamic. Without a bake
+   * the hemisphere light stands in for bounce light.
+   */
+  private async loadLightmap(levelId: string): Promise<void> {
+    const base = `${import.meta.env.BASE_URL}levels/${levelId}.lightmap`;
+    try {
+      const meta = (await (await fetch(`${base}.json`)).json()) as { scale: number };
+      const tex = await new THREE.TextureLoader().loadAsync(`${base}.png`);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.channel = 1;
+      tex.flipY = true;
+      // The bake stores irradiance / π normalised by `scale`; three.js expects irradiance.
+      const intensity = meta.scale * Math.PI * GameRenderer.LIGHTMAP_GAIN;
+      for (const m of this.levelMeshes) {
+        const mat = m.material as THREE.MeshStandardMaterial;
+        mat.lightMap = tex;
+        mat.lightMapIntensity = intensity;
+        mat.needsUpdate = true;
+      }
+      this.hasLightmap = true;
+    } catch {
+      this.hasLightmap = false;
+    }
+  }
+
+  /** Artistic gain on the baked bounce light. */
+  static LIGHTMAP_GAIN = 1;
+  private hasLightmap = false;
 
   /** A soft volumetric-looking beam and dust under each skylight. */
   private buildShafts(skylights: { x: number; z: number; ceil: number }[], rooms: Set<string>): void {
@@ -330,7 +367,7 @@ export class GameRenderer {
     this.renderer.toneMappingExposure = l.exposure;
     this.hemi.color.copy(l.hemiSky);
     this.hemi.groundColor.copy(l.hemiGround);
-    this.hemi.intensity = l.hemiIntensity;
+    this.hemi.intensity = l.hemiIntensity * (this.hasLightmap ? 0.6 : 1);
     this.sun.color.copy(l.sunColor);
     this.sun.intensity = l.sunIntensity;
     const t = this.sun.target.position;

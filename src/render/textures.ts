@@ -293,7 +293,7 @@ export function rock(opts: { size?: number; seed?: number; base: string }): PbrS
 
 /** Hairline crack pattern over a flagstone, for tiles that are about to give way. */
 export function cracked(src: PbrSet, seed = 21): THREE.Texture {
-  const img = src.map.image as HTMLCanvasElement;
+  const img = src.map.image as HTMLCanvasElement | HTMLImageElement;
   const c = document.createElement('canvas');
   c.width = img.width;
   c.height = img.height;
