@@ -6,14 +6,18 @@ import { FixedStepLoop } from './core/loop';
 import { OrbitCamera } from './camera/orbit';
 import { GameRenderer, type PlayerPose } from './render/scene';
 import { createWorld, stepWorld } from './sim/world';
+import { applyStaticStrings, pickLocale, setLocale, t } from './ui/i18n';
 
 const $ = <T extends HTMLElement>(sel: string): T => {
   const el = document.querySelector<T>(sel);
-  if (!el) throw new Error(`Falta ${sel}`);
+  if (!el) throw new Error(`Missing ${sel}`);
   return el;
 };
 
 async function main(): Promise<void> {
+  setLocale(pickLocale(navigator.languages));
+  applyStaticStrings();
+
   const canvas = $<HTMLCanvasElement>('#game');
   const hud = $('#hud-stats');
 
@@ -88,11 +92,11 @@ async function main(): Promise<void> {
       fps = Math.round(fpsFrames / fpsTime);
       fpsFrames = 0;
       fpsTime = 0;
-      hud.textContent = `${renderer.backendName} · ${fps} fps · tick ${world.tick} · saltos ${jumps}`;
+      hud.textContent = t('hud.stats', { backend: renderer.backendName, fps, tick: world.tick, jumps });
     }
   });
 
-  // Acceso de depuración desde la consola y para los tests de humo.
+  // Debug handle for the console and smoke tests.
   (window as unknown as { __nc: unknown }).__nc = { world, camera };
 }
 

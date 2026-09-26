@@ -1,0 +1,10 @@
+{
+  "title": "La Novena Cámara",
+  "loading": "Cargando…",
+  "help": "WASD / flechas mover · Espacio saltar · Shift andar · arrastrar para girar la cámara · rueda zoom · C recentrar",
+  "hud.stats": "{backend} · {fps} fps · tick {tick} · saltos {jumps}",
+  "touch.jump": "Saltar",
+  "touch.action": "Acción",
+  "touch.walk": "Andar",
+  "error.noWebGL": "Tu navegador no soporta WebGPU ni WebGL2. Prueba con una versión reciente de Chrome, Edge, Firefox o Safari."
+}

@@ -1,5 +1,5 @@
 /**
- * Cámara orbital en tercera persona (spec §6). Hito 1: órbita y zoom sin colisión.
+ * Third-person orbit camera (spec §6). Milestone 1: orbit and zoom, no collision.
  */
 const DEG = Math.PI / 180;
 
@@ -11,7 +11,7 @@ export const cameraTuning = {
   minPitch: -14 * DEG,
   maxPitch: 66 * DEG,
   follow: 10,
-  /** Radianes por píxel de ratón. */
+  /** Radians per mouse pixel. */
   sensitivity: 0.005,
 };
 
@@ -33,7 +33,7 @@ export class OrbitCamera {
     );
   }
 
-  /** Recentrar detrás del personaje. */
+  /** Recenter behind the character. */
   recenter(playerYaw: number): void {
     this.yaw = playerYaw;
   }
@@ -45,7 +45,7 @@ export class OrbitCamera {
     this.target.z += (z - this.target.z) * k;
   }
 
-  /** Posición del ojo según yaw, pitch y distancia. */
+  /** Eye position from yaw, pitch and distance. */
   eye(): { x: number; y: number; z: number } {
     const h = Math.cos(this.pitch) * this.distance;
     return {

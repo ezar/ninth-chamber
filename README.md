@@ -1,22 +1,24 @@
-# La Novena Cámara · The Ninth Chamber
+# The Ninth Chamber · La Novena Cámara
 
-Aventura de exploración de tumbas en tercera persona para el navegador. El spec completo está en [docs/spec.md](docs/spec.md) y las reglas para Claude Code en [CLAUDE.md](CLAUDE.md).
+Third-person tomb-exploration adventure for the browser. The full spec is in [docs/spec.md](docs/spec.md) (Spanish) and the rules for Claude Code are in [CLAUDE.md](CLAUDE.md).
 
-## Desarrollo
+## Development
 
 ```sh
 pnpm install
-pnpm dev        # servidor de desarrollo
-pnpm test       # tests de simulación (Vitest)
+pnpm dev        # dev server
+pnpm test       # simulation tests (Vitest)
 pnpm lint       # ESLint
-pnpm typecheck  # tipos, incluida la comprobación de que src/sim no usa el DOM
-pnpm build      # build de producción en dist/
+pnpm typecheck  # types, including the check that src/sim does not use the DOM
+pnpm build      # production build in dist/
 ```
 
-## Controles (hito 1)
+## Controls (milestone 1)
 
-- Teclado: WASD o flechas para moverse, Espacio saltar, Shift andar, arrastrar con el ratón para girar la cámara, rueda para el zoom, C recentrar.
-- Mando: stick izquierdo mover, stick derecho cámara, A saltar, LT andar.
-- Táctil: joystick en la mitad izquierda, arrastre en la derecha para la cámara y botones en pantalla.
+- Keyboard: WASD or arrows to move, Space jump, Shift walk, drag with the mouse to turn the camera, wheel to zoom, C recenter.
+- Gamepad: left stick move, right stick camera, A jump, LT walk.
+- Touch: joystick on the left half, drag on the right half for the camera, and on-screen buttons.
 
-Estado: ver [docs/changelog.md](docs/changelog.md).
+The UI language follows the browser (English or Spanish for now).
+
+Status: see [docs/changelog.md](docs/changelog.md).

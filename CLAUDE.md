@@ -1,31 +1,37 @@
 # The Ninth Chamber
 
-Juego de exploración de tumbas en navegador. Spec completo en docs/spec.md: léelo antes de cualquier cambio de diseño.
+Tomb-exploration game for the browser. The full spec is in docs/spec.md (written in Spanish): read it before any design change.
 
-## Reglas
+## Language
 
-- TypeScript strict. Sin any salvo en límites con librerías.
-- src/sim no importa three ni nada del DOM. Todo lo de sim/ debe correr en Node.
-- Prohibido Math.random y Date.now en sim/: usa world.rng y el contador de ticks.
-- Nada de motores de física genéricos. Colisión de rejilla propia.
-- Constantes de juego solo en src/sim/player/tuning.ts.
-- La simulación emite eventos; audio, render y UI solo escuchan.
-- Niveles en levels/*.level.json, validados con el esquema de src/sim/grid/schema.ts.
-- No usar nombres, personajes ni recursos de Tomb Raider.
-- Lo visual sigue art/looks/*.json y los concepts de Claude Design en docs/art/. Tras cualquier cambio visual, regenera las capturas de referencia con pnpm shots y compáralas con el concept.
+- Everything in the repo is in English: code, identifiers, comments, file and folder names, tests, commit messages, PRs and docs (except docs/spec.md, which is the owner's source document).
+- Player-facing text never lives in code: it goes in i18n/*.json (en is the reference; es and ca follow) and is read through src/ui/i18n.ts.
 
-## Flujo
+## Rules
 
-- Antes de tocar sim/: escribe o actualiza el test de movimiento en tests/.
-- pnpm test y pnpm validate:levels deben pasar antes de dar un hito por terminado.
-- Cada hito termina con una demo en la URL de previsualización y una nota en docs/changelog.md.
+- TypeScript strict. No any except at library boundaries.
+- src/sim does not import three or anything from the DOM. Everything in sim/ must run in Node.
+- No Math.random or Date.now in sim/: use world.rng and the tick counter.
+- No generic physics engines. Own grid collision.
+- Gameplay constants only in src/sim/player/tuning.ts.
+- The simulation emits events; audio, render and UI only listen.
+- Levels in levels/*.level.json, validated with the schema in src/sim/grid/schema.ts.
+- Do not use names, characters or assets from Tomb Raider.
+- Visuals follow art/looks/*.json and the Claude Design concepts in docs/art/. After any visual change, regenerate the reference shots with pnpm shots and compare them with the concept.
 
-## Comandos
+## Workflow
+
+- Before touching sim/: write or update the movement test in tests/.
+- pnpm test and pnpm validate:levels must pass before a milestone is done.
+- Each milestone ends with a demo on the preview URL and a note in docs/changelog.md.
+
+## Commands
 
 - pnpm dev, pnpm test, pnpm validate:levels, pnpm replay:update, pnpm shots, pnpm build
-- Disponibles desde el hito 1: pnpm dev, pnpm test, pnpm lint, pnpm typecheck, pnpm format, pnpm build. validate:levels, replay:update y shots llegan con los hitos 2 y V1.
+- Available since milestone 1: pnpm dev, pnpm test, pnpm lint, pnpm typecheck, pnpm format, pnpm build. validate:levels, replay:update and shots arrive with milestones 2 and V1.
 
-## Cómo se hacen cumplir las reglas
+## How the rules are enforced
 
-- eslint.config.js prohíbe en src/sim importar three o capas de presentación, Math.random, Date.now y globales del DOM.
-- tsconfig.sim.json compila src/sim y el núcleo puro (loop, rng, events, input-frame) sin lib DOM.
+- eslint.config.js forbids, in src/sim, importing three or presentation layers, Math.random, Date.now and DOM globals.
+- tsconfig.sim.json compiles src/sim and the pure core (loop, rng, events, input-frame) without the DOM lib.
+- tests/i18n.test.ts checks that every locale has the same keys as English.

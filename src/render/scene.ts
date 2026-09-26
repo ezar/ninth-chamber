@@ -1,6 +1,6 @@
 /**
- * Render del hito 1: suelo con rejilla de bloques de 2 m, algunas columnas de
- * referencia y el personaje de cajas. Interpola entre el estado anterior y el actual.
+ * Milestone 1 renderer: a floor with a 2 m block grid, a few reference pillars
+ * and the box character. Interpolates between the previous and current state.
  */
 import * as THREE from 'three/webgpu';
 import type { Vec3 } from '../sim/world';
@@ -37,14 +37,14 @@ export class GameRenderer {
     await this.renderer.init();
   }
 
-  /** 'WebGPU' o 'WebGL2' según el backend que haya elegido Three.js. */
+  /** 'WebGPU' or 'WebGL2', depending on the backend Three.js picked. */
   get backendName(): string {
     const backend = (this.renderer as unknown as { backend?: { isWebGPUBackend?: boolean } }).backend;
     return backend?.isWebGPUBackend ? 'WebGPU' : 'WebGL2';
   }
 
   private buildRoom(): void {
-    const size = 12; // bloques por lado
+    const size = 12; // blocks per side
     const floorTex = gridTexture();
     floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
     floorTex.repeat.set(size, size);
@@ -57,7 +57,7 @@ export class GameRenderer {
     floor.receiveShadow = true;
     this.scene.add(floor);
 
-    // Columnas en las esquinas de bloque para leer la escala.
+    // Pillars on block corners to read the scale.
     const stone = new THREE.MeshStandardMaterial({ color: '#8a7355', roughness: 0.85 });
     const pillarGeo = new THREE.BoxGeometry(BLOCK, BLOCK * 2, BLOCK);
     const spots: [number, number][] = [
@@ -92,7 +92,7 @@ export class GameRenderer {
   }
 
   private buildPlayer(): void {
-    // Personaje de cajas provisional (spec §11): cuerpo + cabeza + nariz para la orientación.
+    // Placeholder box character (spec §11): body + head + nose to show facing.
     const w = tuning.radius * 2;
     const body = new THREE.Mesh(
       new THREE.BoxGeometry(w, tuning.height * 0.78, w * 0.7),
@@ -142,18 +142,18 @@ export class GameRenderer {
   }
 }
 
-/** Textura de rejilla generada en canvas: un bloque de 2 m por repetición. */
+/** Canvas-generated grid texture: one 2 m block per repeat. */
 function gridTexture(): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = c.height = 128;
   const g = c.getContext('2d');
-  if (!g) throw new Error('Canvas 2D no disponible');
+  if (!g) throw new Error('Canvas 2D not available');
   g.fillStyle = '#6b5842';
   g.fillRect(0, 0, 128, 128);
   g.strokeStyle = '#4a3b2b';
   g.lineWidth = 3;
   g.strokeRect(1.5, 1.5, 125, 125);
-  // Marcas de click (0,5 m).
+  // Click marks (0.5 m).
   g.strokeStyle = 'rgba(74, 59, 43, 0.35)';
   g.lineWidth = 1;
   for (let i = 1; i < 4; i++) {

@@ -1,32 +1,32 @@
 /**
- * Constantes de juego (spec §5 "Constantes de partida", salen del PoC).
- * Es el único sitio donde viven: los tests de movimiento dependen de ellas.
+ * Gameplay constants (spec §5 "Constantes de partida", taken from the PoC).
+ * This is the only place they live: the movement tests depend on them.
  */
 export const tuning = {
-  /** Radio de colisión (m). */
+  /** Collision radius (m). */
   radius: 0.34,
-  /** Altura del personaje (m). */
+  /** Character height (m). */
   height: 1.9,
-  /** Subida automática de escalón (m). */
+  /** Automatic step-up height (m). */
   stepUp: 0.55,
 
-  /** Velocidad corriendo (m/s). */
+  /** Run speed (m/s). */
   runSpeed: 5.4,
-  /** Velocidad andando (m/s). */
+  /** Walk speed (m/s). */
   walkSpeed: 2.2,
-  /** Aceleración horizontal (1/s): fracción de la diferencia que se corrige por segundo. */
+  /** Horizontal acceleration (1/s): fraction of the speed difference corrected per second. */
   accel: 12,
 
-  /** Gravedad (m/s²). */
+  /** Gravity (m/s²). */
   gravity: 24,
-  /** Velocidad vertical inicial del salto (m/s). */
+  /** Initial vertical jump speed (m/s). */
   jumpSpeed: 8.05,
-  /** Control aéreo (m/s²). */
+  /** Air control (m/s²). */
   airControl: 3,
-  /** Velocidad horizontal máxima en el aire (m/s). */
+  /** Maximum horizontal speed in the air (m/s). */
   airMaxSpeed: 5.6,
 
-  /** Velocidad de giro hacia la dirección de movimiento (rad/s). */
+  /** Turn rate towards the movement direction (rad/s). */
   turnSpeed: 12,
 };
 

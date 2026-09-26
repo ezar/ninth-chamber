@@ -1,5 +1,5 @@
 {
-  "//": "Comprueba que src/sim y el núcleo puro compilan sin DOM ni Three.js (deben correr en Node).",
+  "//": "Checks that src/sim and the pure core compile without DOM or Three.js (they must run in Node).",
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "lib": ["ES2022"],

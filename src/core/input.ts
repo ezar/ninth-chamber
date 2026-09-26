@@ -1,20 +1,20 @@
 /**
- * Dispositivos de entrada (teclado, mando y táctil) fundidos en un RawInput.
- * Solo esta capa toca el DOM; la simulación recibe InputFrame.
+ * Input devices (keyboard, gamepad and touch) merged into a RawInput.
+ * Only this layer touches the DOM; the simulation receives InputFrames.
  */
 import { buttonBit, type Button, type ButtonMask, type RawInput } from './input-frame';
 
 export interface InputDevice {
-  /** Estado actual del dispositivo. */
+  /** Current device state. */
   poll(): RawInput;
-  /** Botones pulsados desde la última llamada (aunque ya se hayan soltado). Los vacía. */
+  /** Buttons pressed since the last call (even if already released). Clears them. */
   takeTapped(): ButtonMask;
-  /** Giro de cámara acumulado (px o unidades de stick·s) desde la última llamada. Lo vacía. */
+  /** Camera look accumulated since the last call (px, or stick·s units). Clears it. */
   takeLook(): { x: number; y: number; zoom: number };
   dispose(): void;
 }
 
-// ───────────────────────────── Teclado y ratón ─────────────────────────────
+// ───────────────────────────── Keyboard and mouse ─────────────────────────────
 
 const KEY_BUTTONS: Record<string, Button> = {
   Space: 'jump',
@@ -134,9 +134,9 @@ export class KeyboardMouseDevice implements InputDevice {
   }
 }
 
-// ─────────────────────────────────── Mando ───────────────────────────────────
+// ────────────────────────────────── Gamepad ──────────────────────────────────
 
-/** Mapeo estándar de la Gamepad API (spec §13). */
+/** Gamepad API standard mapping (spec §13). */
 const PAD_BUTTONS: [number, Button][] = [
   [0, 'jump'], // A
   [2, 'action'], // X
@@ -148,7 +148,7 @@ const PAD_BUTTONS: [number, Button][] = [
   [3, 'medkit'], // Y
   [8, 'inventory'], // Select
   [9, 'pause'], // Start
-  [11, 'recenter'], // pulsar stick derecho
+  [11, 'recenter'], // right stick click
 ];
 
 const DEADZONE = 0.18;
@@ -161,7 +161,7 @@ export class GamepadDevice implements InputDevice {
   private look = { x: 0, y: 0, zoom: 0 };
   private last: RawInput = { moveX: 0, moveY: 0, held: 0 };
 
-  /** Se llama una vez por frame de render con el tiempo transcurrido. */
+  /** Called once per render frame with the elapsed time. */
   update(dt: number): void {
     const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
     const pad = pads.find((p): p is Gamepad => !!p && p.connected && p.mapping === 'standard');
@@ -182,7 +182,7 @@ export class GamepadDevice implements InputDevice {
       moveY: -deadzone(pad.axes[1] ?? 0),
       held,
     };
-    // Stick derecho: unidades equivalentes a píxeles de ratón.
+    // Right stick: units equivalent to mouse pixels.
     const LOOK_SPEED = 900;
     this.look.x += deadzone(pad.axes[2] ?? 0) * LOOK_SPEED * dt;
     this.look.y += deadzone(pad.axes[3] ?? 0) * LOOK_SPEED * dt;
@@ -207,13 +207,13 @@ export class GamepadDevice implements InputDevice {
   dispose(): void {}
 }
 
-// ─────────────────────────────────── Táctil ───────────────────────────────────
+// ─────────────────────────────────── Touch ───────────────────────────────────
 
 const JOY_RADIUS = 60;
 
 /**
- * Joystick flotante en la mitad izquierda, arrastre de cámara en la derecha y
- * botones en pantalla (elementos con data-button dentro de `root`).
+ * Floating joystick on the left half, camera drag on the right half and
+ * on-screen buttons (elements with data-button inside `root`).
  */
 export class TouchDevice implements InputDevice {
   private joyId: number | null = null;
@@ -332,9 +332,9 @@ export class TouchDevice implements InputDevice {
   }
 }
 
-// ───────────────────────────── Fusión de dispositivos ─────────────────────────────
+// ───────────────────────────── Device merging ─────────────────────────────
 
-/** Une varios dispositivos: los ejes se suman (y se recortan) y los botones se combinan con OR. */
+/** Merges several devices: axes are summed (and clamped), buttons are OR-ed. */
 export function mergeDevices(devices: readonly InputDevice[]): {
   raw: RawInput;
   tapped: ButtonMask;

@@ -1,5 +1,5 @@
-# Despliegue y previsualización por pull request con la integración Git de Netlify.
-# El hosting sigue abierto en el spec (§18): si se elige Vercel, basta con borrar este archivo.
+# Deploys and per-pull-request previews through Netlify's Git integration.
+# Hosting is still open in the spec (§18): if Vercel is chosen, just delete this file.
 [build]
   command = "pnpm build"
   publish = "dist"

@@ -1,21 +1,21 @@
 /**
- * Bucle de paso fijo con acumulador (spec §3 "Bucle y capas").
+ * Fixed-step loop with an accumulator (spec §3 "Bucle y capas").
  *
- * No conoce el reloj del navegador: quien lo usa le pasa el tiempo transcurrido.
- * Así se puede testear en Node y ejecutar sin render.
+ * It does not read the browser clock: the caller passes in elapsed time.
+ * That makes it testable in Node and runnable without rendering.
  */
 
 export const TICK_RATE = 60;
 export const TICK_DT = 1 / TICK_RATE;
-/** Máximo de ticks por frame para no entrar en espiral de la muerte. */
+/** Maximum ticks per frame, to avoid the spiral of death. */
 export const MAX_TICKS_PER_FRAME = 5;
 
 export interface FrameResult {
-  /** Ticks de simulación ejecutados en este frame. */
+  /** Simulation ticks run this frame. */
   ticks: number;
-  /** Fracción [0, 1) entre el estado anterior y el actual, para interpolar el render. */
+  /** Fraction in [0, 1) between the previous and current state, for render interpolation. */
   alpha: number;
-  /** Tiempo descartado porque se superó MAX_TICKS_PER_FRAME. */
+  /** Time discarded because MAX_TICKS_PER_FRAME was exceeded. */
   dropped: number;
 }
 
@@ -28,7 +28,7 @@ export class FixedStepLoop {
     private readonly maxTicks = MAX_TICKS_PER_FRAME,
   ) {}
 
-  /** Avanza `elapsed` segundos de tiempo real y ejecuta los ticks que tocan. */
+  /** Advances `elapsed` seconds of real time and runs the ticks that are due. */
   advance(elapsed: number): FrameResult {
     this.accumulator += Math.max(0, elapsed);
     let ticks = 0;
@@ -39,7 +39,7 @@ export class FixedStepLoop {
     }
     let dropped = 0;
     if (this.accumulator >= this.dt) {
-      // Nos hemos quedado atrás: se descarta el exceso y se conserva la fase.
+      // We fell behind: drop the excess and keep the phase.
       dropped = this.accumulator - (this.accumulator % this.dt);
       this.accumulator %= this.dt;
     }

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -7,30 +7,24 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
     />
     <meta name="theme-color" content="#1a130d" />
-    <title>La Novena Cámara</title>
+    <title>The Ninth Chamber</title>
   </head>
   <body>
     <canvas id="game" tabindex="0"></canvas>
 
     <div id="hud">
-      <div id="hud-stats">Cargando…</div>
-      <div id="hud-help">
-        WASD / flechas mover · Espacio saltar · Shift andar · arrastrar para girar la cámara · rueda zoom · C
-        recentrar
-      </div>
+      <div id="hud-stats" data-i18n="loading"></div>
+      <div id="hud-help" data-i18n="help"></div>
     </div>
 
     <div id="touch" aria-hidden="true">
       <div id="stick"><div id="stick-knob"></div></div>
-      <button data-button="jump" class="tbtn tbtn-jump">Saltar</button>
-      <button data-button="action" class="tbtn tbtn-action">Acción</button>
-      <button data-button="walk" data-toggle="true" class="tbtn tbtn-walk">Andar</button>
+      <button data-button="jump" class="tbtn tbtn-jump" data-i18n="touch.jump"></button>
+      <button data-button="action" class="tbtn tbtn-action" data-i18n="touch.action"></button>
+      <button data-button="walk" data-toggle="true" class="tbtn tbtn-walk" data-i18n="touch.walk"></button>
     </div>
 
-    <div id="fatal" hidden>
-      Tu navegador no soporta WebGPU ni WebGL2. Prueba con una versión reciente de Chrome, Edge, Firefox o
-      Safari.
-    </div>
+    <div id="fatal" data-i18n="error.noWebGL" hidden></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
