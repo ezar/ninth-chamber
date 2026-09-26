@@ -141,7 +141,15 @@ export interface ZoneActor {
   inside: boolean;
 }
 
-export type Actor = BlockActor | DoorActor | LeverActor | PlateActor | PickupActor | ZoneActor;
+/** A journal note: read with Action and never consumed, so it can be read again (see Stats.notes). */
+export interface NoteActor {
+  kind: 'note';
+  id: string;
+  cx: number;
+  cz: number;
+}
+
+export type Actor = BlockActor | DoorActor | LeverActor | PlateActor | PickupActor | ZoneActor | NoteActor;
 
 /** Enemy behaviour states (spec §7 "Comportamiento"). */
 export type EnemyMode = 'idle' | 'alert' | 'chase' | 'attack' | 'hurt' | 'flee' | 'dead';
@@ -207,7 +215,12 @@ export interface Stats {
   time: number;
   distance: number;
   deaths: number;
+  /** Journal notes read, by id, in reading order. Kept across deaths. */
+  notes: string[];
+  /** Secrets found (the count); each counts once, see secretsFound. */
   secrets: number;
+  /** Ids of the secrets found, kept across deaths: a found idol stays found. */
+  secretsFound: string[];
   /** Medkits picked up. */
   medkits: number;
   medkitsUsed: number;

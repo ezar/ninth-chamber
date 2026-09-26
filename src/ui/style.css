@@ -111,6 +111,16 @@ body.paused #pause-button {
   animation: title 5.5s ease-in-out forwards;
 }
 
+#hud-title .kicker {
+  display: block;
+  margin-bottom: 14px;
+  font: 500 12px var(--font-mono);
+  font-variant: normal;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ui-amber);
+}
+
 @keyframes title {
   0% {
     opacity: 0;
@@ -249,35 +259,6 @@ body.reduce-motion #hud-health.low #hud-health-fill {
 #fade.dark {
   opacity: 0.85;
   transition-delay: 0.8s;
-}
-
-#start,
-#end {
-  position: fixed;
-  inset: 0;
-  z-index: 6;
-  display: grid;
-  place-items: center;
-  background: radial-gradient(ellipse at 50% 60%, rgba(15, 13, 11, 0.35), rgba(15, 13, 11, 0.9));
-  transition: opacity 0.8s;
-}
-
-#end {
-  z-index: 5;
-}
-
-#start.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-#end {
-  opacity: 0;
-}
-#end.show {
-  opacity: 1;
-}
-#end[hidden] {
-  display: none;
 }
 
 .panel {
@@ -727,7 +708,8 @@ body.touch .opt-bar {
 body.touch .opt-main {
   min-height: 44px;
 }
-body.touch .panel .help {
+body.touch .panel .help,
+body.touch #start .help {
   display: none;
 }
 

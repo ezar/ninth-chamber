@@ -280,6 +280,15 @@ export class GameRenderer {
   }
 
   /**
+   * Draws a fresh World of the level already built (restart, back to the
+   * title) without rebuilding the geometry; another level goes through setWorld.
+   */
+  resetWorld(world: World): void {
+    if (world.level === this.world?.level) this.world = world;
+    else this.setWorld(world);
+  }
+
+  /**
    * Baked indirect light (scripts/bake): applied as the level materials'
    * lightMap on the second UV set. Direct light stays dynamic. Without a bake
    * the hemisphere light stands in for bounce light.

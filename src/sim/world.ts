@@ -72,6 +72,9 @@ function createActors(level: Level): Actor[] {
       case 'medkit':
         actors.push({ kind: 'medkit', id: e.id, cx, cz, taken: false, variant: e.size });
         break;
+      case 'note':
+        actors.push({ kind: 'note', id: e.id, cx, cz });
+        break;
       case 'zone':
         actors.push({ kind: 'zone', id: e.id, cx, cz, w: e.size[0], h: e.size[1], inside: false });
         break;
@@ -133,7 +136,9 @@ export function createWorld(level: Level, seed = 1): World {
       time: 0,
       distance: 0,
       deaths: 0,
+      notes: [],
       secrets: 0,
+      secretsFound: [],
       medkits: 0,
       medkitsUsed: 0,
       shots: 0,
@@ -259,6 +264,13 @@ export function respawn(world: World): void {
   p.weapon.cooldown = 0;
   p.weapon.busy = 0;
   resetEnemies(world);
+  // Secrets found since the checkpoint stay found (they count once, like journal notes).
+  for (const a of world.state.actors) {
+    if (a.kind === 'secret' && world.stats.secretsFound.includes(a.id)) {
+      a.taken = true;
+      world.state.signals[`${a.id}.taken`] = true;
+    }
+  }
   world.events.emit({ type: 'player.respawned', tick: world.tick });
 }
 

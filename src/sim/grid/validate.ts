@@ -19,6 +19,7 @@ const SIGNALS: Record<string, string[]> = {
   plate: ['pressed'],
   zone: ['entered'],
   door: ['open'],
+  note: ['read'],
   secret: ['taken'],
   relic: ['taken'],
   enemy: ['dead'],
@@ -68,6 +69,17 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
       const n = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] }[e.wall];
       const behind = level.sector(cx + (n?.[0] ?? 0), cz + (n?.[1] ?? 0));
       if (behind && !behind.wall) errors.push(`lever '${e.id}' is not against a wall on its ${e.wall} side`);
+    }
+    if (e.type === 'note') {
+      if (e.wall) {
+        const n = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] }[e.wall];
+        const behind = level.sector(cx + (n?.[0] ?? 0), cz + (n?.[1] ?? 0));
+        if (behind && !behind.wall) errors.push(`note '${e.id}' is not against a wall on its ${e.wall} side`);
+      }
+      for (const part of ['meta', 'title', 'body']) {
+        const key = `${e.text}.${part}`;
+        if (i18nKeys && !i18nKeys.has(key)) errors.push(`note '${e.id}': missing i18n key '${key}'`);
+      }
     }
   }
 

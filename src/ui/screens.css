@@ -1,0 +1,1160 @@
+/*
+ * Title, credits, intro, note reader and end-of-level screens. Tokens and type
+ * from the Claude Design art direction (docs/art/README.md, artboards e and f).
+ */
+
+/* ── Phases: the HUD and touch controls only show during play ─────────────── */
+
+#hud {
+  transition: opacity 0.6s;
+}
+
+body:not([data-phase='play']) #hud {
+  opacity: 0;
+}
+
+body:not([data-phase='play']) #touch,
+#reader:not([hidden]) ~ #touch {
+  display: none;
+}
+
+/* ── Buttons shared by the dialogs ────────────────────────────────────────── */
+
+.credits-foot button,
+.end-actions button,
+#reader-close {
+  min-height: 44px;
+  padding: 0 22px;
+  border: 1px solid var(--ui-line);
+  border-radius: 2px;
+  background: rgba(236, 227, 208, 0.04);
+  color: var(--ui-bone);
+  font: 600 13px var(--font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.credits-foot button:hover,
+.credits-foot button:focus,
+.end-actions button:hover,
+.end-actions button:focus,
+#reader-close:hover,
+#reader-close:focus {
+  border-color: var(--ui-amber);
+  background: rgba(232, 163, 61, 0.14);
+  outline: none;
+}
+
+/* Keyboard and pad focus stays visible even on the amber primary button. */
+.credits-foot button:focus-visible,
+.end-actions button:focus-visible,
+#reader-close:focus-visible {
+  outline: 1px solid var(--ui-amber);
+  outline-offset: 3px;
+}
+
+/* ── The nine-segment seal ────────────────────────────────────────────────── */
+
+.seal-svg .seal-stone {
+  fill: var(--ui-bone);
+}
+.seal-svg .seal-dim {
+  fill: none;
+  stroke: #5a4d40;
+  stroke-width: 2.5;
+}
+.seal-svg .seal-ninth {
+  fill: none;
+  stroke: var(--ui-amber);
+  stroke-width: 3;
+}
+.seal-svg .seal-ninth.filled {
+  fill: var(--ui-amber);
+}
+.seal-svg .seal-ring {
+  fill: none;
+  stroke: var(--ui-bone);
+  stroke-width: 3;
+}
+.seal-svg .seal-core {
+  fill: var(--ui-amber);
+}
+
+/* ── Title screen: the menu over the live entrance scene ─────────────────── */
+
+#start {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition:
+    opacity 1.1s ease,
+    visibility 0s linear 0s;
+}
+
+#start.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 1.1s ease,
+    visibility 0s linear 1.1s;
+}
+
+#start .scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(12, 10, 8, 0.9) 0%, rgba(12, 10, 8, 0.62) 32%, rgba(12, 10, 8, 0) 66%),
+    linear-gradient(0deg, rgba(12, 10, 8, 0.8) 0%, rgba(12, 10, 8, 0) 24%);
+}
+
+.title-block {
+  position: relative;
+  max-width: 760px;
+  margin-top: -3vh;
+  padding: 0 24px 0 max(40px, 7vw);
+}
+
+#start-seal .seal-svg {
+  display: block;
+  width: clamp(58px, 6vw, 86px);
+  height: auto;
+  margin: 0 0 22px -3px;
+  filter: drop-shadow(0 2px 14px rgba(0, 0, 0, 0.7));
+}
+
+.title-block h1 {
+  margin: 0;
+  font: 500 clamp(40px, 5.6vw, 80px) / 0.98 var(--font-display);
+  font-variant: small-caps;
+  letter-spacing: 0.14em;
+  color: var(--ui-bone);
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.75);
+}
+
+.title-block .tagline {
+  margin: 16px 0 0;
+  font: italic 500 clamp(18px, 1.7vw, 23px) / 1.3 var(--font-display);
+  letter-spacing: 0.02em;
+  color: #cfc3ad;
+}
+
+.title-block .kicker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 30px 0 0;
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ui-dust);
+}
+
+.title-block .kicker::before {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: var(--ui-amber);
+}
+
+.title-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: 24px;
+}
+
+.title-menu button {
+  position: relative;
+  min-height: 44px;
+  padding: 0 12px 0 18px;
+  border: 0;
+  background: none;
+  color: var(--ui-dust);
+  font: 500 18px var(--font-ui);
+  letter-spacing: 0.04em;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.title-menu button::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 22px;
+  margin-top: -11px;
+  background: var(--ui-amber);
+  transform: scaleY(0);
+  transition: transform 0.25s ease;
+}
+
+.title-menu button:hover,
+.title-menu button:focus {
+  color: var(--ui-bone);
+  font-weight: 600;
+  outline: none;
+}
+
+.title-menu button:hover::before,
+.title-menu button:focus::before {
+  transform: scaleY(1);
+}
+
+.title-menu #start-button {
+  font-size: 21px;
+}
+
+.title-block .help {
+  max-width: 440px;
+  margin: 26px 0 0;
+  color: var(--ui-dust);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#start .legal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 0 max(24px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(40px, 7vw);
+  color: rgba(168, 156, 136, 0.78);
+  font: 400 12px var(--font-ui);
+}
+
+#version {
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px), (max-height: 520px) {
+  .title-block {
+    margin-top: 0;
+    padding: 0 24px 0 max(24px, env(safe-area-inset-left));
+  }
+  #start-seal .seal-svg {
+    width: 48px;
+    margin-bottom: 12px;
+  }
+  .title-block h1 {
+    font-size: clamp(32px, 7vh, 48px);
+  }
+  .title-block .kicker {
+    margin-top: 16px;
+  }
+  .title-menu {
+    margin-top: 10px;
+  }
+  #start .scrim {
+    background: linear-gradient(
+      90deg,
+      rgba(12, 10, 8, 0.9) 0%,
+      rgba(12, 10, 8, 0.55) 70%,
+      rgba(12, 10, 8, 0.2)
+    );
+  }
+  #start .legal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding-left: max(24px, env(safe-area-inset-left));
+  }
+}
+
+/* ── Credits ──────────────────────────────────────────────────────────────── */
+
+#credits {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(12, 10, 8, 0.78);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+
+#credits.show {
+  opacity: 1;
+}
+
+#credits[hidden] {
+  display: none;
+}
+
+.credits-panel {
+  width: min(680px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 34px 40px 28px;
+  border: 1px solid var(--ui-line);
+  border-top: 2px solid var(--ui-amber);
+  background: rgba(15, 13, 11, 0.94);
+}
+
+.credits-panel h2 {
+  margin: 0 0 18px;
+  font: 500 40px / 1 var(--font-display);
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+}
+
+#credits-list {
+  display: grid;
+  grid-template-columns: minmax(120px, 32%) 1fr;
+  margin: 0;
+}
+
+#credits-list dt {
+  padding: 13px 16px 11px 0;
+  border-top: 1px solid var(--ui-line);
+  color: var(--ui-dust);
+  font: 500 11px / 1.6 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+#credits-list dd {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--ui-line);
+  color: var(--ui-bone);
+  font: 400 16px / 1.45 var(--font-ui);
+}
+
+.credits-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin: 22px 0 0;
+}
+
+.credits-foot a {
+  color: var(--ui-amber);
+  font-size: 14px;
+  text-underline-offset: 3px;
+}
+
+.credits-foot a:focus {
+  outline: 1px solid var(--ui-amber);
+  outline-offset: 4px;
+}
+
+/* ── Intro: letterbox, cards over the camera move ─────────────────────────── */
+
+#intro {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#intro[hidden] {
+  display: none;
+}
+
+#intro .letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: #050403;
+  transition: height 1.6s cubic-bezier(0.65, 0, 0.25, 1);
+}
+
+#intro .top {
+  top: 0;
+}
+
+#intro .bottom {
+  bottom: 0;
+}
+
+#intro.on .letterbox {
+  height: 12.5vh;
+}
+
+/* A soft shade under the cards, so they read over the sunlit dust. */
+#intro::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12.5vh;
+  height: 36vh;
+  background: linear-gradient(0deg, rgba(8, 6, 5, 0.6), rgba(8, 6, 5, 0));
+  opacity: 0;
+  transition: opacity 1.6s;
+}
+
+#intro.on::after {
+  opacity: 1;
+}
+
+#intro-card {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: calc(12.5vh + 6vh);
+  width: min(30em, 86vw);
+  margin: 0;
+  transform: translate(-50%, 10px);
+  text-align: center;
+  text-wrap: balance;
+  color: var(--ui-bone);
+  font: 500 clamp(21px, 2.3vw, 33px) / 1.42 var(--font-display);
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 4px 30px rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  filter: blur(4px);
+  transition:
+    opacity 1.1s ease,
+    transform 1.8s ease,
+    filter 1.1s ease;
+}
+
+#intro-card.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  filter: none;
+}
+
+#intro-skip {
+  position: absolute;
+  z-index: 1;
+  right: max(28px, 3vw);
+  bottom: calc(6.25vh - 7px);
+  margin: 0;
+  color: var(--ui-dust);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.8s;
+}
+
+#intro-skip.show {
+  opacity: 0.7;
+}
+
+/* ── Note reader: paper over a dimmed, paused scene ───────────────────────── */
+
+#reader {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at 50% 45%, rgba(20, 15, 10, 0.6), rgba(8, 6, 4, 0.92) 75%);
+  backdrop-filter: blur(3px) saturate(0.7);
+  opacity: 0;
+  transition: opacity 0.3s;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+#reader.show {
+  opacity: 1;
+}
+
+#reader[hidden] {
+  display: none;
+}
+
+.reader-stage {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 40px 18px;
+}
+
+.sheet {
+  --paper: #e9dcc0;
+  --ink: #2b2119;
+  position: relative;
+  width: min(600px, 100%);
+  padding: 44px 54px 40px;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.25 0 0 0 0 0.12 0 0 0 0.24 0'/></filter><rect width='100%' height='100%' filter='url(%23p)'/></svg>"),
+    radial-gradient(circle at 86% 90%, rgba(140, 92, 40, 0.16) 0 14px, transparent 36px),
+    radial-gradient(ellipse at 30% 18%, rgba(255, 250, 235, 0.5), transparent 60%),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(118, 82, 42, 0.3) 100%);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.65),
+    0 1px 0 rgba(255, 255, 255, 0.25) inset;
+  transform: translateY(16px) rotate(-0.4deg);
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+#reader.show .sheet {
+  transform: rotate(-0.4deg);
+}
+
+.sheet-meta {
+  margin: 0 0 10px;
+  color: #7a6650;
+  font: 500 11px / 1.5 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sheet-title {
+  margin: 0 0 20px;
+  font: 600 31px / 1.1 var(--font-display);
+}
+
+.sheet-body p,
+.sheet-body blockquote {
+  margin: 0 0 14px;
+  font: 500 20px / 1.55 var(--font-display);
+}
+
+.sheet-body .sign {
+  text-align: right;
+  font-style: italic;
+}
+
+/* Typed expedition log, 1956. */
+.sheet[data-style='diary'] {
+  --paper: #e5d2aa;
+}
+
+.sheet[data-style='diary'] .sheet-title {
+  display: inline-block;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(43, 33, 25, 0.5);
+  font: 500 15px var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sheet[data-style='diary'] .sheet-body p {
+  font: 500 14.5px / 1.75 var(--font-mono);
+  color: #2d251d;
+  text-shadow: 0 0 0.7px rgba(45, 37, 29, 0.55);
+}
+
+/* A handwritten page from a field notebook: ruled, with a madder margin. */
+.sheet[data-style='letter'] {
+  --paper: #ece2cb;
+  padding-left: 70px;
+  background-image:
+    linear-gradient(90deg, transparent 50px, rgba(154, 74, 46, 0.38) 50px 51px, transparent 51px),
+    repeating-linear-gradient(180deg, transparent 0 31px, rgba(110, 92, 64, 0.2) 31px 32px),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(118, 82, 42, 0.28) 100%);
+  background-position:
+    0 0,
+    0 12px,
+    0 0;
+}
+
+.sheet[data-style='letter'] .sheet-body p {
+  font: italic 500 21px / 32px var(--font-display);
+  color: #2e2536;
+}
+
+/* A rubbing of the carving, then Nora's translation on squared paper. */
+.sheet[data-style='carving'] {
+  --paper: #e7dfcc;
+  background-image:
+    linear-gradient(rgba(90, 80, 60, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(90, 80, 60, 0.1) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(118, 82, 42, 0.26) 100%);
+  background-size:
+    20px 20px,
+    20px 20px,
+    auto;
+}
+
+.rubbing {
+  margin: -20px -30px 20px;
+  padding: 10px 14px 8px;
+  background-color: #2b2622;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.86 0 0 0 0 0.78 0 0 0 0.16 0'/></filter><rect width='100%' height='100%' filter='url(%23c)'/></svg>");
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.rubbing[hidden] {
+  display: none;
+}
+
+#reader-glyphs svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 22vh;
+}
+
+#reader-glyphs path {
+  fill: none;
+  stroke: #d9cdb4;
+  stroke-width: 5;
+  stroke-linecap: square;
+  opacity: 0.85;
+}
+
+.rubbing figcaption {
+  margin-top: 6px;
+  color: rgba(217, 205, 180, 0.6);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.sheet[data-style='carving'] .sheet-body blockquote {
+  padding-left: 16px;
+  border-left: 2px solid rgba(154, 74, 46, 0.55);
+  font-style: italic;
+  font-size: 21px;
+}
+
+.sheet[data-style='carving'] .sheet-body p {
+  font-size: 19px;
+}
+
+.reader-foot {
+  width: min(600px, 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+#reader-counter {
+  color: var(--ui-dust);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+#reader-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px 0 9px;
+}
+
+#reader-close kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--ui-amber);
+  border-radius: 5px;
+  color: var(--ui-amber);
+  font: 500 13px var(--font-mono);
+  letter-spacing: 0;
+}
+
+#reader-close kbd[hidden] {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .sheet {
+    padding: 32px 26px 28px;
+  }
+  .sheet[data-style='letter'] {
+    padding-left: 48px;
+    background-position:
+      -22px 0,
+      0 12px,
+      0 0;
+  }
+  .rubbing {
+    margin: -12px -8px 20px;
+  }
+  .sheet-body p,
+  .sheet-body blockquote {
+    font-size: 18px;
+  }
+}
+
+/* ── End of the level: the relic moment, the record, the next chamber ─────── */
+
+#end {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at 28% 42%, rgba(46, 27, 10, 0.6), rgba(8, 6, 4, 0.95) 70%);
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+
+#end.show {
+  opacity: 1;
+}
+
+#end[hidden] {
+  display: none;
+}
+
+.end-grid {
+  min-height: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: clamp(32px, 6vw, 96px);
+  padding: clamp(28px, 6vh, 72px) clamp(24px, 7vw, 110px);
+}
+
+.end-kicker {
+  margin: 0;
+  color: var(--ui-amber);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+#end-title {
+  margin: 12px 0 0;
+  font: 500 clamp(36px, min(5vw, 8vh), 68px) / 1 var(--font-display);
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+}
+
+.starmap svg {
+  display: block;
+  width: clamp(160px, min(24vw, 30vh), 310px);
+  height: auto;
+  margin: 14px 0 10px -8px;
+  overflow: visible;
+}
+
+.relic-line {
+  max-width: 34em;
+  margin: 0 0 12px;
+  color: #d9ccb2;
+  font: italic 500 clamp(18px, 1.5vw, 22px) / 1.45 var(--font-display);
+}
+
+.relic-line:last-child {
+  color: var(--ui-bone);
+  font-style: normal;
+}
+
+.map-ring {
+  fill: none;
+  stroke: rgba(232, 163, 61, 0.3);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+
+.map-line {
+  fill: none;
+  stroke: rgba(236, 227, 208, 0.5);
+  stroke-width: 1.1;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.map-gap {
+  fill: none;
+  stroke: var(--ui-amber);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+  opacity: 0;
+}
+
+.map-star {
+  opacity: 0;
+}
+
+.map-star circle {
+  fill: var(--ui-bone);
+}
+
+.map-star .glow {
+  fill: rgba(242, 169, 59, 0.24);
+}
+
+/* Tide Glass: the dark disc that carves each face of the moon. */
+.map-star .moon-shadow {
+  fill: #1c130b;
+}
+
+/* Sun Disc: the disc itself, its rays drawn as map lines. */
+.map-star .sun-disc {
+  fill: rgba(242, 169, 59, 0.22);
+  stroke: var(--ui-bone);
+  stroke-width: 1.5;
+}
+
+.map-here {
+  fill: none;
+  stroke: var(--ui-amber);
+  stroke-width: 1.2;
+  opacity: 0;
+}
+
+.map-ninth {
+  fill: rgba(242, 169, 59, 0.08);
+  stroke: var(--ui-amber);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3.5;
+  opacity: 0;
+}
+
+.end-record {
+  padding-left: clamp(24px, 3vw, 48px);
+  border-left: 1px solid var(--ui-line);
+}
+
+.end-rank {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+#end-seal .seal-svg {
+  display: block;
+  width: 92px;
+  height: 92px;
+}
+
+.end-record .label {
+  margin: 0;
+  color: var(--ui-dust);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+#end-rank-name {
+  margin: 4px 0 4px;
+  color: var(--ui-bone);
+  font: 500 34px / 1 var(--font-display);
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+}
+
+#end-seal[data-rank='amber'] + div #end-rank-name {
+  color: var(--ui-amber);
+}
+
+#end-score {
+  margin: 0;
+  color: var(--ui-dust);
+  font: 500 13px var(--font-mono);
+}
+
+#end-stats {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  max-width: 380px;
+  margin: 0;
+}
+
+#end-stats dt,
+#end-stats dd {
+  margin: 0;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+#end-stats dt {
+  color: #cfc3ad;
+  font-size: 15px;
+}
+
+#end-stats dd {
+  text-align: right;
+  font: 500 14px / 1.6 var(--font-mono);
+}
+
+#end-best {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 0;
+  color: var(--ui-dust);
+  font: 500 12px var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+#end-best .tag {
+  padding: 2px 8px;
+  border: 1px solid var(--ui-amber);
+  color: var(--ui-amber);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.end-teaser {
+  margin: 28px 0 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--ui-line);
+}
+
+.teaser-name {
+  margin: 6px 0 2px;
+  font: 500 30px / 1 var(--font-display);
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+}
+
+.teaser-line {
+  max-width: 30em;
+  margin: 2px 0 0;
+  color: #d9ccb2;
+  font: italic 500 18px / 1.4 var(--font-display);
+}
+
+.teaser-soon {
+  margin: 10px 0 0;
+  color: var(--ui-amber);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.end-actions #end-restart {
+  border-color: var(--ui-amber);
+  background: rgba(232, 163, 61, 0.1);
+}
+
+/* Staged entrance: the relic first, the record after; any input shows everything. */
+#end .end-relic > *,
+#end .end-record {
+  opacity: 0;
+}
+
+#end.show .end-relic > *,
+#end.show .end-record {
+  animation: end-in 1.3s ease forwards;
+}
+
+#end.show .end-relic > :nth-child(1) {
+  animation-delay: 0.4s;
+}
+#end.show .end-relic > :nth-child(2) {
+  animation-delay: 0.8s;
+}
+#end.show .end-relic > :nth-child(3) {
+  animation-delay: 1.3s;
+}
+#end.show .end-relic > :nth-child(4) {
+  animation-delay: 2.4s;
+}
+#end.show .end-relic > :nth-child(5) {
+  animation-delay: 3.9s;
+}
+#end.show .end-relic > :nth-child(6) {
+  animation-delay: 5.5s;
+}
+#end.show .end-record {
+  animation-delay: 7s;
+}
+
+#end.show .map-line {
+  animation: map-draw 2.8s ease-in-out 1.7s forwards;
+}
+#end.show .map-star {
+  animation: end-fade 0.8s ease forwards;
+  animation-delay: calc(1.6s + var(--i) * 0.3s);
+}
+#end.show .map-here {
+  animation: end-fade 1s ease 1.8s forwards;
+}
+#end.show .map-gap {
+  animation: gap-in 1.4s ease 4.3s forwards;
+}
+#end.show .map-ninth {
+  animation: ninth 2.6s ease-in-out 4.5s infinite;
+}
+
+#end.revealed .end-relic > *,
+#end.revealed .end-record,
+#end.revealed .map-star,
+#end.revealed .map-here {
+  animation: none;
+  opacity: 1;
+}
+#end.revealed .map-line {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+#end.revealed .map-gap {
+  animation: none;
+  opacity: 0.6;
+}
+#end.revealed .map-ninth {
+  animation: ninth 2.6s ease-in-out infinite;
+}
+
+@keyframes end-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes end-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes map-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes gap-in {
+  to {
+    opacity: 0.6;
+  }
+}
+
+@keyframes ninth {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 860px) {
+  .end-grid {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .end-record {
+    padding: 24px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--ui-line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #intro-card {
+    filter: none;
+    transform: translate(-50%, 0);
+    transition: opacity 0.6s;
+  }
+  .sheet,
+  #reader.show .sheet {
+    transition: none;
+    transform: none;
+  }
+  #end.show .end-relic > *,
+  #end.show .end-record,
+  #end.show .map-star,
+  #end.show .map-here,
+  #end.show .map-gap,
+  #end.show .map-line {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+  #end.show .map-ninth,
+  #end.revealed .map-ninth {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ── With the loading screen, curtain and pause menu (style.css) ──────────── */
+
+/* Stacking: hud 1, fade 2, touch 3, pause button 4, end 5, start 6, curtain 9, menu 10. */
+#end {
+  z-index: 5;
+}
+#start {
+  z-index: 6;
+}
+#intro {
+  z-index: 7;
+}
+#reader,
+#credits {
+  z-index: 8;
+}
+
+/* The reel of renders covers the title while the game loads, then gives way to the live scene. */
+#start #loading-reel {
+  transition:
+    opacity 1.6s ease,
+    visibility 0s linear 0s;
+}
+#start.ready #loading-reel {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 1.6s ease,
+    visibility 0s linear 1.6s;
+}
+
+/* The loading line sits under the menu, aligned with it. */
+.title-block #loading {
+  margin: 18px 0 0;
+}
+.title-block .load-seal {
+  margin: 0 0 12px;
+}
+
+.title-menu button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.title-menu button:disabled::before {
+  transform: scaleY(0);
+}
+body.loading #start-options {
+  visibility: hidden;
+}
+
+/* Reduced motion: no letterbox slide or drifting cards; the intro camera holds still (ui/intro.ts). */
+body.reduce-motion #intro .letterbox,
+body.reduce-motion #intro::after {
+  transition: none;
+}
+body.reduce-motion #intro-card {
+  filter: none;
+  transform: translate(-50%, 0);
+  transition: opacity 0.6s;
+}

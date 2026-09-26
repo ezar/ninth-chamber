@@ -6,8 +6,37 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
     />
+    <!-- Text placeholders are filled from i18n/en.json, and the public URL, at build time (scripts/vite-site.ts). -->
+    <title>%t:title%</title>
+    <meta name="description" content="%t:meta.description%" />
     <meta name="theme-color" content="#0f0d0b" />
-    <title>The Ninth Chamber</title>
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="./icons/seal.svg" type="image/svg+xml" />
+    <link rel="icon" href="./icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="%t:meta.shortName%" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%t:title%" />
+    <meta property="og:title" content="%t:title%" />
+    <meta property="og:description" content="%t:meta.description%" />
+    <meta property="og:url" content="%site%" />
+    <meta property="og:image" content="%site%og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="%t:meta.imageAlt%" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="%t:title%" />
+    <meta name="twitter:description" content="%t:meta.description%" />
+    <meta name="twitter:image" content="%site%og-image.jpg" />
+    <meta name="twitter:image:alt" content="%t:meta.imageAlt%" />
+
     <script>
       // Before any bundle arrives: the language for the loading screen's fallback text
       // (the stored choice, else the first of the browser's languages we have).
@@ -36,13 +65,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Fonts load without blocking the first paint (the fallbacks are close enough). -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@500&display=swap"
       rel="stylesheet"
       media="print"
       onload="this.media = 'all'"
     />
   </head>
-  <body class="loading">
+  <body class="loading" data-phase="title">
     <canvas id="game" tabindex="0"></canvas>
 
     <div id="hud">
@@ -60,12 +89,65 @@
 
     <div id="fade" aria-hidden="true"></div>
 
-    <div id="end" hidden>
-      <div class="panel">
-        <div class="seal" aria-hidden="true"></div>
-        <h1 id="end-title"></h1>
-        <div id="end-stats"></div>
-        <button id="end-restart" data-nav></button>
+    <div id="intro" hidden>
+      <div class="letterbox top"></div>
+      <div class="letterbox bottom"></div>
+      <p id="intro-card" aria-live="polite"></p>
+      <p id="intro-skip"></p>
+    </div>
+
+    <div id="reader" hidden role="dialog" aria-modal="true" aria-labelledby="reader-title">
+      <div class="reader-stage">
+        <article id="reader-sheet" class="sheet">
+          <figure id="reader-rubbing" class="rubbing" hidden>
+            <div id="reader-glyphs"></div>
+            <figcaption data-i18n="reader.rubbing"></figcaption>
+          </figure>
+          <p id="reader-meta" class="sheet-meta"></p>
+          <h2 id="reader-title" class="sheet-title"></h2>
+          <div id="reader-body" class="sheet-body"></div>
+        </article>
+        <footer class="reader-foot">
+          <span id="reader-counter"></span>
+          <button id="reader-close" type="button">
+            <kbd id="reader-key">E</kbd><span data-i18n="reader.close"></span>
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <div id="end" hidden role="dialog" aria-modal="true" aria-labelledby="end-title">
+      <div class="end-grid">
+        <section class="end-relic">
+          <p id="end-kicker" class="end-kicker"></p>
+          <h1 id="end-title"></h1>
+          <div id="end-figure" class="starmap"></div>
+          <p class="relic-line"></p>
+          <p class="relic-line"></p>
+          <p class="relic-line"></p>
+        </section>
+        <section class="end-record">
+          <div class="end-rank">
+            <div id="end-seal"></div>
+            <div>
+              <p class="label" data-i18n="end.seal"></p>
+              <p id="end-rank-name"></p>
+              <p id="end-score"></p>
+            </div>
+          </div>
+          <dl id="end-stats"></dl>
+          <p id="end-best"></p>
+          <div class="end-teaser">
+            <p id="end-next-label" class="label"></p>
+            <p id="end-next-name" class="teaser-name"></p>
+            <p id="end-next-line" class="teaser-line"></p>
+            <p id="end-next-soon" class="teaser-soon" data-i18n="end.soon"></p>
+          </div>
+          <div id="end-actions" class="end-actions">
+            <button id="end-restart" type="button" data-nav data-i18n="end.restart"></button>
+            <button id="end-menu" type="button" data-nav data-i18n="end.menu"></button>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -82,20 +164,23 @@
         <div class="reel reel-3"></div>
         <div class="reel reel-4"></div>
       </div>
-      <div class="panel">
+      <div class="scrim" aria-hidden="true"></div>
+      <main class="title-block">
+        <div class="lockup">
+          <div id="start-seal"></div>
+          <h1 data-i18n="title" class="fallback">
+            <span lang="en">The Ninth Chamber</span><span lang="es">La Novena Cámara</span>
+          </h1>
+          <p class="tagline" data-i18n="tagline"></p>
+        </div>
         <p class="kicker fallback" data-i18n="start.kicker">
           <span lang="en">Tomb of Qarrum · First chamber</span
           ><span lang="es">Tumba de Qarrum · Primera cámara</span>
         </p>
-        <h1 data-i18n="title" class="fallback">
-          <span lang="en">The Ninth Chamber</span><span lang="es">La Novena Cámara</span>
-        </h1>
-        <p class="sub fallback" data-i18n="level.antechamber">
-          <span lang="en">The Antechamber</span><span lang="es">La Antesala</span>
-        </p>
-        <div class="start-actions">
+        <nav id="start-menu" class="title-menu">
           <button
             id="start-button"
+            type="button"
             class="fallback"
             data-nav
             data-i18n="start.play"
@@ -104,8 +189,9 @@
           >
             <span lang="en">Enter the tomb</span><span lang="es">Entrar en la tumba</span>
           </button>
-          <button id="start-options" class="ghost" data-nav data-i18n="start.options"></button>
-        </div>
+          <button id="start-options" type="button" data-nav data-i18n="start.options"></button>
+          <button id="credits-button" type="button" data-nav data-i18n="start.credits"></button>
+        </nav>
         <div id="loading" role="status" aria-live="polite">
           <div class="load-seal" aria-hidden="true"></div>
           <div class="load-track"><div id="loading-fill"></div></div>
@@ -114,6 +200,21 @@
           </p>
         </div>
         <p class="help" data-i18n="help"></p>
+      </main>
+      <footer class="legal">
+        <span data-i18n="start.copyright"></span>
+        <span id="version"></span>
+      </footer>
+    </div>
+
+    <div id="credits" hidden role="dialog" aria-modal="true" aria-labelledby="credits-title">
+      <div class="credits-panel">
+        <h2 id="credits-title" data-i18n="credits.title"></h2>
+        <dl id="credits-list"></dl>
+        <p class="credits-foot">
+          <a href="./credits.txt" target="_blank" rel="noopener" data-i18n="credits.full"></a>
+          <button id="credits-back" type="button" data-i18n="credits.back"></button>
+        </p>
       </div>
     </div>
 

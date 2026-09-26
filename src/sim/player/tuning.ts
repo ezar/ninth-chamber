@@ -75,6 +75,31 @@ export const tuning = {
   respawnDelay: 2.5,
 };
 
+/**
+ * End-of-level rating (spec §9 "Estadísticas de nivel"): 100 points split
+ * between time, secrets, journal notes and deaths, and the seal each score earns.
+ */
+export const rating = {
+  /** Full time points up to the level's par time; they fall linearly to 0 at par × timeZeroAt. */
+  timePoints: 35,
+  timeZeroAt: 2.5,
+  /** Par (s) for levels that do not set one. */
+  defaultPar: 300,
+  secretPoints: 30,
+  notePoints: 15,
+  /** Points for a deathless run; each death costs deathPenalty. */
+  deathPoints: 20,
+  deathPenalty: 7,
+  /** Seals from lowest to highest, with the minimum score for each. */
+  ranks: [
+    { id: 'sand', min: 0 },
+    { id: 'stone', min: 35 },
+    { id: 'bronze', min: 55 },
+    { id: 'gold', min: 75 },
+    { id: 'amber', min: 90 },
+  ],
+} as const;
+
 /** World mechanism constants. */
 export const mechanics = {
   /** Warning time before a cracked tile falls (s). */

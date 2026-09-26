@@ -23,4 +23,4 @@ pnpm build      # production build in dist/
 
 The UI language follows the browser (English or Spanish for now).
 
-Status: see [docs/changelog.md](docs/changelog.md).
+Status: see [docs/changelog.md](docs/changelog.md). Credits: [CREDITS.md](CREDITS.md). Licence: all rights reserved for now; the choice is still open ([docs/license.md](docs/license.md)).
