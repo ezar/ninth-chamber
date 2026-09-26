@@ -70,6 +70,10 @@ class ScannedSkin {
         o.receiveShadow = true;
         o.frustumCulled = false;
         const mats = Array.isArray(o.material) ? o.material : [o.material];
+        // The scan's material is double-sided; animated, the inside of the shirt's
+        // front showed through the back of the jacket as white patches. The scan
+        // is a closed surface, so its front faces are all that should render.
+        for (const m of mats) m.side = THREE.FrontSide;
         this.materials.push(...mats);
       }
     });
@@ -260,7 +264,11 @@ export class NoraRig {
     } else skin.apply(this.procPose);
   }
 
+  /** Last opacity set (the camera fades her when it closes in), for things she holds. */
+  opacity = 1;
+
   setOpacity(a: number): void {
+    this.opacity = a;
     if (this.skin) this.skin.setOpacity(a);
     else this.driver.setOpacity(a);
   }

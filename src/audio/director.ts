@@ -126,6 +126,8 @@ const num = (e: SimEvent, key: string, fallback: number): number => {
 export class MusicDirector {
   private palette: Palette = paletteFor('antechamber');
   private base: Base = 'silence';
+  /** When the level-end fanfare rings out (clock time), so the end screen lets it finish. */
+  private fanfareEndsAt = 0;
   /** The cue the base state is playing (null during a silence). */
   private baseCue: string | null = null;
   private exploreIndex = 0;
@@ -189,8 +191,31 @@ export class MusicDirector {
       // Coming out of the intro, the end screen or the title: the tomb's own sound first.
       if (this.base === 'intro' || this.base === 'title' || this.base === 'end') this.calm(true);
     } else {
-      this.setBase('end', null);
+      this.enterEnd();
     }
+  }
+
+  /**
+   * The end screen: a fanfare still ringing plays out, then the main theme
+   * returns; without one, a short silence first.
+   */
+  private enterEnd(): void {
+    const now = this.clock.now();
+    const fanfare = this.palette.fanfare;
+    const ringing = this.current.cue === fanfare && now < this.fanfareEndsAt;
+    const theme = (): void => this.setBase('end', TITLE, { loop: true, fadeIn: 6 });
+    if (ringing) {
+      this.cancelBaseTimers();
+      this.resetDanger();
+      this.base = 'end';
+      this.baseCue = fanfare;
+      this.current = { state: 'end', cue: fanfare };
+      this.scheduleBase(this.fanfareEndsAt - now + 1, theme);
+      return;
+    }
+    if (this.base === 'end' && this.baseCue === TITLE) return;
+    this.setBase('end', null);
+    this.scheduleBase(4, theme);
   }
 
   /** Player health 0..1, every frame (cheap: acts on changes only). */
@@ -211,9 +236,8 @@ export class MusicDirector {
         this.calm(true);
         break;
       case 'end.show':
-        this.setBase('end', null);
         // The main theme returns under the end screen once the fanfare has rung out.
-        this.scheduleBase(4, () => this.setBase('end', TITLE, { loop: true, fadeIn: 6 }));
+        if (this.base !== 'end') this.enterEnd();
         break;
       case 'end.reveal':
         this.sting(this.palette.stingers.journal, -6);
@@ -531,6 +555,7 @@ export class MusicDirector {
       });
     }
     const length = cue ? cueInfo(cue)?.duration : undefined;
+    if (base === 'fanfare' && cue) this.fanfareEndsAt = this.clock.now() + (length ?? 15);
     if (cue && length && !o.loop) {
       this.scheduleBase(length, () => {
         if (this.baseCue !== cue) return;

@@ -32,6 +32,8 @@ interface Voice {
   node: AudioNode | null;
   filter: BiquadFilterNode | null;
   stopped: boolean;
+  /** Streams: the browser refused to start it (autoplay); the next request retries. */
+  blocked?: boolean;
 }
 
 const DUCK_ATTACK = 0.12;
@@ -157,7 +159,11 @@ export class ScorePlayer implements MusicSink {
       at = cur.start + Math.ceil((since + 0.05) / cur.bar) * cur.bar;
       if (at - now > 4) at = now + 0.02;
     }
-    if (cur && cur.cue === cue && !cur.stopped) return;
+    if (cur && cur.cue === cue && !cur.stopped) {
+      // The same cue again, usually from a fresh gesture: retry a stream autoplay refused.
+      if (cur.el && cur.blocked && !this.paused) this.retryStream(cur);
+      return;
+    }
     if (cur) this.release(cur, at, o.fadeOut);
     this.main = null;
     this.beatBpm = 0;
@@ -203,6 +209,7 @@ export class ScorePlayer implements MusicSink {
         // An autoplay refusal leaves this cue silent (the next gesture brings music back);
         // a broken file or format gets the synthesised stand-in.
         const name = err instanceof Error ? err.name : '';
+        if (name === 'NotAllowedError') v.blocked = true;
         if (!v.stopped && name !== 'NotAllowedError' && name !== 'AbortError') this.opts.fallback?.(cue);
       });
     };
@@ -213,6 +220,15 @@ export class ScorePlayer implements MusicSink {
     if (delay > 0.03) setTimeout(begin, delay * 1000);
     else begin();
     return v;
+  }
+
+  private retryStream(v: Voice): void {
+    const el = v.el;
+    if (!el) return;
+    v.blocked = false;
+    el.play().catch((err: unknown) => {
+      if (err instanceof Error && err.name === 'NotAllowedError') v.blocked = true;
+    });
   }
 
   private startBuffer(cue: string, buffer: AudioBuffer, at: number, o: PlayOpts): Voice {

@@ -93,6 +93,21 @@ function pistolMesh(): { group: THREE.Group; muzzle: THREE.Vector3 } {
   return { group: g, muzzle: new THREE.Vector3(0, 0.028, -0.19) };
 }
 
+/** Sets the opacity of every mesh material in a group, switching transparency only when needed. */
+function fadeGroup(g: THREE.Object3D, a: number): void {
+  g.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const m = o.material as THREE.Material;
+    const transparent = a < 0.99;
+    if (m.transparent !== transparent) {
+      m.transparent = transparent;
+      m.needsUpdate = true;
+    }
+    m.opacity = a;
+    o.castShadow = a > 0.5;
+  });
+}
+
 interface Pistol {
   group: THREE.Group;
   muzzle: THREE.Vector3;
@@ -313,7 +328,9 @@ export class CombatView {
     this.pistols.forEach((pistol, i) => {
       const side = i as 0 | 1;
       const g = pistol.group;
-      g.visible = this.drawn > 0.35;
+      // The pistols fade with Nora when the camera closes in, so they never float on their own.
+      g.visible = this.drawn > 0.35 && nora.opacity > 0.2;
+      if (g.visible) fadeGroup(g, nora.opacity);
       if (g.visible) {
         let f: THREE.Vector3;
         let u: THREE.Vector3;
@@ -323,8 +340,8 @@ export class CombatView {
           u = _u.copy(UP).addScaledVector(f, -UP.dot(f));
           if (u.lengthSq() < 1e-4) u.set(0, 0, -1);
           u.normalize();
-          // Grip in the palm, just past the wrist and under the knuckles.
-          g.position.copy(_pos).addScaledVector(f, 0.05).addScaledVector(u, -0.012);
+          // Grip in the palm: the top of the grip sits in the web of the hand, above the wrist line.
+          g.position.copy(_pos).addScaledVector(f, 0.055).addScaledVector(u, 0.02);
         } else {
           nora.handFrame(side, _pos, _q);
           // The aim layer points the fingers 0.3 below the aim: the barrel lifts them back to it.

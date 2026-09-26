@@ -195,6 +195,31 @@ describe('music director', () => {
     expect(d.state).toBe('silence');
   });
 
+  it('the level-end fanfare rings out on the end screen before the main theme returns', () => {
+    const { d, sink } = playing();
+    d.onEvent(ev('music', { name: 'fanfare' }));
+    expect(sink.lastPlay()?.cue).toBe('fanfare');
+    const length = cueInfo('fanfare')?.duration ?? 15;
+    seconds(3);
+    d.onEvent(ev('level.end'));
+    d.setPhase('end');
+    d.onEvent(ev('end.show'));
+    // Nothing silences the fanfare while it still plays.
+    expect(sink.lastPlay()?.cue).toBe('fanfare');
+    seconds(length - 3 - 0.5);
+    expect(sink.lastPlay()?.cue).toBe('fanfare');
+    seconds(2);
+    expect(sink.lastPlay()).toMatchObject({ cue: 'title', o: { loop: true } });
+  });
+
+  it('without a fanfare the end screen starts quiet and brings the theme in', () => {
+    const { d, sink } = playing();
+    d.setPhase('end');
+    expect(sink.lastPlay()?.cue).toBeNull();
+    seconds(4.5);
+    expect(sink.lastPlay()).toMatchObject({ cue: 'title', o: { loop: true } });
+  });
+
   it('a cracking floor spikes the tension, which decays', () => {
     const { d } = playing();
     d.onEvent(ev('tile.cracked', { cx: 1, cz: 1 }));
@@ -288,6 +313,8 @@ describe('music director', () => {
     d.setPhase('end');
     d.onEvent(ev('end.show', { rank: 'A' }));
     seconds(5);
+    expect(sink.lastPlay()?.cue).toBe('fanfare');
+    seconds(cueInfo('fanfare')?.duration ?? 15);
     expect(sink.lastPlay()).toMatchObject({ cue: 'title', o: { loop: true } });
   });
 
