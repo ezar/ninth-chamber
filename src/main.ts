@@ -1,5 +1,6 @@
 import './ui/style.css';
 import './ui/screens.css';
+import './ui/prelude.css';
 import levelJson from '../levels/antechamber.level.json';
 import { AudioEngine, type ReverbPreset } from './audio/engine';
 import { entranceShots, shotYaw, titleShot, type Shot } from './camera/cinematic';
@@ -34,6 +35,7 @@ import { LoadingScreen } from './ui/loading';
 import { Menu } from './ui/menu';
 import { PadEdgeReader } from './ui/nav';
 import { PAD, PadReader, focusItem, padHas } from './ui/pad';
+import { Prelude } from './ui/prelude';
 import { Reader } from './ui/reader';
 import { browserStorage, defaultSettings, loadSettings, saveSettings, type Settings } from './ui/settings';
 import { TitleScreen } from './ui/title';
@@ -69,6 +71,7 @@ async function main(): Promise<void> {
   setLocale(settings.language ?? pickLocale(navigator.languages));
   applyStaticStrings();
   document.body.classList.toggle('reduce-motion', settings.reducedMotion);
+  document.documentElement.classList.toggle('reduce-motion', settings.reducedMotion);
 
   const loading = new LoadingScreen();
   loading.trackDownloads();
@@ -76,6 +79,35 @@ async function main(): Promise<void> {
   const canvas = $<HTMLCanvasElement>('#game');
   const stats = $('#hud-stats');
   const startButton = $<HTMLButtonElement>('#start-button');
+
+  const level = Level.parse(levelJson);
+  const chamber = chamberOf(level.id);
+
+  // Audio exists before the renderer loads: the first tap or key, even during the
+  // splash and the story cards, unlocks it and brings in the title theme softly.
+  // Until then loading stays silent (browsers allow no sound before a gesture).
+  const audio = new AudioEngine();
+  audio.setLevel(level.id);
+  let phase: Phase = 'title';
+  audio.setMusicPhase('title');
+  const titleMusic = (): void => {
+    if (phase !== 'title') return;
+    void audio.unlock();
+    audio.setMusicPhase('title');
+  };
+  window.addEventListener('pointerdown', titleMusic, { capture: true });
+  window.addEventListener('keydown', titleMusic, { capture: true });
+
+  // The story cards over the loading reel (index.html): when they give way to the
+  // title, the start button takes the focus if the tomb is ready.
+  const prelude = new Prelude(() => {
+    if (loading.isReady) startButton.focus({ preventScroll: true });
+  });
+  /** Loading is over: the button wakes, and the cards finish the one on screen. */
+  const loadingDone = (): void => {
+    loading.ready();
+    prelude.ready();
+  };
 
   // Quality: the stored tier, or on first run the device heuristic until the benchmark decides.
   const hints = deviceHints();
@@ -89,13 +121,9 @@ async function main(): Promise<void> {
     throw err;
   }
 
-  const level = Level.parse(levelJson);
-  const chamber = chamberOf(level.id);
   let world: World = createWorld(level, 1);
   renderer.setWorld(world);
 
-  const audio = new AudioEngine();
-  audio.setLevel(level.id);
   audio.setEmitters(
     level.entities
       .filter((e) => e.type === 'brazier' || e.type === 'relic')
@@ -128,7 +156,6 @@ async function main(): Promise<void> {
   const drs = new DynamicResolution(QUALITY[tier].minRenderScale);
   let benchmark: TierBenchmark | null = null;
 
-  let phase: Phase = 'title';
   const setPhase = (p: Phase): void => {
     phase = p;
     document.body.dataset.phase = p;
@@ -197,6 +224,7 @@ async function main(): Promise<void> {
         renderer.setReducedMotion(settings.reducedMotion);
         applyCamera();
         document.body.classList.toggle('reduce-motion', settings.reducedMotion);
+        document.documentElement.classList.toggle('reduce-motion', settings.reducedMotion);
         break;
       case 'language':
         setLocale(settings.language ?? pickLocale(navigator.languages));
@@ -261,20 +289,12 @@ async function main(): Promise<void> {
    */
   let starting = false;
   const curtain = $('#curtain');
-  // The first gesture on the title screen unlocks audio and brings in the title theme.
-  const titleMusic = (): void => {
-    if (phase !== 'title') return;
-    void audio.unlock();
-    audio.setMusicPhase('title');
-  };
-  window.addEventListener('pointerdown', titleMusic, { capture: true });
-  window.addEventListener('keydown', titleMusic, { capture: true });
   for (const b of document.querySelectorAll<HTMLButtonElement>('#start button, #end button')) {
     b.addEventListener('pointerenter', () => audio.ui('hover'));
   }
 
   const start = (): void => {
-    if (phase !== 'title' || starting || !loading.isReady || menu.isOpen) return;
+    if (phase !== 'title' || starting || !loading.isReady || prelude.running || menu.isOpen) return;
     starting = true;
     // Audio and fullscreen must be requested inside the gesture itself.
     void audio.unlock();
@@ -295,9 +315,10 @@ async function main(): Promise<void> {
       camera.yaw = world.state.player.yaw;
       camera.recenter(world.state.player.yaw);
       setPhase('intro');
+      // Cards read over the loading reel are not shown again: the flythrough carries the rest.
       intro.start(
         [view, ...shots.slice(1)],
-        chamber?.intro ?? [],
+        (chamber?.intro ?? []).slice(prelude.seen),
         document.body.classList.contains('touch'),
         settings.reducedMotion,
       );
@@ -308,7 +329,7 @@ async function main(): Promise<void> {
   const title = new TitleScreen(
     start,
     (type) => cue(type),
-    () => menu.isOpen || !loading.isReady,
+    () => menu.isOpen || !loading.isReady || prelude.running,
   );
   $('#start-options').addEventListener('click', () => {
     if (!menu.isOpen) menu.open('title');
@@ -625,14 +646,14 @@ async function main(): Promise<void> {
     if (guess === 'mobile') {
       settings.quality = 'mobile';
       saveSettings(storage, settings);
-      loading.ready();
+      loadingDone();
     } else {
       // First run (spec §11): measure the title scene for ~3 s at the guessed tier.
       benchmark = new TierBenchmark(guess);
       loading.setStage('loading.calibrate', 0.9);
     }
   } else {
-    loading.ready();
+    loadingDone();
   }
 
   const finishBenchmark = (b: TierBenchmark): void => {
@@ -642,7 +663,7 @@ async function main(): Promise<void> {
     saveSettings(storage, settings);
     if (chosen !== tier) applyTier(chosen);
     menu.refresh();
-    loading.ready();
+    loadingDone();
   };
 
   let last = performance.now();
@@ -671,7 +692,9 @@ async function main(): Promise<void> {
     if (padState.held !== 0) setDevice('gamepad');
     const pad = padEdges.next(padState);
     if (!menuOwnsPad) {
-      if (phase === 'title') title.pad(pad);
+      if (phase === 'title' && prelude.running) {
+        if (pad.any) prelude.skip();
+      } else if (phase === 'title') title.pad(pad);
       else if (phase === 'intro' && pad.any) intro.skip();
       else if (phase === 'end') endScreen.pad(pad);
       else reader.pad(pad);
@@ -748,6 +771,7 @@ async function main(): Promise<void> {
     settings,
     drs,
     loading,
+    prelude,
     intro,
     reader,
     endScreen,

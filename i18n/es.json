@@ -67,6 +67,7 @@
   "premise.antechamber": "Setenta años después de la expedición Ferrand, Nora Vidal abre la tumba de Qarrum en busca del Corazón de Ámbar.",
   "intro.skip": "Pulsa cualquier tecla para saltar",
   "intro.skipTouch": "Toca para saltar",
+  "prelude.skip": "Saltar",
   "prompt.read": "Leer",
   "notice.journal": "Diario · {n} de {total}",
   "reader.counter": "Diario · {n} de {total} notas encontradas",

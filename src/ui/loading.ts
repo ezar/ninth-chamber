@@ -1,7 +1,9 @@
 /**
  * The loading state on the start screen: a thin progress line and a short
  * line of text while textures, Nora and the shaders get ready, with the
- * start button disabled until the tomb can be entered.
+ * start button disabled until the tomb can be entered. While the story cards
+ * play over the reel (ui/prelude.ts) a small copy of the line sits in the
+ * letterbox; both show the same progress.
  */
 import { DefaultLoadingManager } from 'three/webgpu';
 import { t, type StringKey } from './i18n';
@@ -17,8 +19,8 @@ const FILES_SHARE = 0.75;
 
 export class LoadingScreen {
   private readonly root = byId('loading');
-  private readonly fill = byId('loading-fill');
-  private readonly label = byId('loading-label');
+  private readonly fills = [byId('loading-fill'), document.getElementById('prelude-fill')];
+  private readonly labels = [byId('loading-label'), document.getElementById('prelude-loading-label')];
   private readonly button = byId('start-button') as HTMLButtonElement;
   private stage: StringKey = 'loading.assets';
   private progress = 0;
@@ -49,7 +51,7 @@ export class LoadingScreen {
     const next = Math.max(this.progress, Math.min(1, p));
     if (next === this.progress) return;
     this.progress = next;
-    this.fill.style.transform = `scaleX(${this.progress})`;
+    this.renderFill();
   }
 
   get isReady(): boolean {
@@ -66,6 +68,7 @@ export class LoadingScreen {
     this.button.removeAttribute('aria-busy');
     document.body.classList.remove('loading');
     this.root.classList.add('done');
+    document.getElementById('prelude-loading')?.classList.add('done');
     byId('start').classList.add('ready');
     DefaultLoadingManager.onProgress = () => undefined;
     this.button.focus({ preventScroll: true });
@@ -77,7 +80,11 @@ export class LoadingScreen {
   }
 
   private render(): void {
-    this.label.textContent = t(this.stage);
-    this.fill.style.transform = `scaleX(${this.progress})`;
+    for (const label of this.labels) if (label) label.textContent = t(this.stage);
+    this.renderFill();
+  }
+
+  private renderFill(): void {
+    for (const fill of this.fills) if (fill) fill.style.transform = `scaleX(${this.progress})`;
   }
 }

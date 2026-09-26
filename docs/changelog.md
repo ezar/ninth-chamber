@@ -1,5 +1,15 @@
 # Changelog
 
+## Splash and the story while the game loads
+
+- **Splash** (`index.html`, `src/ui/prelude.css`): from the first paint, on black, the nine-segment seal carves itself: eight segments drawn one by one with an amber stroke and a glint as the stone fills in, the ninth left as an outline that flickers once like a dying ember; then the wordmark (by locale) fades in while its letter-spacing settles, with a faint shimmer of dust. About 2.8 s, pure CSS and SVG (the seal is the identity geometry from `src/ui/seal.ts`, baked in at build time). Any tap or key skips it; with reduced motion the finished seal holds still for a second. Loading runs underneath.
+- **The story over the loading reel**: the four intro cards of The Antechamber play letterboxed over the reel of in-game renders, one image per card crossfading in with a slow drift, before any bundle arrives. The cards in every locale and each locale's timings are baked into `index.html` at build time (`scripts/vite-site.ts`, `%tt:key%` for text in every locale); a small inline script picks the language (the saved setting, else the browser's), reduced motion and touch, and the CSS plays the sequence. The loading line and its label sit small in the lower bar, with a Skip button on the right.
+- **Loading on top of it** (`src/ui/prelude.ts`): when loading finishes, the card on screen finishes (never cut mid-read), then the title lockup comes up and the "Enter the tomb" button rises and glows; Skip, Escape, Enter, Space or a pad button bring the title at once. If the cards end first, the title comes up with the disabled button and the loading line under the menu.
+- **No story twice**: entering the tomb leaves out the cards already read during loading; with all four read, the intro is a 9 s camera flythrough ending on the level title card. Cards skipped or never shown (a fast load) still play in the in-engine intro. Reduced motion keeps still images and the held intro shot.
+- **Music**: the audio engine now exists before the renderer loads, so the first tap or key, even during the splash or the cards, unlocks audio and brings in the title theme with its slow fade-in. Without a gesture loading stays silent.
+- **No jumps when the game loads**: the title screen's text (title, tagline, kicker, buttons, help, copyright, version, loading label) is in the page from the start in every locale, the seal's box is reserved and phones hide the keyboard help before the script runs.
+- **Manifest**: background and theme colour are the splash black (`#0a0806`, also `<meta name="theme-color">`), orientation `any` (phones play in portrait too), and the flat SVG icon is gone from the icons so installs use the rendered PNGs.
+
 ## Adaptive score
 
 - A music director (`src/audio/director.ts`) plays an adaptive score from simulation and UI events. States: title, intro, sparse exploration with long silences, tension, combat, chase, boss, relic climax, fanfare, death and end. Stingers mark discoveries, solved puzzles, checkpoints and death. The rules and techniques are in `docs/audio.md`.

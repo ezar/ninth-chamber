@@ -159,6 +159,35 @@ async function loadClip(url: string): Promise<Clip> {
  * Nora as the renderer sees her: the procedural model until the scan loads,
  * then the scan driven by motion clips and the procedural animation.
  */
+/**
+ * Low ready with the pistols drawn: over the clip's arms, the upper arms lift
+ * a little and the elbows bend so the forearms, and the pistols along them,
+ * point ahead and about 20° down, muzzles slightly toed in. Rotations are
+ * pre-multiplied in model space (rest: facing -Z, arms down, left at -X), so
+ * the clip's arm swing survives underneath.
+ */
+const READY_SHOULDER = 0.22;
+const READY_ELBOW = 0.9;
+const READY_TOE_IN = 0.14;
+const _qa = new THREE.Quaternion();
+const _qb = new THREE.Quaternion();
+const _axisX = new THREE.Vector3(1, 0, 0);
+const _axisY = new THREE.Vector3(0, 1, 0);
+function lowReady(p: AnimPose, w: number): void {
+  for (const [s, sign] of [
+    ['L', -1],
+    ['R', 1],
+  ] as const) {
+    _qa.setFromAxisAngle(_axisX, READY_SHOULDER * w);
+    p.q(JOINT_INDEX[`upperArm_${s}`]).premultiply(_qa);
+    // Toe-in turns the left forearm towards +X and the right one towards -X.
+    _qb.setFromAxisAngle(_axisY, sign * READY_TOE_IN * w);
+    _qa.setFromAxisAngle(_axisX, (READY_SHOULDER + READY_ELBOW) * w).premultiply(_qb);
+    p.q(JOINT_INDEX[`lowerArm_${s}`]).premultiply(_qa);
+    p.q(JOINT_INDEX[`hand_${s}`]).premultiply(_qa);
+  }
+}
+
 export class NoraRig {
   private readonly driver = new NoraModel();
   private skin: ScannedSkin | null = null;
@@ -251,8 +280,12 @@ export class NoraRig {
       // Aiming (a locked target or a recent shot): the procedural aiming layer
       // (nora.ts) drives the torso and arms over the clips while the legs keep
       // running from them. Holding the pistols without a target, the clips keep
-      // the arms and the pistols ride along the forearms at her sides.
-      const armed = pose.mode === 'ground' || pose.mode === 'air' ? pose.weapons * pose.aiming : 0;
+      // the arms and a low-ready layer bends the elbows so the pistols point
+      // ahead and down instead of hanging.
+      const upright = pose.mode === 'ground' || pose.mode === 'air';
+      const armed = upright ? pose.weapons * pose.aiming : 0;
+      const ready = upright ? pose.weapons * (1 - pose.aiming) : 0;
+      this.readyW += (ready - this.readyW) * (1 - Math.exp(-Math.max(0, dt) * 10));
       this.aimW += (armed - this.aimW) * (1 - Math.exp(-Math.max(0, dt) * 14));
       if (this.aimW > 1e-3)
         this.animator.setProceduralOverride(Math.max(this.aimW, this.override.weight), AIM_JOINTS);
@@ -260,9 +293,13 @@ export class NoraRig {
       const root = this.driver.root;
       this.rootPos.copy(root.position);
       this.animator.update(pose, dt, this.procPose, this.rootPos, root.rotation.y, this.shown);
+      if (this.readyW > 1e-3) lowReady(this.shown, this.readyW);
       skin.apply(this.shown);
     } else skin.apply(this.procPose);
   }
+
+  /** Weight of the low-ready arms layer (pistols drawn, no target). */
+  private readyW = 0;
 
   /** Last opacity set (the camera fades her when it closes in), for things she holds. */
   opacity = 1;
@@ -293,6 +330,21 @@ export class NoraRig {
     dir.setFromMatrixPosition(fore.matrixWorld);
     dir.subVectors(pos, dir).normalize();
     return true;
+  }
+
+  /** World position of a joint of the visible (scanned) body; false until it has loaded. */
+  jointPosition(name: RetargetJoint, out: THREE.Vector3): boolean {
+    const bone = this.skin?.bone(name);
+    if (!bone) return false;
+    bone.updateWorldMatrix(true, false);
+    out.setFromMatrixPosition(bone.matrixWorld);
+    return true;
+  }
+
+  /** The horizontal direction she faces. */
+  facing(out: THREE.Vector3): THREE.Vector3 {
+    const yaw = this.driver.root.rotation.y;
+    return out.set(-Math.sin(yaw), 0, -Math.cos(yaw));
   }
 
   handFrame(side: 0 | 1, pos: THREE.Vector3, quat: THREE.Quaternion): void {

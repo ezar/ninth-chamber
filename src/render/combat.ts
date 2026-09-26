@@ -93,6 +93,27 @@ function pistolMesh(): { group: THREE.Group; muzzle: THREE.Vector3 } {
   return { group: g, muzzle: new THREE.Vector3(0, 0.028, -0.19) };
 }
 
+/** A leather thigh holster; origin at its mouth, -Z down the barrel, +Y towards her front. */
+function holsterMesh(): THREE.Group {
+  const g = new THREE.Group();
+  const leather = new THREE.MeshStandardMaterial({ color: '#4a3020', roughness: 0.8, metalness: 0 });
+  const strap = new THREE.MeshStandardMaterial({ color: '#2e2016', roughness: 0.85, metalness: 0 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.052, 0.17), leather);
+  body.position.set(0, 0.012, -0.085);
+  const flap = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.03, 0.03), leather);
+  flap.position.set(0, -0.018, -0.005);
+  // Two straps around the thigh, on the inner side of the holster.
+  const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.075, 0.018), strap);
+  s1.position.set(-0.022, 0.012, -0.05);
+  const s2 = s1.clone();
+  s2.position.z = -0.13;
+  for (const m of [body, flap, s1, s2]) {
+    m.castShadow = true;
+    g.add(m);
+  }
+  return g;
+}
+
 /** Sets the opacity of every mesh material in a group, switching transparency only when needed. */
 function fadeGroup(g: THREE.Object3D, a: number): void {
   g.traverse((o) => {
@@ -132,9 +153,17 @@ const _x = new THREE.Vector3();
 const _m = new THREE.Matrix4();
 const _c = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
+const _hip = new THREE.Vector3();
+const _hipO = new THREE.Vector3();
+const _knee = new THREE.Vector3();
+const _hd = new THREE.Vector3();
+const _ho = new THREE.Vector3();
+const _hf = new THREE.Vector3();
+const _hx = new THREE.Vector3();
 
 export class CombatView {
   readonly group = new THREE.Group();
+  private readonly holsters: [THREE.Group, THREE.Group] = [holsterMesh(), holsterMesh()];
   private readonly enemies: EnemyViews;
   private readonly pistols: [Pistol, Pistol];
   private readonly light = new THREE.PointLight('#ffc98a', 0, 8, 2);
@@ -185,6 +214,10 @@ export class CombatView {
       return { group, muzzle, flash, flashLeft: 0 };
     };
     this.pistols = [make(), make()];
+    for (const h of this.holsters) {
+      h.visible = false;
+      this.group.add(h);
+    }
 
     // Four thin corner ticks in bone white: present, not loud.
     const markerTex = canvasTexture(64, (g) => {
@@ -316,6 +349,33 @@ export class CombatView {
     }
   }
 
+  /**
+   * Places a thigh holster from the visible body's hip and knee; false while
+   * the scanned body is not loaded. Leaves the thigh direction in _hd.
+   */
+  private placeHolster(nora: NoraRig, side: 0 | 1, h: THREE.Group): boolean {
+    const s = side === 0 ? 'L' : 'R';
+    const o = side === 0 ? 'R' : 'L';
+    if (!nora.jointPosition(`thigh_${s}`, _hip) || !nora.jointPosition(`shin_${s}`, _knee)) {
+      h.visible = false;
+      return false;
+    }
+    nora.jointPosition(`thigh_${o}`, _hipO);
+    _hd.subVectors(_knee, _hip).normalize();
+    const out = _ho.subVectors(_hip, _hipO);
+    out.addScaledVector(_hd, -out.dot(_hd)).normalize();
+    const fwd = nora.facing(_hf);
+    fwd.addScaledVector(_hd, -fwd.dot(_hd)).normalize();
+    h.position.copy(_hip).addScaledVector(_hd, 0.2).addScaledVector(out, 0.056);
+    // Basis: -Z along the thigh (barrel down), +Y towards her front, X from their cross product.
+    _hx.crossVectors(fwd, _c.copy(_hd).negate());
+    _m.makeBasis(_hx, fwd, _c);
+    h.quaternion.setFromRotationMatrix(_m);
+    h.visible = nora.opacity > 0.2;
+    if (h.visible) fadeGroup(h, nora.opacity);
+    return true;
+  }
+
   update(world: World, nora: NoraRig, alpha: number, dt: number): void {
     this.time += dt;
     this.sinceShot += dt;
@@ -328,10 +388,19 @@ export class CombatView {
     this.pistols.forEach((pistol, i) => {
       const side = i as 0 | 1;
       const g = pistol.group;
+      // Holsters ride on her thighs; the pistols sit in them until drawn.
+      const holster = this.holsters[side];
+      const holstered = this.placeHolster(nora, side, holster);
+      const inHand = this.drawn > 0.35;
       // The pistols fade with Nora when the camera closes in, so they never float on their own.
-      g.visible = this.drawn > 0.35 && nora.opacity > 0.2;
+      g.visible = nora.opacity > 0.2 && (inHand || holstered);
       if (g.visible) fadeGroup(g, nora.opacity);
-      if (g.visible) {
+      if (g.visible && !inHand) {
+        // Holstered: muzzle down the thigh, the grip out of the holster's mouth towards her back.
+        g.position.copy(holster.position).addScaledVector(_hd, -0.02);
+        g.quaternion.copy(holster.quaternion);
+        g.scale.setScalar(1);
+      } else if (g.visible) {
         let f: THREE.Vector3;
         let u: THREE.Vector3;
         if (nora.gripFrame(side, _pos, _f)) {
