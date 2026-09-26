@@ -1,7 +1,7 @@
 import { buttonBit, emptyFrame, type Button, type InputFrame } from '../src/core/input-frame';
 import { stepWorld, type World } from '../src/sim/world';
 
-/** Construye un InputFrame a partir de ejes y botones mantenidos / pulsados. */
+/** Builds an InputFrame from axes and held / pressed buttons. */
 export function frame(
   opts: { x?: number; y?: number; held?: Button[]; pressed?: Button[]; yaw?: number } = {},
 ): InputFrame {

@@ -13,7 +13,7 @@ export default tseslint.config(
     },
   },
   {
-    // Reglas de CLAUDE.md: la simulación es determinista y no conoce el render ni el DOM.
+    // CLAUDE.md rules: the simulation is deterministic and knows nothing about render or the DOM.
     files: ['src/sim/**/*.ts'],
     languageOptions: { globals: {} },
     rules: {
@@ -21,19 +21,19 @@ export default tseslint.config(
         'error',
         {
           patterns: [
-            { group: ['three', 'three/*'], message: 'src/sim no puede importar Three.js.' },
+            { group: ['three', 'three/*'], message: 'src/sim must not import Three.js.' },
             {
               group: ['**/render/**', '**/ui/**', '**/audio/**', '**/camera/**'],
-              message: 'src/sim no depende de capas de presentación.',
+              message: 'src/sim must not depend on presentation layers.',
             },
           ],
         },
       ],
       'no-restricted-properties': [
         'error',
-        { object: 'Math', property: 'random', message: 'Usa world.rng.' },
-        { object: 'Date', property: 'now', message: 'Usa el contador de ticks.' },
-        { object: 'performance', property: 'now', message: 'Usa el contador de ticks.' },
+        { object: 'Math', property: 'random', message: 'Use world.rng.' },
+        { object: 'Date', property: 'now', message: 'Use the tick counter.' },
+        { object: 'performance', property: 'now', message: 'Use the tick counter.' },
       ],
       'no-restricted-globals': [
         'error',

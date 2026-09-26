@@ -1,6 +1,6 @@
 /**
- * InputFrame: la entrada de un tick como datos puros (spec §3).
- * Grabar la lista de InputFrame es grabar una partida.
+ * InputFrame: one tick of input as plain data (spec §3).
+ * Recording the list of InputFrames records a playthrough.
  */
 
 export const BUTTONS = [
@@ -19,18 +19,18 @@ export const BUTTONS = [
 
 export type Button = (typeof BUTTONS)[number];
 
-/** Máscara de bits: un bit por botón, en el orden de BUTTONS. */
+/** Bit mask: one bit per button, in BUTTONS order. */
 export type ButtonMask = number;
 
 export const buttonBit = (b: Button): number => 1 << BUTTONS.indexOf(b);
 
 export interface InputFrame {
-  /** Eje de movimiento, x = derecha, y = adelante, longitud ≤ 1. */
+  /** Movement axis, x = right, y = forward, length ≤ 1. */
   moveX: number;
   moveY: number;
   /**
-   * Orientación de la cámara (radianes) en este tick. El movimiento es relativo
-   * a cámara, así que forma parte de la entrada para que las repeticiones sean deterministas.
+   * Camera yaw (radians) on this tick. Movement is camera-relative, so the yaw
+   * is part of the input to keep replays deterministic.
    */
   camYaw: number;
   held: ButtonMask;
@@ -51,7 +51,7 @@ export const isHeld = (f: InputFrame, b: Button): boolean => (f.held & buttonBit
 export const isPressed = (f: InputFrame, b: Button): boolean => (f.pressed & buttonBit(b)) !== 0;
 export const isReleased = (f: InputFrame, b: Button): boolean => (f.released & buttonBit(b)) !== 0;
 
-/** Estado bruto que aporta cada dispositivo en un instante. */
+/** Raw state a device reports at a given instant. */
 export interface RawInput {
   moveX: number;
   moveY: number;
@@ -59,11 +59,11 @@ export interface RawInput {
 }
 
 /**
- * Convierte muestras brutas (unión de todos los dispositivos) en InputFrame,
- * calculando flancos de pulsación y suelta entre ticks consecutivos.
+ * Turns raw samples (merged from all devices) into InputFrames, computing
+ * press and release edges between consecutive ticks.
  *
- * Una pulsación y suelta que ocurren entre dos ticks no se pierde: los
- * dispositivos acumulan `tapped` y se funde aquí como pulsado.
+ * A press and release that both happen between two ticks is not lost: devices
+ * accumulate `tapped`, which is merged here as pressed.
  */
 export class InputFramer {
   private prevHeld: ButtonMask = 0;

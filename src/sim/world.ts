@@ -1,6 +1,6 @@
 /**
- * Estado único de la simulación. Hito 1: un cubo que corre y salta sobre un
- * suelo plano. La rejilla y la máquina de estados de Nora llegan en los hitos 2 y 3.
+ * Single simulation state. Milestone 1: a box that runs and jumps on a flat
+ * floor. The grid and Nora's state machine arrive in milestones 2 and 3.
  */
 import { EventQueue } from '../core/events';
 import { isPressed, isHeld, type InputFrame } from '../core/input-frame';
@@ -17,7 +17,7 @@ export interface Vec3 {
 export interface PlayerState {
   pos: Vec3;
   vel: Vec3;
-  /** Orientación (rad), 0 = mirando a -Z. */
+  /** Facing (rad), 0 = looking towards -Z. */
   yaw: number;
   grounded: boolean;
 }
@@ -49,11 +49,11 @@ const wrapAngle = (a: number): number => {
   return a;
 };
 
-/** Avanza la simulación un tick de 1/60 s. */
+/** Advances the simulation by one 1/60 s tick. */
 export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
   const p = world.player;
 
-  // Dirección deseada relativa a cámara: adelante = hacia donde mira la cámara.
+  // Desired direction, camera-relative: forward = where the camera looks.
   const sin = Math.sin(input.camYaw);
   const cos = Math.cos(input.camYaw);
   const dirX = input.moveX * cos - input.moveY * sin;
@@ -88,8 +88,8 @@ export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
     p.yaw = wrapAngle(p.yaw + Math.max(-maxTurn, Math.min(maxTurn, diff)));
   }
 
-  // Gravedad integrada de forma exacta (aceleración constante): la altura y el
-  // tiempo de salto coinciden con las fórmulas del spec sin depender del paso.
+  // Gravity integrated exactly (constant acceleration): jump height and air time
+  // match the spec's formulas regardless of the step size.
   p.pos.x += p.vel.x * dt;
   p.pos.z += p.vel.z * dt;
   if (!p.grounded) {
@@ -107,12 +107,12 @@ export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
   world.tick++;
 }
 
-/** Instantánea serializable de World (para guardado, tests y repeticiones). */
+/** Serializable World snapshot (for saves, tests and replays). */
 export function snapshot(world: World): object {
   return { tick: world.tick, rng: world.rng.state, player: world.player };
 }
 
-/** Hash FNV-1a de la instantánea, para comparar repeticiones doradas. */
+/** FNV-1a hash of the snapshot, for comparing golden replays. */
 export function hashWorld(world: World): string {
   const s = JSON.stringify(snapshot(world));
   let h = 0x811c9dc5;

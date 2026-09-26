@@ -5,7 +5,7 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
-    // three/webgpu pesa ~800 kB; el troceo por salas llegará con la carga de niveles.
+    // three/webgpu weighs ~800 kB; per-room chunking arrives with level loading.
     chunkSizeWarningLimit: 1000,
   },
   test: {

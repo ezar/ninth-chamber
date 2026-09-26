@@ -1,6 +1,6 @@
 /**
- * Cola de eventos de la simulación. La simulación emite; render, audio y UI
- * los consumen después de cada tick. La simulación nunca llama a esas capas.
+ * Simulation event queue. The simulation emits; render, audio and UI consume
+ * the events after each tick. The simulation never calls those layers.
  */
 
 export interface SimEvent {
@@ -16,7 +16,7 @@ export class EventQueue {
     this.queue.push(event);
   }
 
-  /** Devuelve y vacía los eventos pendientes. */
+  /** Returns and clears the pending events. */
   drain(): SimEvent[] {
     const out = this.queue;
     this.queue = [];

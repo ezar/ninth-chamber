@@ -1,0 +1,10 @@
+{
+  "title": "The Ninth Chamber",
+  "loading": "Loading…",
+  "help": "WASD / arrows move · Space jump · Shift walk · drag to turn the camera · wheel zoom · C recenter",
+  "hud.stats": "{backend} · {fps} fps · tick {tick} · jumps {jumps}",
+  "touch.jump": "Jump",
+  "touch.action": "Action",
+  "touch.walk": "Walk",
+  "error.noWebGL": "Your browser supports neither WebGPU nor WebGL2. Try a recent version of Chrome, Edge, Firefox or Safari."
+}
