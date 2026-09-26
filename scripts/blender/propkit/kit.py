@@ -34,6 +34,7 @@ def high(
     curv0_blur: int = 2,
     curv_blur: int = 3,
     keep_base: bool = True,
+    smooth: bool = True,
 ) -> bpy.types.Object:
     """Make a detailed bake source from ``base``.
 
@@ -55,6 +56,12 @@ def high(
         core.curvature(h, "curv0", curv0_blur)
         core.displace(h, disp)
     core.curvature(h, "curv", curv_blur)
+    # Bake sources must be smooth-shaded or their facets end up in the normal map
+    # (hard edges above 60 degrees stay sharp).
+    if smooth:
+        core.smooth_by_angle(h, 60.0)
+    else:
+        core.flat(h)
     recipes = recipe if isinstance(recipe, (list, tuple)) else [recipe]
     if len(h.data.materials) == 0:
         for i, r in enumerate(recipes):

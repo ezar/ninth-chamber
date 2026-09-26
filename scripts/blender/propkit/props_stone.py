@@ -5,8 +5,8 @@ from __future__ import annotations
 import math
 import random
 
+import bpy  # noqa: F401  (must precede bmesh when bpy runs as a module)
 import bmesh
-import bpy
 from mathutils import Vector
 
 from . import core, looks, motifs, shapes
@@ -35,12 +35,12 @@ def _delete_faces(obj, pred) -> None:
 # ---------------------------------------------------------------------------
 
 NOTCH_Z, NOTCH_H, NOTCH_W, NOTCH_D = 1.2, 0.15, 0.6, 0.07
+PALE_STONE = "#c2a481"  # pushable blocks read paler than the walls (sandstone towards limestone)
 
 
 def _block_base() -> bpy.types.Object:
     bm = bmesh.new()
     shapes.box(bm, (-1, -1, 0), (1, 1, 2))
-    side = [f for f in bm.faces if abs(f.normal.z) < 0.5]
     for z in (NOTCH_Z - NOTCH_H / 2, NOTCH_Z + NOTCH_H / 2):
         geom = list(bm.faces) + list(bm.edges) + list(bm.verts)
         bmesh.ops.bisect_plane(bm, geom=[g for g in geom if not isinstance(g, bmesh.types.BMFace)
@@ -129,7 +129,8 @@ def block(ctx: Ctx) -> list:
               keep_base=False)
     core.smooth_by_angle(low, 35)
     core.uv_smart(low, 45, 0.004)
-    finish(ctx, [BakeSpec("block", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("block", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True,
+                          albedo=PALE_STONE)])
     return [low]
 
 
@@ -216,7 +217,8 @@ def column_base(ctx: Ctx) -> list:
               curv0_blur=4, keep_base=False)
     core.smooth_by_angle(low, 35)
     core.uv_smart(low, 45, 0.004)
-    finish(ctx, [BakeSpec("column_base", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("column_base", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low]
 
 
@@ -245,7 +247,8 @@ def column_capital(ctx: Ctx) -> list:
               voxel=0.008, disp=disp, curv0_blur=4, keep_base=False)
     core.smooth_by_angle(low, 35)
     core.uv_smart(low, 45, 0.004)
-    finish(ctx, [BakeSpec("column_capital", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("column_capital", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low]
 
 
@@ -293,41 +296,35 @@ def _door_touch(g: Graph, p: S) -> S:
 
 
 def _seal_amber(name: str) -> bpy.types.Object:
-    """Raised amber inlay tracing the ninth (top) segment's outline, on both faces."""
+    """Raised amber inlay tracing the ninth (top) segment's outline groove, on both faces."""
+    import numpy as np
+
     r = SEAL_R
-    r0, r1 = 0.36 * r, 0.86 * r
-    gap = 0.011 * r / 0.5
-    inset = 0.0065
+    groove = 0.013
+    level = -groove / 2  # centre line of the outline groove
+    c = np.array([0.0, (motifs.SEAL_R0 + motifs.SEAL_R1) / 2 * r])
     pts = []
-
-    def half_angle(rr):
-        return math.pi / 9 - (gap + inset) / rr
-
-    # Outer arc (left to right), inner arc (right to left), in the segment's local polar frame.
-    ra, rb = r1 - inset, r0 + inset
-    na, nb = 22, 10
-    for i in range(na + 1):
-        a = math.pi / 2 + half_angle(ra) - (2 * half_angle(ra)) * i / na
-        pts.append((ra * math.cos(a), ra * math.sin(a)))
-    for i in range(nb + 1):
-        a = math.pi / 2 - half_angle(rb) + (2 * half_angle(rb)) * i / nb
-        pts.append((rb * math.cos(a), rb * math.sin(a)))
-    pts.reverse()  # counter-clockwise, so (ty, -tx) is the outward normal
-    n = len(pts)
+    n = 64
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        d = np.array([math.cos(a), math.sin(a)])
+        lo, hi = 0.0, r
+        for _ in range(40):  # bisect along the ray for sd == level (region is star-shaped from c)
+            m = (lo + hi) / 2
+            q = c + d * m
+            if motifs.seal_sd_np(q[0], q[1], r) < level:
+                lo = m
+            else:
+                hi = m
+        q = c + d * lo
+        pts.append(Vector((q[0], q[1])))
     loops = {"out": [], "top_out": [], "top_in": [], "in": []}
     for i in range(n):
-        p0 = Vector(pts[i - 1])
-        p1 = Vector(pts[i])
-        p2 = Vector(pts[(i + 1) % n])
-        t0 = (p1 - p0).normalized()
-        t1 = (p2 - p1).normalized()
-        n0 = Vector((t0.y, -t0.x))
-        n1 = Vector((t1.y, -t1.x))
-        nm = (n0 + n1).normalized()
-        miter = 1.0 / max(nm.dot(n1), 0.35)
-        for key, off in (("out", 0.0055), ("top_out", 0.0035), ("top_in", -0.0035), ("in", -0.0055)):
-            q = p1 + nm * off * miter
-            loops[key].append(q)
+        p0, p1, p2 = pts[i - 1], pts[i], pts[(i + 1) % n]
+        t = (p2 - p0).normalized()
+        nm = Vector((t.y, -t.x))  # outward for a counter-clockwise loop
+        for key, off in (("out", 0.0055), ("top_out", 0.0032), ("top_in", -0.0032), ("in", -0.0055)):
+            loops[key].append(p1 + nm * off)
     bm = bmesh.new()
     for side in (1, -1):
         y0 = side * (DOOR_T / 2 - 0.002)
@@ -361,7 +358,8 @@ def door(ctx: Ctx) -> list:
     core.smooth_by_angle(amber, 50)
     core.uv_smart(amber, 60, 0.01)
     amber.data.materials.append(amber_inlay_material())
-    finish(ctx, [BakeSpec("door", low, [hi], size=1024, cage=0.05, ray=0.12, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("door", low, [hi], size=1024, cage=0.05, ray=0.12, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low, amber]
 
 
@@ -371,6 +369,7 @@ def amber_inlay_material() -> bpy.types.Material:
 
     m = bpy.data.materials.new("seal_amber")
     m.use_nodes = True
+    m.use_backface_culling = True
     b = m.node_tree.nodes["Principled BSDF"]
     c = hex_rgb("#f2a93b")
     b.inputs["Base Color"].default_value = (c[0], c[1], c[2], 1)
@@ -446,7 +445,8 @@ def altar(ctx: Ctx) -> list:
               disp=disp, curv0_blur=4, keep_base=False)
     core.smooth_by_angle(low, 35)
     core.uv_smart(low, 45, 0.003)
-    finish(ctx, [BakeSpec("altar", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("altar", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low]
 
 
@@ -463,10 +463,12 @@ def _chunk(rng: random.Random, size, cuts: int, name: str):
     planes = []
     for _ in range(cuts):
         d = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.2, 1))).normalized()
-        c = Vector((d.x * sx * rng.uniform(0.18, 0.38), d.y * sy * rng.uniform(0.18, 0.38),
-                    sz * 0.5 + d.z * sz * rng.uniform(0.15, 0.35)))
+        # Cut between 40% and 80% of the way from the centre to the furthest corner along d,
+        # so every plane bites off a real piece.
+        reach = abs(d.x) * sx / 2 + abs(d.y) * sy / 2 + abs(d.z) * sz / 2
+        c = Vector((0, 0, sz / 2)) + d * reach * rng.uniform(0.4, 0.8)
         geom = list(bm.verts) + list(bm.edges) + list(bm.faces)
-        r = bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=c, plane_no=d, clear_outer=True)
+        bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=c, plane_no=d, clear_outer=True)
         edges = [e for e in bm.edges if e.is_boundary]
         if edges:
             bmesh.ops.holes_fill(bm, edges=edges, sides=0)
@@ -508,20 +510,19 @@ def _rubble(ctx: Ctx, name: str, seed: int, chunks) -> list:
         _frac_attr(src, planes)
         s = float(seed * 10 + i)
 
-        amp = 0.045 * max(size)
+        amp = 0.09 * max(size)
 
         def disp(g, s=s, amp=amp):
             p = g.pos()
             fr = g.attr("frac").smooth(0.0, 0.5)
-            dressed = looks.stone_disp(g, amp=0.004, chip=0.02, seed=s, chip_density=0.8, chip_scale=10.0)
-            # Conchoidal fracture: stepped facets (random height per Voronoi cell) over rough noise.
-            pw = g.warp(p, 0.04, 6.0, seed=s + 2.5)
-            cell = g.voronoi(pw, scale=9.0 / max(size[0], 0.3), feature="F1", out="Color", w=s + 3.5)
-            facet = (g.separate(cell)[0] - 0.5) * (amp * 0.5)
-            rough = (g.noise(p, scale=6.0, detail=6.0, rough=0.6, w=s + 0.5, kind="RIDGED_MULTIFRACTAL") * (amp * 0.12)
-                     + (g.noise(p, scale=2.5, detail=4.0, rough=0.55, w=s + 1.5) - 0.5) * (amp * 1.4)
-                     + facet)
-            return g.mixf(fr, dressed, rough)
+            dressed = looks.stone_disp(g, amp=0.004, chip=0.022, seed=s, chip_density=0.85, chip_scale=10.0)
+            # Fracture: multi-scale rough relief with a few sharp ridges (no cellular pattern).
+            rough = ((g.noise(p, scale=2.6, detail=6.0, rough=0.62, w=s + 1.5) - 0.5) * (amp * 1.8)
+                     + g.noise(p, scale=6.0, detail=5.0, rough=0.55, w=s + 0.5, kind="RIDGED_MULTIFRACTAL")
+                     * (amp * 0.15)
+                     + (g.noise(p, scale=16.0, detail=3.0, w=s + 2.5) - 0.5) * (amp * 0.4))
+            whole = (g.noise(p, scale=1.3, detail=3.0, w=s + 3.5) - 0.5) * (amp * 0.6)
+            return g.mixf(fr, dressed, rough) + whole
 
         core.curvature(src, "curv0", 3)
         core.displace(src, disp)
@@ -536,7 +537,8 @@ def _rubble(ctx: Ctx, name: str, seed: int, chunks) -> list:
     low = name_mesh(core.join(lows, name), name)
     core.smooth_by_angle(low, 55)
     core.uv_smart(low, 50, 0.004, shape="CONCAVE")
-    finish(ctx, [BakeSpec(name, low, [hi], size=1024, cage=0.02, ray=0.05, normal_jpeg=True)])
+    finish(ctx, [BakeSpec(name, low, [hi], size=1024, cage=0.02, ray=0.05, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low]
 
 
@@ -547,25 +549,25 @@ def chunks_budget(size) -> int:
 
 def rubble_a(ctx: Ctx) -> list:
     return _rubble(ctx, "rubble_a", 101, [
-        ((0.8, 0.55, 0.46), 4, (0.0, 0.0), 12.0, (0.0, 0.0)),
-        ((0.26, 0.22, 0.18), 3, (0.62, -0.28), 40.0, (8.0, -6.0)),
-        ((0.22, 0.2, 0.15), 3, (-0.55, 0.36), -25.0, (-5.0, 10.0)),
+        ((0.8, 0.55, 0.46), 6, (0.0, 0.0), 12.0, (0.0, 0.0)),
+        ((0.26, 0.22, 0.18), 4, (0.55, -0.3), 40.0, (8.0, -6.0)),
+        ((0.22, 0.2, 0.15), 4, (-0.5, 0.3), -25.0, (-5.0, 10.0)),
     ])
 
 
 def rubble_b(ctx: Ctx) -> list:
     return _rubble(ctx, "rubble_b", 202, [
-        ((0.5, 0.4, 0.3), 4, (0.0, 0.0), -8.0, (4.0, 0.0)),
-        ((0.42, 0.3, 0.26), 4, (0.46, 0.2), 55.0, (-10.0, 6.0)),
-        ((0.3, 0.26, 0.2), 3, (-0.36, -0.26), 20.0, (12.0, -8.0)),
+        ((0.5, 0.4, 0.3), 5, (0.0, 0.0), -8.0, (4.0, 0.0)),
+        ((0.42, 0.3, 0.26), 5, (0.44, 0.2), 55.0, (-10.0, 6.0)),
+        ((0.3, 0.26, 0.2), 4, (-0.34, -0.24), 20.0, (12.0, -8.0)),
     ])
 
 
 def rubble_c(ctx: Ctx) -> list:
     return _rubble(ctx, "rubble_c", 303, [
-        ((0.3, 0.24, 0.18), 3, (0.0, 0.0), 5.0, (6.0, 0.0)),
-        ((0.24, 0.2, 0.16), 3, (0.34, 0.12), 60.0, (-12.0, 8.0)),
-        ((0.22, 0.2, 0.14), 3, (-0.3, 0.2), -30.0, (10.0, 14.0)),
-        ((0.2, 0.18, 0.14), 3, (0.1, -0.32), 80.0, (-8.0, -10.0)),
-        ((0.2, 0.16, 0.12), 3, (-0.22, -0.24), 15.0, (14.0, 6.0)),
+        ((0.3, 0.24, 0.18), 4, (0.0, 0.0), 5.0, (6.0, 0.0)),
+        ((0.24, 0.2, 0.16), 4, (0.32, 0.12), 60.0, (-12.0, 8.0)),
+        ((0.22, 0.2, 0.14), 4, (-0.28, 0.18), -30.0, (10.0, 14.0)),
+        ((0.2, 0.18, 0.14), 4, (0.1, -0.3), 80.0, (-8.0, -10.0)),
+        ((0.2, 0.16, 0.12), 4, (-0.22, -0.22), 15.0, (14.0, 6.0)),
     ])

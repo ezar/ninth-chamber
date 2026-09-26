@@ -136,6 +136,7 @@ export class Hud {
     } else {
       this.prompt.classList.remove('show');
     }
+    document.body.classList.toggle('can-act', key !== null);
   }
 
   private promptFor(world: World): StringKey | null {

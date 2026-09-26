@@ -260,6 +260,15 @@ export function doorStop(s: Strip, t: number, slam: boolean): void {
   s.noiseHit(t + 0.05, { type: 'highpass', f: 2600, gain: 0.025, a: 0.08, d: 0.9 });
 }
 
+/** One tick of a timed door: a dry stone click, higher and doubled in the last seconds. */
+export function tick(s: Strip, t: number, urgent: boolean): void {
+  s.noiseHit(t, { type: 'bandpass', f: urgent ? 4200 : 3100, q: 6, gain: 0.13, a: 0.0005, d: 0.018 });
+  s.tone(t, { wave: 'triangle', f: urgent ? 1180 : 880, gain: 0.05, a: 0.001, d: 0.06 });
+  if (urgent) {
+    s.noiseHit(t + 0.12, { type: 'bandpass', f: 3600, q: 6, gain: 0.08, a: 0.0005, d: 0.015 });
+  }
+}
+
 export function plate(s: Strip, t: number, pressed: boolean): void {
   if (pressed) {
     s.tone(t, { f: 160, f2: 90, gain: 0.14, a: 0.002, d: 0.06 });

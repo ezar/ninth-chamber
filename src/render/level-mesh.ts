@@ -145,6 +145,20 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
   const floorTop = (s: Sector): number => (s.flags.has('crumble') ? s.pitFloor : Math.max(...s.floor));
   const solid = (s: Sector | undefined): boolean => !s || s.wall;
 
+  /** A wall cell standing free in a room (a pillar): three or more open sides. */
+  const isPillar = (cx: number, cz: number): boolean => {
+    let open = 0;
+    for (const [dx, dz] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      if (!solid(sector(cx + dx, cz + dz))) open++;
+    }
+    return open >= 3;
+  };
+
   const skyCells = new Set<string>();
   const skylights: LevelMeshes['skylights'] = [];
   for (const room of level.rooms) {
@@ -275,6 +289,16 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
       else upper = s.ceil;
       if (upper > bottom + 1e-3) {
         wallQuad(b.wall, atlas, side.a, side.b, bottom, upper, side.n);
+        // Qarrum's builders corbel: room walls step inwards in two courses under
+        // the ceiling (art bible "shape language"). Freestanding pillars are left
+        // plain for their capitals.
+        if (solid(nb) && s.ceil - bottom > 4.5 && !isPillar(s.cx + side.dx, s.cz + side.dz)) {
+          stoneCourse(b.wall, atlas, side.a, side.b, side.n, s.ceil - 0.42, s.ceil, 0.34, 'below');
+          stoneCourse(b.wall, atlas, side.a, side.b, side.n, s.ceil - 0.84, s.ceil - 0.42, 0.17, 'below');
+        }
+        // A plinth course at the foot of tall walls (4 cm proud, within the grid tolerance).
+        if (upper - bottom >= 1.5)
+          stoneCourse(b.wall, atlas, side.a, side.b, side.n, bottom, bottom + 0.32, 0.04, 'above');
         // A grabbable ledge gets a pale, hand-polished lip (legibility, art bible).
         if (nb && !solid(nb) && upper < s.ceil - 0.5 && upper - bottom >= 0.75)
           lip(b.lip, atlas, side.a, side.b, upper, side.n);
@@ -298,6 +322,101 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
     lightmapSize: size,
     skylights,
   };
+}
+
+/** Adds a planar quad, fixing the winding so it faces `normal`. */
+function quad(
+  bd: Builder,
+  atlas: Atlas,
+  corners: readonly [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3],
+  normal: THREE.Vector3,
+  ao: readonly [number, number, number, number],
+  uvOf: (p: THREE.Vector3) => [number, number],
+): void {
+  const [p0, p1, p2] = corners;
+  const w = p0.distanceTo(p1);
+  const h = p1.distanceTo(p2);
+  const rect = atlas.allocate(w, h);
+  const base = bd.pos.length / 3;
+  const st: [number, number][] = [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ];
+  corners.forEach((p, i) => {
+    const [u, v] = uvOf(p);
+    const [ss, tt] = st[i] ?? [0, 0];
+    bd.vertex(p, normal, u, v, ao[i] ?? 1, rect, ss, tt);
+  });
+  const facing =
+    new THREE.Vector3().subVectors(p1, p0).cross(new THREE.Vector3().subVectors(p2, p0)).dot(normal) > 0;
+  if (facing) bd.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  else bd.idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+}
+
+/**
+ * A stone course running along a wall face: a box `depth` proud of the wall
+ * between two heights. `exposed` says which horizontal face is visible (the
+ * underside of a corbel, the top of a plinth); both ends are capped.
+ */
+function stoneCourse(
+  bd: Builder,
+  atlas: Atlas,
+  a: readonly [number, number],
+  bb: readonly [number, number],
+  n: readonly [number, number],
+  y0: number,
+  y1: number,
+  depth: number,
+  exposed: 'below' | 'above',
+): void {
+  const nx = n[0] * depth;
+  const nz = n[1] * depth;
+  const along = Math.abs(bb[0] - a[0]) > 0 ? 'x' : 'z';
+  const wallUv = (p: THREE.Vector3): [number, number] => [(along === 'x' ? p.x : p.z) / BLOCK, p.y / BLOCK];
+  const flatUv = (p: THREE.Vector3): [number, number] => [p.x / BLOCK, p.z / BLOCK];
+  const V = (x: number, y: number, z: number): THREE.Vector3 => new THREE.Vector3(x, y, z);
+  const normal = new THREE.Vector3(n[0], 0, n[1]);
+  // Front.
+  quad(
+    bd,
+    atlas,
+    [
+      V(bb[0] + nx, y0, bb[1] + nz),
+      V(a[0] + nx, y0, a[1] + nz),
+      V(a[0] + nx, y1, a[1] + nz),
+      V(bb[0] + nx, y1, bb[1] + nz),
+    ],
+    normal,
+    exposed === 'below' ? [0.7, 0.7, 0.9, 0.9] : [0.6, 0.6, 0.85, 0.85],
+    wallUv,
+  );
+  // Exposed horizontal face.
+  const y = exposed === 'below' ? y0 : y1;
+  quad(
+    bd,
+    atlas,
+    [V(bb[0], y, bb[1]), V(a[0], y, a[1]), V(a[0] + nx, y, a[1] + nz), V(bb[0] + nx, y, bb[1] + nz)],
+    new THREE.Vector3(0, exposed === 'below' ? -1 : 1, 0),
+    exposed === 'below' ? [0.45, 0.45, 0.6, 0.6] : [0.75, 0.75, 0.9, 0.9],
+    flatUv,
+  );
+  // End caps.
+  for (const [p, sign] of [
+    [a, 1],
+    [bb, -1],
+  ] as const) {
+    const t = new THREE.Vector3(bb[0] - a[0], 0, bb[1] - a[1]).normalize().multiplyScalar(-sign);
+    quad(
+      bd,
+      atlas,
+      [V(p[0], y0, p[1]), V(p[0] + nx, y0, p[1] + nz), V(p[0] + nx, y1, p[1] + nz), V(p[0], y1, p[1])],
+      t,
+      [0.7, 0.7, 0.8, 0.8],
+      wallUv,
+    );
+  }
 }
 
 /**

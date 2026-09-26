@@ -73,6 +73,7 @@ const LEVEL = {
   lever: 1.6,
   crack: 1.8,
   rumble: 0.85,
+  tick: 0.9,
   bowl: 0.55,
   ui: { click: 0.6, hover: 0.4, confirm: 0.7 },
 } as const;
@@ -619,6 +620,39 @@ export class AudioGraph {
         });
         break;
       }
+      case 'door.tick': {
+        // A timed door counting down: a small stone click (2D, it is the player's timer), doubled at the end.
+        const urgent = num(e, 'left', 9) <= 3;
+        this.play('sfx', null, (s, t) => {
+          if (this.ready('ui.confirm')) {
+            const o = {
+              gain: LEVEL.tick * (urgent ? 1.2 : 1),
+              rate: urgent ? 1.5 : 1.25,
+              rateSpread: 0.02,
+              gainSpread: 1,
+            };
+            this.layer(s, t, 'ui.confirm', o);
+            if (urgent) this.layer(s, t, 'ui.confirm', { ...o, delay: 0.12, gain: o.gain * 0.7 });
+          } else {
+            sfx.tick(s, t, urgent);
+          }
+        });
+        break;
+      }
+      case 'block.reset':
+        this.play('sfx', null, (s, t) => {
+          if (
+            !this.layer(s, t, 'block.drag', {
+              gain: LEVEL.drag * 0.8,
+              rate: 1.1,
+              duration: 0.6,
+              fadeOut: 0.2,
+            })
+          ) {
+            sfx.blockMoving(s, t, 0.6, 'push');
+          }
+        });
+        break;
       case 'plate.pressed':
       case 'plate.released': {
         const pressed = e.type === 'plate.pressed';

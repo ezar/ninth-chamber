@@ -1,0 +1,11 @@
+{
+  "id": "descent",
+  "background": "#0c0d10",
+  "exposure": 1.05,
+  "hemi": { "sky": "#8c7d6c", "ground": "#1c1a18", "intensity": 0.28 },
+  "fog": { "color": "#57606a", "density": 0.03 },
+  "sun": { "color": "#ffcf96", "intensity": 3.5, "direction": [-0.2, 0.95, 0.22] },
+  "fire": { "color": "#ff9448", "intensity": 30, "flicker": 0.25 },
+  "bloom": { "strength": 0.5, "radius": 0.5, "threshold": 0.82 },
+  "grade": { "tint": "#eee0cc", "saturation": 0.92, "contrast": 1.12, "vignette": 0.4 }
+}

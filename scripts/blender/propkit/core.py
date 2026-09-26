@@ -13,8 +13,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Sequence
 
+import bpy  # noqa: F401  (must precede bmesh when bpy runs as a module)
 import bmesh
-import bpy
 import numpy as np
 from mathutils import Matrix, Vector
 
@@ -26,6 +26,7 @@ from .nodes import Graph, S
 
 
 def reset_scene(threads: int = 0) -> bpy.types.Scene:
+    BAKED.clear()
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
@@ -456,7 +457,12 @@ def high_material(name: str, recipe: Callable[[Graph], Look]) -> bpy.types.Mater
     out = g.node("ShaderNodeOutputMaterial")
     out.name = "OUT_main"
     g.links.new(bsdf.outputs[0], out.inputs["Surface"])
-    chans = {"base": look.base, "rough": look.rough, "metal": look.metal, "ao": look.ao,
+    # ORM packed in one emission pass: R occlusion, G roughness, B metalness.
+    orm = g.node("ShaderNodeCombineColor")
+    g.feed(orm.inputs[0], look.ao)
+    g.feed(orm.inputs[1], look.rough)
+    g.feed(orm.inputs[2], look.metal)
+    chans = {"base": look.base, "orm": orm.outputs[0],
              "emit": look.emit if look.emit is not None else "#000000"}
     for ch, val in chans.items():
         em = g.node("ShaderNodeEmission")
@@ -506,6 +512,8 @@ class BakeSpec:
     jpeg_quality: int = 88
     normal_jpeg: bool = False  # store the normal map as JPEG (size budget)
     orm_size: int | None = None  # ORM resolution when smaller than ``size``
+    png_limit: int = 320_000  # data maps above this many bytes as PNG fall back to JPEG
+    albedo: str | None = None  # calibrate the mean base colour to this sRGB hex (palette target)
     extra: dict = field(default_factory=dict)
 
 
@@ -555,6 +563,57 @@ def _save(arr: np.ndarray, path: str, fmt: str, data: bool, quality: int = 90) -
     return out
 
 
+def _encode_auto(arr: np.ndarray, base_path: str, data: bool, png_limit: int, quality: int) -> bpy.types.Image:
+    """Lossless PNG when it stays under ``png_limit`` bytes, otherwise 4:4:4 JPEG."""
+    import io
+
+    from PIL import Image
+
+    rgb = np.clip(arr[::-1, :, :3] * 255.0 + 0.5, 0, 255).astype(np.uint8)
+    buf = io.BytesIO()
+    Image.fromarray(rgb, "RGB").save(buf, "PNG", optimize=True)
+    if buf.tell() <= png_limit:
+        return _save(arr, base_path + ".png", "PNG", data)
+    return _save(arr, base_path + ".jpg", "JPEG", data, quality)
+
+
+def _blur_r(orm: np.ndarray) -> np.ndarray:
+    """Soften bake noise in the occlusion channel (3x3 box)."""
+    r = orm[..., 0]
+    p = np.pad(r, 1, mode="edge")
+    acc = sum(p[1 + dy : 1 + dy + r.shape[0], 1 + dx : 1 + dx + r.shape[1]] for dy in (-1, 0, 1) for dx in (-1, 0, 1))
+    out = orm.copy()
+    out[..., 0] = acc / 9.0
+    return out
+
+
+def calibrate_albedo(base: np.ndarray, target: str) -> np.ndarray:
+    """Scale each channel so the mean albedo of the baked texels matches ``target``.
+
+    Keeps all the procedural variation while pinning the overall colour to the
+    art-direction palette; non-metal albedo is kept inside sRGB 40..235.
+    """
+    rgb = base[..., :3]
+    covered = rgb.sum(-1) > 1e-4
+    mean = rgb[covered].mean(0)
+    t = np.array([int(target.lstrip("#")[i : i + 2], 16) / 255.0 for i in (0, 2, 4)])
+    out = base.copy()
+    out[..., :3] = np.where(covered[..., None], np.clip(rgb * (t / np.maximum(mean, 1e-4)), 40 / 255, 235 / 255),
+                            rgb)
+    return out
+
+
+def triangulate_ngons(obj: bpy.types.Object) -> None:
+    """Tangents (bake and export) need tris/quads."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    ng = [f for f in bm.faces if len(f.verts) > 4]
+    if ng:
+        bmesh.ops.triangulate(bm, faces=ng, quad_method="BEAUTY", ngon_method="BEAUTY")
+        bm.to_mesh(obj.data)
+    bm.free()
+
+
 def bake(spec: BakeSpec, tex_dir: str) -> bpy.types.Material:
     """Bake all channels from ``spec.highs`` onto ``spec.low`` and give it a glTF material."""
     scene = bpy.context.scene
@@ -570,6 +629,7 @@ def bake(spec: BakeSpec, tex_dir: str) -> bpy.types.Material:
     bk.normal_space = "TANGENT"
 
     low = spec.low
+    triangulate_ngons(low)
     low.data.materials.clear()
     tmp = bpy.data.materials.new(spec.name + "_bake")
     tmp.use_nodes = True
@@ -587,14 +647,14 @@ def bake(spec: BakeSpec, tex_dir: str) -> bpy.types.Material:
     low.select_set(True)
     bpy.context.view_layer.objects.active = low
 
-    chans = ["base", "rough", "metal", "ao"] + (["emit"] if spec.emit else [])
+    chans = ["base", "orm"] + (["emit"] if spec.emit else [])
     res: dict[str, np.ndarray] = {}
     for ch in chans:
-        img = _new_image(f"{spec.name}_{ch}", spec.size, ch != "base" and ch != "emit")
+        img = _new_image(f"{spec.name}_{ch}", spec.size, ch == "orm")
         tnode.image = img
         for m in mats:
             _activate_output(m, ch)
-        scene.cycles.samples = spec.samples * (4 if ch == "ao" else 1)
+        scene.cycles.samples = spec.samples * (3 if ch == "orm" else 1)
         bpy.ops.object.bake(type="EMIT")
         res[ch] = _pixels(img)
         bpy.data.images.remove(img)
@@ -608,43 +668,72 @@ def bake(spec: BakeSpec, tex_dir: str) -> bpy.types.Material:
         res["normal"] = _pixels(img)
         bpy.data.images.remove(img)
 
+    if spec.albedo:
+        res["base"] = calibrate_albedo(res["base"], spec.albedo)
     os.makedirs(tex_dir, exist_ok=True)
-    base_img = _save(res["base"], os.path.join(tex_dir, f"{spec.name}_basecolor.jpg"), "JPEG", False,
-                     spec.jpeg_quality)
-    orm = np.stack([res["ao"][..., 0], res["rough"][..., 0], res["metal"][..., 0]], -1)
+    stem = os.path.join(tex_dir, spec.name)
+    base_img = _save(res["base"], stem + "_basecolor.jpg", "JPEG", False, spec.jpeg_quality)
+    orm = _blur_r(res["orm"][..., :3])
     if spec.orm_size:
         orm = _resize(orm, spec.orm_size)
-    orm_img = _save(orm, os.path.join(tex_dir, f"{spec.name}_orm.png"), "PNG", True)
+    orm_img = _encode_auto(orm, stem + "_orm", True, spec.png_limit, 95)
     nrm_img = None
     if spec.normal:
-        if spec.normal_jpeg:
-            nrm_img = _save(res["normal"], os.path.join(tex_dir, f"{spec.name}_normal.jpg"), "JPEG", True, 93)
-        else:
-            nrm_img = _save(res["normal"], os.path.join(tex_dir, f"{spec.name}_normal.png"), "PNG", True)
+        limit = 0 if spec.normal_jpeg else spec.png_limit
+        nrm_img = _encode_auto(res["normal"], stem + "_normal", True, limit, 94)
     emit_img = None
     if spec.emit:
-        emit_img = _save(res["emit"], os.path.join(tex_dir, f"{spec.name}_emissive.jpg"), "JPEG", False,
-                         spec.jpeg_quality)
+        emit_img = _save(res["emit"], stem + "_emissive.jpg", "JPEG", False, spec.jpeg_quality)
 
     low.data.materials.clear()
     bpy.data.materials.remove(tmp)
     mat = final_material(spec.name, base_img, orm_img, nrm_img, emit_img, spec.emit_strength)
     low.data.materials.append(mat)
+    BAKED.append((spec, {"base": res["base"], "orm": orm, "normal": res.get("normal"), "emit": res.get("emit")},
+                  mat, stem))
     return mat
+
+
+# Baked texture sets of the prop being built: (spec, arrays, material, file stem).
+BAKED: list = []
+
+
+def reencode(level: int) -> None:
+    """Re-encode the current prop's maps at a lower quality (size budget), level 1, 2, 3..."""
+    for spec, arr, mat, stem in BAKED:
+        nodes = mat.node_tree.nodes
+        qn = max(72, 92 - 6 * level)
+        qo = max(72, 93 - 6 * level)
+        qb = max(75, spec.jpeg_quality - 3 * level)
+        orm = arr["orm"]
+        if level >= 2 and orm.shape[0] > 256:
+            orm = _resize(orm, orm.shape[0] // 2)
+        base = arr["base"]
+        if level >= 4 and base.shape[0] > 512:
+            base = _resize(base, base.shape[0] // 2)
+        nodes["TEX_base"].image = _save(base, f"{stem}_basecolor.jpg", "JPEG", False, qb)
+        nodes["TEX_orm"].image = _save(orm, f"{stem}_orm.jpg", "JPEG", True, qo)
+        if arr["normal"] is not None:
+            nodes["TEX_normal"].image = _save(arr["normal"], f"{stem}_normal.jpg", "JPEG", True, qn)
+        if arr["emit"] is not None:
+            nodes["TEX_emit"].image = _save(arr["emit"], f"{stem}_emissive.jpg", "JPEG", False, qb)
 
 
 def final_material(name, base_img, orm_img, nrm_img, emit_img=None, emit_strength=1.0) -> bpy.types.Material:
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
+    mat.use_backface_culling = True  # exported as doubleSided: false
     nt = mat.node_tree
     nt.nodes.clear()
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     nt.links.new(bsdf.outputs[0], out.inputs[0])
     tb = nt.nodes.new("ShaderNodeTexImage")
+    tb.name = "TEX_base"
     tb.image = base_img
     nt.links.new(tb.outputs["Color"], bsdf.inputs["Base Color"])
     to = nt.nodes.new("ShaderNodeTexImage")
+    to.name = "TEX_orm"
     to.image = orm_img
     sep = nt.nodes.new("ShaderNodeSeparateColor")
     nt.links.new(to.outputs["Color"], sep.inputs[0])
@@ -655,12 +744,14 @@ def final_material(name, base_img, orm_img, nrm_img, emit_img=None, emit_strengt
     nt.links.new(sep.outputs["Red"], grp.inputs["Occlusion"])
     if nrm_img is not None:
         tn = nt.nodes.new("ShaderNodeTexImage")
+        tn.name = "TEX_normal"
         tn.image = nrm_img
         nm = nt.nodes.new("ShaderNodeNormalMap")
         nt.links.new(tn.outputs["Color"], nm.inputs["Color"])
         nt.links.new(nm.outputs[0], bsdf.inputs["Normal"])
     if emit_img is not None:
         te = nt.nodes.new("ShaderNodeTexImage")
+        te.name = "TEX_emit"
         te.image = emit_img
         nt.links.new(te.outputs["Color"], bsdf.inputs["Emission Color"])
         bsdf.inputs["Emission Strength"].default_value = emit_strength

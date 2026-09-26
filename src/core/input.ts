@@ -3,6 +3,7 @@
  * Only this layer touches the DOM; the simulation receives InputFrames.
  */
 import { buttonBit, type Button, type ButtonMask, type RawInput } from './input-frame';
+import { buzz } from './haptics';
 
 export interface InputDevice {
   /** Current device state. */
@@ -209,7 +210,11 @@ export class GamepadDevice implements InputDevice {
 
 // ─────────────────────────────────── Touch ───────────────────────────────────
 
-const JOY_RADIUS = 60;
+const JOY_RADIUS = 64;
+/** Stick deflection ignored as thumb jitter. */
+const JOY_DEAD = 0.12;
+/** A gentle push below this deflection walks (and so stops at edges), like a light analog tilt. */
+const JOY_WALK = 0.55;
 
 /**
  * Floating joystick on the left half, camera drag on the right half and
@@ -247,6 +252,7 @@ export class TouchDevice implements InputDevice {
       } else if (this.lookId === null) {
         this.lookId = e.pointerId;
         this.lookLast = { x: e.clientX, y: e.clientY };
+        document.body.classList.add('moved');
       }
     });
     listen(surface, 'pointermove', (e) => {
@@ -255,10 +261,18 @@ export class TouchDevice implements InputDevice {
         let dy = e.clientY - this.joyOrigin.y;
         const len = Math.hypot(dx, dy);
         if (len > JOY_RADIUS) {
+          // The base trails a thumb that slides past the rim, so reversing is instant.
+          const over = len - JOY_RADIUS;
+          this.joyOrigin.x += (dx / len) * over;
+          this.joyOrigin.y += (dy / len) * over;
+          this.stick.base.style.left = `${this.joyOrigin.x}px`;
+          this.stick.base.style.top = `${this.joyOrigin.y}px`;
           dx *= JOY_RADIUS / len;
           dy *= JOY_RADIUS / len;
         }
-        this.joy = { x: dx / JOY_RADIUS, y: -dy / JOY_RADIUS };
+        const m = Math.min(1, len / JOY_RADIUS);
+        const k = m < JOY_DEAD ? 0 : (m - JOY_DEAD) / (1 - JOY_DEAD) / (m || 1);
+        this.joy = { x: (dx / JOY_RADIUS) * k, y: (-dy / JOY_RADIUS) * k };
         this.stick.knob.style.transform = `translate(${dx}px, ${dy}px)`;
       } else if (e.pointerId === this.lookId) {
         this.look.x += (e.clientX - this.lookLast.x) * 1.4;
@@ -284,6 +298,7 @@ export class TouchDevice implements InputDevice {
         e.preventDefault();
         e.stopPropagation();
         el.setPointerCapture(e.pointerId);
+        buzz(toggle ? 6 : 10);
         if (toggle) {
           this.toggled ^= buttonBit(b);
           el.classList.toggle('on', (this.toggled & buttonBit(b)) !== 0);
@@ -304,6 +319,7 @@ export class TouchDevice implements InputDevice {
   private showStick(visible: boolean): void {
     const { base, knob } = this.stick;
     base.style.display = visible ? 'block' : 'none';
+    document.body.classList.toggle('stick-active', visible);
     base.style.left = `${this.joyOrigin.x}px`;
     base.style.top = `${this.joyOrigin.y}px`;
     knob.style.transform = 'translate(0, 0)';
@@ -312,6 +328,8 @@ export class TouchDevice implements InputDevice {
   poll(): RawInput {
     let held = this.toggled;
     for (const b of this.buttons.values()) held |= buttonBit(b);
+    const m = Math.hypot(this.joy.x, this.joy.y);
+    if (m > 0 && m < JOY_WALK) held |= buttonBit('walk');
     return { moveX: this.joy.x, moveY: this.joy.y, held };
   }
 

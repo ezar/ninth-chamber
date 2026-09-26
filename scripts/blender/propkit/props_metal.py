@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import math
 
+import bpy  # noqa: F401  (must precede bmesh when bpy runs as a module)
 import bmesh
-import bpy
 from mathutils import Vector
 
 from . import core, looks, motifs, shapes
@@ -18,70 +18,72 @@ from .nodes import Graph, S
 # ---------------------------------------------------------------------------
 
 RIM_Z = 1.15
-BOWL_OUTER = [(0.0, 0.925), (0.07, 0.925), (0.1, 0.935), (0.2, 0.952), (0.3, 0.99), (0.37, 1.035),
-              (0.412, 1.075), (0.422, 1.082), (0.432, 1.098), (0.44, 1.118), (0.456, 1.128), (0.458, 1.143),
-              (0.45, RIM_Z)]
-BOWL_INNER = [(0.424, RIM_Z), (0.418, 1.136), (0.405, 1.11), (0.37, 1.07), (0.3, 1.025), (0.2, 0.992),
-              (0.1, 0.978), (0.0, 0.975)]
+BOWL_OUTER = [(0.0, 0.9), (0.1, 0.9), (0.13, 0.905), (0.16, 0.925), (0.24, 0.945), (0.32, 0.975), (0.38, 1.01),
+              (0.42, 1.05), (0.44, 1.07), (0.437, 1.078), (0.44, 1.09), (0.446, 1.11), (0.456, 1.12),
+              (0.462, 1.132), (0.459, 1.145), (0.45, RIM_Z)]
+BOWL_INNER = [(0.426, RIM_Z), (0.42, 1.14), (0.41, 1.11), (0.38, 1.065), (0.31, 1.02), (0.2, 0.985),
+              (0.1, 0.97), (0.0, 0.967)]
 LEG_ANGLES = (90.0, 210.0, 330.0)
 BRACE_Z = 0.3
+LEG_PROFILE = [(0.2, 0.95), (0.24, 0.88), (0.285, 0.72), (0.33, 0.54), (0.37, 0.36), (0.4, 0.2), (0.415, 0.1),
+               (0.42, 0.06)]
 
 
 def _leg_path(a_deg: float) -> list[Vector]:
     a = math.radians(a_deg)
     d = Vector((math.cos(a), math.sin(a), 0))
-    prof = [(0.22, 0.965), (0.25, 0.9), (0.29, 0.74), (0.33, 0.55), (0.36, 0.36), (0.38, 0.2), (0.39, 0.075),
-            (0.39, 0.04)]
-    return [d * r + Vector((0, 0, z)) for r, z in prof]
+    return [d * r + Vector((0, 0, z)) for r, z in LEG_PROFILE]
 
 
 def _brace_radius() -> float:
-    # Leg radius at BRACE_Z by linear interpolation of the path.
-    prof = [(0.33, 0.55), (0.36, 0.36), (0.38, 0.2)]
-    for (r0, z0), (r1, z1) in zip(prof[:-1], prof[1:]):
+    for (r0, z0), (r1, z1) in zip(LEG_PROFILE[:-1], LEG_PROFILE[1:]):
         if z1 <= BRACE_Z <= z0:
             t = (z0 - BRACE_Z) / (z0 - z1)
             return r0 + (r1 - r0) * t
-    return 0.37
+    return 0.38
 
 
 def _brazier_body(detail: bool) -> bpy.types.Object:
-    segs = 40 if detail else 28
+    segs = 48 if detail else 24
+    sides = 12 if detail else 7
     bm = bmesh.new()
     shapes.lathe(bm, BOWL_OUTER + BOWL_INNER, segs)
+    # Heavy foot ring under the bowl where the legs are fixed.
+    ring = [(0.15, 0.93), (0.235, 0.935), (0.24, 0.905), (0.232, 0.885), (0.15, 0.885)]
+    shapes.lathe(bm, ring + [ring[0]], segs)
     for a in LEG_ANGLES:
         path = _leg_path(a)
-        rad = [0.03, 0.027, 0.025, 0.024, 0.023, 0.023, 0.024, 0.026]
-        shapes.tube(bm, path, rad, sides=10 if detail else 7)
-        # Collar (knuckle) at mid height.
-        mid = path[3]
-        t = (path[4] - path[2]).normalized()
-        shapes.tube(bm, [mid - t * 0.03, mid - t * 0.018, mid + t * 0.018, mid + t * 0.03],
-                    [0.026, 0.036, 0.036, 0.026], sides=10 if detail else 7)
-        # Foot: a flattened pad.
+        rad = [0.036, 0.034, 0.031, 0.029, 0.028, 0.029, 0.031, 0.034]
+        shapes.tube(bm, path, rad, sides=sides)
+        # Two collars (knuckles) along the leg.
+        for k in (3, 5):
+            mid = path[k]
+            t = (path[k + 1] - path[k - 1]).normalized()
+            shapes.tube(bm, [mid - t * 0.03, mid - t * 0.02, mid + t * 0.02, mid + t * 0.03],
+                        [0.03, 0.042, 0.042, 0.03], sides=sides)
+        # Paw-like foot.
         fz = Vector((path[-1].x, path[-1].y, 0.0))
-        foot = [(0.0, 0.0), (0.05, 0.0), (0.055, 0.012), (0.045, 0.03), (0.028, 0.05), (0.0, 0.05)]
-        verts_before = set(bm.verts)
-        shapes.lathe(bm, foot, 12 if detail else 8, phase=math.radians(a))
-        new = [v for v in bm.verts if v not in verts_before]
+        foot = [(0.0, 0.0), (0.058, 0.0), (0.066, 0.014), (0.06, 0.032), (0.046, 0.05), (0.036, 0.066),
+                (0.0, 0.07)]
+        before = set(bm.verts)
+        shapes.lathe(bm, foot, 14 if detail else 8, phase=math.radians(a))
+        new = [v for v in bm.verts if v not in before]
         bmesh.ops.translate(bm, verts=new, vec=fz)
-        # Mounting tab under the bowl.
+        # Tab bolting the leg to the foot ring.
         top = path[0]
-        shapes.tube(bm, [top + Vector((0, 0, -0.02)), top + Vector((0, 0, 0.03))], [0.034, 0.03],
-                    sides=10 if detail else 7)
-    # Ring brace tying the legs together.
+        shapes.tube(bm, [top + Vector((0, 0, -0.035)), top + Vector((0, 0, 0.0))], [0.04, 0.04], sides=sides)
     rb = _brace_radius()
-    ring = [Vector((rb * math.cos(2 * math.pi * i / 36), rb * math.sin(2 * math.pi * i / 36), BRACE_Z))
-            for i in range(37)]
-    shapes.tube(bm, ring, 0.013, sides=8 if detail else 6, caps=False)
+    loop = [Vector((rb * math.cos(2 * math.pi * i / 42), rb * math.sin(2 * math.pi * i / 42), BRACE_Z))
+            for i in range(43)]
+    shapes.tube(bm, loop, 0.016, sides=8 if detail else 6, caps=False)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return core.obj_from_bmesh("brazier", bm)
 
 
 def _coals_mesh(detail: bool) -> bpy.types.Object:
-    rings = 14 if detail else 5
-    segs = 64 if detail else 22
+    rings = 14 if detail else 4
+    segs = 64 if detail else 20
     prof = []
     for i in range(rings + 1):
         r = 0.408 * i / rings
@@ -104,7 +106,7 @@ def _brazier_soot(g: Graph, p: S) -> S:
     radial = (nx * x + ny * y) / (r + 1e-4)
     inner = radial.smooth(0.05, -0.2) * z.smooth(0.97, 1.0) * r.smooth(0.1, 0.2)
     streak = g.noise(g.scale_vec(p, 12.0, 12.0, 1.5), scale=1.0, detail=4.0, w=51.0)
-    outer = z.smooth(1.0, 1.14) * (streak.smooth(0.35, 0.65) * 0.6 + 0.25) * radial.smooth(-0.1, 0.2)
+    outer = z.smooth(0.98, 1.13) * (streak.smooth(0.3, 0.65) * 0.7 + 0.35) * radial.smooth(-0.1, 0.2)
     under = z.smooth(0.9, 0.97) * z.smooth(1.02, 0.98) * 0.4
     return (inner * 0.95 + outer * 0.7 + under).clamp()
 
@@ -112,9 +114,9 @@ def _brazier_soot(g: Graph, p: S) -> S:
 def _brazier_touch(g: Graph, p: S) -> S:
     x, y, z = g.separate(p)
     rim = z.smooth(1.125, 1.145)
-    nz_foot = z.smooth(0.03, 0.0)
-    coll = (z - 0.55).abs().smooth(0.04, 0.015)
-    return (rim * 0.9 + nz_foot * 0.8 + coll * 0.6).clamp()
+    feet = z.smooth(0.03, 0.005)
+    coll = (z - 0.54).abs().smooth(0.03, 0.012) + (z - 0.2).abs().smooth(0.03, 0.012)
+    return (rim * 0.9 + feet * 0.8 + coll * 0.7).clamp()
 
 
 def _brazier_carve(g: Graph, p: S) -> S:
@@ -125,9 +127,9 @@ def _brazier_carve(g: Graph, p: S) -> S:
     f = g.math("FRACT", t) - 0.5
     r = g.vmath("LENGTH", g.combine(x, y, 0.0))
     d = g.vmath("LENGTH", g.combine(f * (2 * math.pi / 9) * r, (z - 1.1), 0.0))
-    boss = d.smooth(0.022, 0.012)
-    ring = motifs.band(g, d - 0.03, 0.003, 0.002)
-    band = motifs.band(g, z - 1.1, 0.036, 0.004) * r.smooth(0.4, 0.43)
+    boss = d.smooth(0.016, 0.009)
+    ring = motifs.band(g, d - 0.021, 0.0025, 0.0015)
+    band = motifs.band(g, z - 1.1, 0.012, 0.004) * r.smooth(0.43, 0.445)
     return ring * band * 0.8 - boss * band  # negative = raised bosses
 
 
@@ -141,14 +143,17 @@ def brazier(ctx: Ctx) -> list:
         return (g.noise(p, scale=20.0, detail=4.0, w=5.0) - 0.5) * 0.0015
 
     hi = high(src, "brazier_high", looks.bronze(touch=_brazier_touch, soot=_brazier_soot, carve=_brazier_carve,
-                                                  seed=1.0), subdiv=2, disp=disp, curv_blur=3, keep_base=False)
+                                                  seed=1.0, edge_lo=70.0, edge_hi=220.0),
+              subdiv=2, disp=disp, curv_blur=2, keep_base=False)
     csrc = _coals_mesh(True)
 
     def cdisp(g):
         p = g.pos()
-        f1 = g.voronoi(p, scale=16.0, feature="F1", w=0.0)
-        f2 = g.voronoi(p, scale=16.0, feature="F2", w=0.0)
-        lump = (f2 - f1).smooth(0.0, 0.35) * 0.028
+        pw = g.warp(p, 0.025, 7.0, seed=5.0)
+        f1 = g.voronoi(pw, scale=12.0, feature="F1", w=0.0)
+        f2 = g.voronoi(pw, scale=12.0, feature="F2", w=0.0)
+        size = g.noise(p, scale=6.0, w=4.0) * 0.024 + 0.012
+        lump = (f2 - f1).smooth(0.0, 0.3) * size
         return lump + (g.noise(p, scale=30.0, detail=4.0, w=2.0) - 0.5) * 0.006
 
     core.subsurf(csrc, 2, simple=True)
@@ -171,6 +176,7 @@ HANDLE_LEN = 0.55
 
 
 def _lever_plate(detail: bool) -> bpy.types.Object:
+    """Wall plate. The game mesh (detail=False) drops the back face; the bake source stays closed."""
     bm = bmesh.new()
     shapes.box(bm, (-0.2, -0.03, 0.0), (0.2, 0.0, 0.5))
     shapes.box(bm, (-0.1, -0.08, 0.08), (0.1, -0.03, 0.42))
@@ -195,6 +201,8 @@ def _lever_plate(detail: bool) -> bpy.types.Object:
         return f.normal.y < -0.9 and abs(c.y + 0.08) < 1e-4 and abs(c.x) < 0.018 and 0.12 < c.z < 0.38
 
     _recess(obj, planes, pick, 0.045)
+    if detail:
+        return obj
     # The back face sits against the wall and is never seen.
     bm = shapes.to_bm(obj)
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.normal.y > 0.9 and abs(f.calc_center_median().y) < 1e-4],
@@ -262,7 +270,7 @@ def lever(ctx: Ctx) -> list:
     def disp(g):
         return (g.noise(g.pos(), scale=40.0, detail=4.0, w=7.0) - 0.5) * 0.0006
 
-    look = looks.bronze(touch=_lever_touch, carve=_lever_carve, seed=3.0, edge_lo=12.0, edge_hi=70.0, ao_dist=0.04)
+    look = looks.bronze(touch=_lever_touch, carve=_lever_carve, seed=3.0, edge_lo=90.0, edge_hi=300.0, ao_dist=0.04)
     core.bevel(hp, 0.004, 3, 30)
     hi_p = high(hp, "lever_plate_high", look, voxel=0.0015, disp=disp, curv_blur=3, keep_base=False)
     hi_h = high(hh, "handle_high", look, subdiv=2, disp=disp, curv_blur=2, keep_base=False)
@@ -270,10 +278,10 @@ def lever(ctx: Ctx) -> list:
     core.smooth_by_angle(low, 45)
     core.uv_smart(low, 55, 0.006, shape="CONCAVE")
     finish(ctx, [BakeSpec("lever", low, [hi_p, hi_h], size=1024, cage=0.006, ray=0.015)])
-    parts = core.split_parts(low, {0: "lever_plate", 1: "handle"})
+    parts = core.split_parts(low, {0: "lever", 1: "handle"})
     h = parts["handle"]
     core.set_origin(h, PIVOT)
-    return [parts["lever_plate"], h]
+    return [parts["lever"], h]
 
 
 # ---------------------------------------------------------------------------
@@ -342,9 +350,9 @@ def _cage(detail: bool) -> bpy.types.Object:
         for z in (0.05, 0.062, 0.078, 0.094, 0.108, 0.12, 0.14, 0.158, 0.172, 0.184):
             pts.append(_gem_point(_gem_radius(z) + wire + 0.0006, z, k, 0.0))
         shapes.tube(bm, pts, wire, sides=sides)
-    girdle = [_gem_point(0.058 * off + wire * 1.2, 0.114, i / 5, 0.0) for i in range(46)]
+    girdle = [_gem_point(0.058 + wire * 1.3 + 0.0006, 0.114, i / 5, 0.0) for i in range(46)]
     shapes.tube(bm, girdle, wire * 1.3, sides=sides, caps=False)
-    top = [_gem_point(0.03 * off + wire, 0.186, i / 3, 0.0) for i in range(28)]
+    top = [_gem_point(0.028 + wire + 0.0006, 0.186, i / 3, 0.0) for i in range(28)]
     shapes.tube(bm, top, wire * 1.1, sides=sides, caps=False)
     # Finial loop on top (reaches 0.22 m).
     loop = [Vector((0.0, 0.011 * math.sin(2 * math.pi * i / 16), 0.2045 + 0.0125 * math.cos(2 * math.pi * i / 16)))
@@ -363,7 +371,7 @@ def relic(ctx: Ctx) -> list:
     hi = high(csrc, "relic_high", looks.gold(seed=2.0, ao_dist=0.02, bump_dist=0.00015), subdiv=1, curv_blur=2,
               keep_base=False)
     gsrc = core.copy_obj(gem, "gem_src")
-    ghi = high(gsrc, "gem_high", looks.amber_gem(seed=4.0), curv_blur=0, keep_base=False)
+    ghi = high(gsrc, "gem_high", looks.amber_gem(seed=4.0), curv_blur=0, keep_base=False, smooth=False)
     core.smooth_by_angle(cage, 60)
     core.uv_smart(cage, 60, 0.006, shape="CONCAVE")
     core.uv_smart(gem, 30, 0.01)
