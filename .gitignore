@@ -5,3 +5,6 @@ coverage
 .DS_Store
 test-results
 playwright-report
+__pycache__
+*.pyc
+*.blend1
