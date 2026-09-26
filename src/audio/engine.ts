@@ -63,14 +63,20 @@ export class AudioEngine {
     this.ctx = ctx;
     // resume() must be requested synchronously inside the gesture.
     const resumed = ctx.resume().catch(() => undefined);
-    const graph = new AudioGraph(ctx);
-    this.graph = graph;
-    for (const [bus, v] of this.volumes) graph.mixer.setBusVolume(bus, v);
-    graph.mixer.setMuted(this.muted);
-    graph.setRoom(this.room);
-    graph.setEmitters(this.emitters);
-    graph.start();
-    this.unlocking = resumed.then(() => {
+    // Building the graph synthesises buffers and impulse responses: seconds on
+    // a slow phone. It waits a moment so whatever the gesture changed on
+    // screen (the start button's press) paints first; events meanwhile are dropped.
+    const built = new Promise<void>((done) => setTimeout(done, 60)).then(() => {
+      const graph = new AudioGraph(ctx);
+      this.graph = graph;
+      for (const [bus, v] of this.volumes) graph.mixer.setBusVolume(bus, v);
+      graph.mixer.setMuted(this.muted);
+      graph.setRoom(this.room);
+      graph.setEmitters(this.emitters);
+      graph.start();
+      return graph;
+    });
+    this.unlocking = Promise.all([resumed, built]).then(([, graph]) => {
       this.unlocking = null;
       // Generate the remaining impulse responses off the critical path.
       const warm = (): void =>
@@ -115,5 +121,16 @@ export class AudioEngine {
   setMuted(muted: boolean): void {
     this.muted = muted;
     this.graph?.mixer.setMuted(muted);
+  }
+
+  /**
+   * Pause menu: suspends the whole audio context, so loops, reverb tails and
+   * scheduled music stop in place and continue where they were on resume.
+   */
+  setPaused(paused: boolean): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (paused) void ctx.suspend().catch(() => undefined);
+    else void ctx.resume().catch(() => undefined);
   }
 }

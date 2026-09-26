@@ -9,7 +9,16 @@
 - New hints (`i18n/en.json`, `i18n/es.json`) for plates, holding weight, the ticking gate, the standing jump, filling a gap with a block, the two plates, the reset lever and lowering into a hang. New looks in `art/looks/`: `plate_hall`, `hourglass`, `well` (with a skylight), `causeway`, `scales`, `descent` (with a skylight).
 - Sim: timed doors emit `door.tick` every second (a stone click in audio, doubled in the last three seconds); door actions only announce a move when the target changes; `"spring": true` levers can be pulled again; `<block>.reset` returns a block to its start; blocks fall when their support goes away; walking never drops off an edge the body already overhangs.
 - Tests: the walkthrough bot (`tests/bot.ts`) plays the whole route through all ten rooms with the three secrets and no deaths (about 13 400 ticks); `tests/antechamber.test.ts` proves that each puzzle is needed, cannot be cheesed and never dead-ends.
-- The baked lightmap (`public/levels/antechamber.lightmap.png`) predates the new geometry and must be re-baked.
+- The lightmap (`public/levels/antechamber.lightmap.png`) was re-baked for the ten rooms (1024×2048, 96 spp).
+
+## Visual quality · tiers, post-processing and menus (in progress)
+
+- Quality tiers (`src/render/quality.ts`, spec §11): **high** has volumetric sun shafts ray-marched through the sun's shadow map, full-resolution GTAO, shadows from the two nearest fires, depth of field in focus shots, SMAA, 16× anisotropy and a pixel ratio up to 2; **medium** has one live shadow at a time (the sun where it shines, otherwise the nearest fire), the modelled light cones, SMAA, 8× anisotropy, 60 % particles and a pixel ratio up to 1.5; **mobile** has a sun shadow refreshed once a second without Nora plus a contact blob under her, FXAA, 4× anisotropy, 35 % particles and a pixel ratio up to 1.25.
+- The first run picks the tier with a ~3 s benchmark of the title scene (phones go straight to mobile; a hidden tab falls back to a device heuristic). The choice is stored in `localStorage` and can be changed in Options. Dynamic resolution drops the scene render scale a step after 1 s over 18 ms and recovers slowly; at its floor an automatically chosen tier steps down.
+- Post-processing is one TSL `RenderPipeline` (`src/render/post.ts`): AO, depth of field, god rays, bloom, the room grade (saturation, tint and now `grade.contrast`, in log space around mid-grey), AgX, SMAA/FXAA on the display image, then vignette and 24 fps film grain. The CSS grain and vignette overlays are gone. Development views: `?view=ao`, `?view=rays`, `?view=raw`.
+- Pause menu (Esc, gamepad Start, a touch button, or leaving the tab): Resume, Restart from checkpoint, Options, Quit to title, with confirmation. Pausing stops the fixed-step simulation, freezes the frame and suspends audio.
+- Options (also from the title): quality, master / music / effects volume, camera sensitivity, invert vertical look, reduced motion (no grain, no title sway), subtitles (placeholder), language. Keyboard, gamepad, mouse and touch share one amber focus.
+- The start screen shows loading progress (files, shader warm-up, first-run calibration) and keeps the start button disabled until the tomb is ready.
 
 ## Milestones 2–4 · The Antechamber (in progress)
 

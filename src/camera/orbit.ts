@@ -23,6 +23,8 @@ export const cameraTuning = {
   follow: 10,
   /** Radians per mouse pixel. */
   sensitivity: 0.005,
+  /** Options menu: pushing up looks down (flight-stick style). */
+  invertY: false,
   /** Clearance kept between the camera and walls (m). */
   radius: 0.25,
   /** Time to recover the full distance after a collision (s). */
@@ -75,7 +77,10 @@ export class OrbitCamera {
   readonly lookAt = { x: 0, y: 0, z: 0 };
   /** Vertical field of view in degrees, eased with speed. */
   fov = cameraTuning.fov;
+  /** Reduced motion: no shake and no speed-driven field of view. */
+  calm = false;
   private focus: { at: Vec3; left: number; blend: number } | null = null;
+  private focusEase = 0;
   private autoYaw: number | null = null;
   private sinceLook = 0;
   private trauma = 0;
@@ -89,10 +94,8 @@ export class OrbitCamera {
       this.sinceLook = 0;
     }
     this.yaw -= dx * cameraTuning.sensitivity;
-    this.pitch = Math.max(
-      cameraTuning.minPitch,
-      Math.min(cameraTuning.maxPitch, this.pitch + dy * cameraTuning.sensitivity),
-    );
+    const pitchDelta = (cameraTuning.invertY ? -dy : dy) * cameraTuning.sensitivity;
+    this.pitch = Math.max(cameraTuning.minPitch, Math.min(cameraTuning.maxPitch, this.pitch + pitchDelta));
     this.distance = Math.max(
       cameraTuning.minDistance,
       Math.min(cameraTuning.maxDistance, this.distance + zoom * 0.5),
@@ -122,8 +125,19 @@ export class OrbitCamera {
     return this.focus !== null;
   }
 
+  /** The point a focus shot looks at, for depth of field (null outside focus shots). */
+  get focusPoint(): Vec3 | null {
+    return this.focus?.at ?? null;
+  }
+
+  /** How far the current focus shot has blended in (0..1, eased). */
+  get focusWeight(): number {
+    return this.focusEase;
+  }
+
   /** Adds screen shake (0..1); amplitude grows with the square of the accumulated trauma. */
   shake(amount: number): void {
+    if (this.calm) return;
     this.trauma = Math.min(1, this.trauma + amount);
   }
 
@@ -258,7 +272,9 @@ export class OrbitCamera {
     // Speed widens the lens a touch; a long fall widens it further.
     const run = Math.min(1, speed / cameraTuning.runSpeed);
     const fall = Math.min(1, Math.max(0, -motion.vy - 6) / 10);
-    const fovWant = cameraTuning.fov + (cameraTuning.runFov - cameraTuning.fov) * run * run + 6 * fall;
+    const fovWant = this.calm
+      ? cameraTuning.fov
+      : cameraTuning.fov + (cameraTuning.runFov - cameraTuning.fov) * run * run + 6 * fall;
     this.fov += (fovWant - this.fov) * Math.min(1, dt * 2.5);
 
     // Trauma shake: layered incommensurate sines read as noise without a noise table.
@@ -285,10 +301,13 @@ export class OrbitCamera {
       f.blend = Math.min(1, f.blend + dt * 1.5);
       const b = f.left > 0 ? f.blend : Math.max(0, f.blend - (0 - f.left) * 2);
       const e = b * b * (3 - 2 * b);
+      this.focusEase = e;
       this.lookAt.x += (f.at.x - this.lookAt.x) * e;
       this.lookAt.y += (f.at.y - this.lookAt.y) * e;
       this.lookAt.z += (f.at.z - this.lookAt.z) * e;
       if (f.left < -0.5) this.focus = null;
+    } else {
+      this.focusEase = 0;
     }
   }
 
