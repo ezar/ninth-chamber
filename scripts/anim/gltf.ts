@@ -79,6 +79,10 @@ export class Gltf {
     this.json.nodes.forEach((n, i) => n.children?.forEach((c) => (this.parent[c] = i)));
   }
 
+  get names(): string[] {
+    return this.json.nodes.map((n) => n.name ?? '');
+  }
+
   nodeIndex(name: string): number {
     const i = this.json.nodes.findIndex((n) => n.name === name);
     if (i < 0) throw new Error(`no node '${name}'`);
@@ -196,7 +200,7 @@ function sampleQuat(tr: Track, t: number, out: Quaternion): void {
 }
 
 /** Model-space (scene root) matrices of every node for a set of local transforms. */
-export function worldMatrices(gltf: Gltf, pose: Trs[]): Matrix4[] {
+export function worldMatrices(gltf: { readonly parent: readonly number[] }, pose: Trs[]): Matrix4[] {
   const out: Matrix4[] = new Array<Matrix4>(pose.length);
   const visit = (i: number): Matrix4 => {
     const done = out[i];

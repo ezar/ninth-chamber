@@ -36,7 +36,8 @@ Recorded sound under open licences. The full list, file by file with source link
 
 ## Animation
 
-- Nora's motion clips (`public/anim/*.json`) are retargeted from the **Universal Animation Library** (Standard) by [Quaternius](https://quaternius.com) — CC0 1.0: `Idle_Loop`, `Walk_Loop`, `Jog_Fwd_Loop`, `Jump_Start`, `Jump_Loop` and `Jump_Land`. The library itself is not in the repo; `pnpm anim:build scripts/anim/sources/ual.json <library folder>` rebuilds the clips (see `docs/animation.md`).
+- Nora's motion clips (`public/anim/*.json`) are **Mixamo** animations (Adobe, https://www.mixamo.com), made on Nora's own mesh and retargeted onto her game skeleton: Breathing Idle, Walking, Walking Backwards, Running, Run To Stop, Left/Right Turn 90, Jump, Running Jump, Falling Idle, Falling To Landing, Hanging Idle, Braced Hang Shimmy (and mirror), Braced Hang To Crouch, Pushing, Picking Up, Hit Reaction, Dying, Pistol Idle, Pistol Run, Shooting, Treading Water, Swimming and Swimming To Edge. Mixamo animations are free to use in games (royalty-free, per Adobe's Mixamo terms). The FBX downloads are not in the repo; `pnpm anim:build scripts/anim/sources/mixamo.json <folder>` rebuilds the clips (see `docs/animation.md`).
+- Earlier clips came from the **Universal Animation Library** (Standard) by [Quaternius](https://quaternius.com), CC0 1.0; the pipeline still supports it (`scripts/anim/sources/ual.json`).
 - Procedural animation layer (climbing, mechanisms, aiming) in `src/render/nora.ts`.
 
 ## Fonts

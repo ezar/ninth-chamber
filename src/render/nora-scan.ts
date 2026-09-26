@@ -15,7 +15,7 @@ import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { NoraModel, type NoraPose, type RetargetJoint } from './nora';
-import { NoraAnimator, type AirClips, type LocomotionClips, type PoseLayer } from './anim/animator';
+import { CLIP_NAMES, NoraAnimator, type ClipLibrary, type ClipName, type PoseLayer } from './anim/animator';
 import { Clip, type ClipFile } from './anim/clip';
 import { AnimPose } from './anim/pose';
 import {
@@ -198,34 +198,27 @@ export class NoraRig {
     try {
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(MeshoptDecoder);
-      const [gltf, clips, air] = await Promise.all([
+      const [gltf, loaded] = await Promise.all([
         loader.loadAsync(url),
-        Promise.all([
-          loadClip(`${clipDir}idle.json`),
-          loadClip(`${clipDir}walk.json`),
-          loadClip(`${clipDir}run.json`),
-        ]).then(
-          ([idle, walk, run]): LocomotionClips => ({ idle, walk, run }),
-          (err: unknown) => {
-            console.warn('Nora clips not loaded, using the procedural animation.', err);
-            return null;
-          },
-        ),
-        Promise.all([
-          loadClip(`${clipDir}jump_start.json`),
-          loadClip(`${clipDir}jump_loop.json`),
-          loadClip(`${clipDir}jump_land.json`),
-        ]).then(
-          ([start, loop, land]): AirClips => ({ start, loop, land }),
-          (err: unknown) => {
-            console.warn('Nora jump clips not loaded, using the procedural jump.', err);
-            return null;
-          },
+        // Each clip is optional: a mode whose clip is missing stays procedural.
+        Promise.all(
+          CLIP_NAMES.map((name) =>
+            loadClip(`${clipDir}${name}.json`).then(
+              (clip): [ClipName, Clip] => [name, clip],
+              (err: unknown): null => {
+                console.warn(`Nora clip '${name}' not loaded.`, err);
+                return null;
+              },
+            ),
+          ),
         ),
       ]);
+      const clips: ClipLibrary = {};
+      for (const entry of loaded) if (entry) clips[entry[0]] = entry[1];
       this.skin = new ScannedSkin(gltf.scene);
-      if (clips) {
-        const animator = new NoraAnimator(this.skin.skeleton, clips, air);
+      const { idle, walk, run } = clips;
+      if (idle && walk && run) {
+        const animator = new NoraAnimator(this.skin.skeleton, { ...clips, idle, walk, run });
         animator.setProceduralOverride(this.override.weight, this.override.joints);
         animator.layers.push(...this.layers);
         this.animator = animator;

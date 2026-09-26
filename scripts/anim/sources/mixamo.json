@@ -1,14 +1,40 @@
 {
-  "//": "Mixamo clips made on Nora's mesh: download FBX, 30 fps, 'In Place' for locomotion, convert each with scripts/anim/fbx_to_glb.py. In-place clips have no root motion, so give each gait clip its ground speed in m/s (or add a non-in-place copy as speedFrom). Rename the files here to match the downloads.",
+  "//": "Mixamo clips made on Nora's own mesh (auto-rigged from the Meshy scan): FBX, 30 fps, mixamorig bones. The FBX files stay outside the repo; file names are the Mixamo download names.",
   "rig": "mixamo",
   "source": "Mixamo",
-  "rest": { "file": "idle.glb" },
+  "rest": { "file": "Breathing Idle.fbx" },
   "clips": [
-    { "name": "idle", "file": "idle.glb", "loop": true },
-    { "name": "walk", "file": "walk.glb", "loop": true, "gait": true, "speed": 1.4 },
-    { "name": "run", "file": "run.glb", "loop": true, "gait": true, "speed": 5.0 },
-    { "name": "jump_start", "file": "jump_start.glb", "loop": false },
-    { "name": "jump_loop", "file": "jump_loop.glb", "loop": true },
-    { "name": "jump_land", "file": "jump_land.glb", "loop": false }
+    { "name": "idle", "file": "Breathing Idle.fbx", "loop": true },
+    { "name": "walk", "file": "Walking.fbx", "loop": true, "gait": true },
+    { "name": "run", "file": "Running.fbx", "loop": true, "gait": true },
+    { "name": "walk_back", "file": "Walking Backwards.fbx", "loop": true, "gait": true },
+    { "name": "run_stop", "file": "Run To Stop.fbx", "loop": false },
+    { "name": "turn_left", "file": "Left Turn 90.fbx", "loop": false },
+    { "name": "turn_right", "file": "Right Turn 90.fbx", "loop": false },
+    { "name": "jump", "file": "Jump.fbx", "loop": false },
+    { "name": "jump_run", "file": "Running Jump.fbx", "loop": false },
+    { "name": "fall", "file": "Falling Idle.fbx", "loop": true },
+    { "name": "land", "file": "Falling To Landing.fbx", "loop": false },
+    { "name": "hang", "file": "Hanging Idle.fbx", "loop": true, "anchor": "hands" },
+    { "name": "shimmy_left", "file": "Braced Hang Shimmy.fbx", "loop": true, "anchor": "hands" },
+    { "name": "shimmy_right", "file": "Braced Hang Shimmy - Mirror.fbx", "loop": true, "anchor": "hands" },
+    {
+      "name": "climb",
+      "file": "Braced Hang To Crouch.fbx",
+      "loop": false,
+      "anchor": "hands",
+      "rootMotion": "keep"
+    },
+    { "name": "push", "file": "Pushing.fbx", "loop": true, "gait": true },
+    { "name": "pull", "file": "Pull Heavy Object.fbx", "loop": true },
+    { "name": "pickup", "file": "Picking Up.fbx", "loop": false, "from": 0.7, "to": 4.6 },
+    { "name": "hit", "file": "Hit Reaction.fbx", "loop": false, "from": 0.3, "to": 2.0 },
+    { "name": "die", "file": "Dying.fbx", "loop": false, "from": 1.8, "to": 4.6 },
+    { "name": "pistol_idle", "file": "Pistol Idle.fbx", "loop": true },
+    { "name": "pistol_run", "file": "Pistol Run.fbx", "loop": true, "gait": true },
+    { "name": "shoot", "file": "Shooting.fbx", "loop": false },
+    { "name": "tread", "file": "Treading Water.fbx", "loop": true },
+    { "name": "swim", "file": "Swimming.fbx", "loop": true },
+    { "name": "swim_to_edge", "file": "Swimming To Edge.fbx", "loop": false, "rootMotion": "keep" }
   ]
 }

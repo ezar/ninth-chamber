@@ -63,6 +63,8 @@
 
 ## Unreleased
 
+- Nora is animated with the owner's Mixamo set, made on her own mesh: ground (idle, walk, run, walking backwards, with foot planting and a landing clip), jumps (standing and running take-offs, falling loop), hanging and shimmying, climbing up (timed to the simulation's climb), block, push and pull, pickup, a hit reaction and death. The pipeline reads the FBX downloads directly (`pnpm anim:build scripts/anim/sources/mixamo.json <folder>`); water clips are baked for level 2. The lever keeps its procedural animation. Details in `docs/animation.md`.
+
 - Nora walks, runs and stands with motion clips instead of the procedural gait: `Idle_Loop`, `Walk_Loop` and `Jog_Fwd_Loop` from the Quaternius Universal Animation Library (CC0, see `CREDITS.md`), retargeted by direction onto her skeleton by `scripts/anim/build-clips.ts` (`pnpm anim:build`) into compact clips in `public/anim/` (6–16 kB each). At run time (`src/render/anim/`) idle, walk and run blend by speed with a shared gait phase, speed is matched with cadence and stride length, a leg pass pins planted feet (no sliding, no spinning on turns, steps followed smoothly), rolls the feet and lowers the hips when a leg can't reach, jumps play the library's take-off, airborne and landing clips, the arms are relaxed (straighter elbows, straight wrists, arms by the sides), and the procedural rig still drives hang, climb, block, push, pull, lever, pickup and dead with 0.2 s cross-fades. Details in `docs/animation.md`; `tests/anim.test.ts` checks the clips and that planted feet don't slide.
 
 - The repo is now in English: code comments, error messages, test names, CLAUDE.md, README and this changelog. docs/spec.md stays in Spanish as the source document.
