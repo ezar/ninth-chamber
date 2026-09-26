@@ -10,6 +10,8 @@ import { ashlar, flagstones, rock, sand, type PbrSet } from './textures';
 export interface SurfaceSet extends PbrSet {
   /** Ambient occlusion (R), roughness (G) and metalness (B) in one map, when scanned. */
   armMap: THREE.Texture | null;
+  /** Normal map strength (1 = as scanned). */
+  normalStrength: number;
 }
 
 export type SurfaceName = 'wall' | 'floor' | 'block' | 'sand' | 'ceiling';
@@ -22,6 +24,73 @@ const SCANNED_SIZE: Record<SurfaceName, number> = {
   sand: 3,
   ceiling: 3,
 };
+
+/**
+ * Softening of the scans, which read harsh and grainy on phone screens: the
+ * albedo moves part of the way towards the texture's mean colour (lower
+ * contrast and saturation in the blotches, joints and cracks still readable
+ * up close) and the normal maps' relief is toned down. The busiest surfaces,
+ * floor and sand, get the most.
+ */
+const SOFTEN: Record<SurfaceName, { albedo: number; normal: number }> = {
+  wall: { albedo: 0.18, normal: 0.8 },
+  floor: { albedo: 0.24, normal: 0.7 },
+  block: { albedo: 0.12, normal: 0.85 },
+  sand: { albedo: 0.28, normal: 0.65 },
+  ceiling: { albedo: 0.15, normal: 0.85 },
+};
+
+/**
+ * The albedo lerped by `k` towards its own mean colour, drawn on a canvas (a
+ * translucent fill over the image, so no per-pixel work on the CPU). Returns
+ * the texture unchanged where there is no canvas or the image is not drawable.
+ */
+export function softenAlbedo(tex: THREE.Texture, k: number): THREE.Texture {
+  const img = tex.image as (CanvasImageSource & { width?: number; height?: number }) | null;
+  const width = img?.width ?? 0;
+  const height = img?.height ?? 0;
+  if (!img || !width || !height || k <= 0 || typeof document === 'undefined') return tex;
+  try {
+    const probe = document.createElement('canvas');
+    probe.width = probe.height = 16;
+    const pg = probe.getContext('2d', { willReadFrequently: true });
+    if (!pg) return tex;
+    pg.drawImage(img, 0, 0, 16, 16);
+    const px = pg.getImageData(0, 0, 16, 16).data;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      r += px[i] ?? 0;
+      g += px[i + 1] ?? 0;
+      b += px[i + 2] ?? 0;
+    }
+    const n = px.length / 4;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const cg = canvas.getContext('2d');
+    if (!cg) return tex;
+    cg.drawImage(img, 0, 0);
+    cg.globalAlpha = k;
+    cg.fillStyle = `rgb(${Math.round(r / n)}, ${Math.round(g / n)}, ${Math.round(b / n)})`;
+    cg.fillRect(0, 0, width, height);
+    const out = new THREE.CanvasTexture(canvas);
+    out.colorSpace = tex.colorSpace;
+    out.wrapS = tex.wrapS;
+    out.wrapT = tex.wrapT;
+    out.repeat.copy(tex.repeat);
+    out.anisotropy = tex.anisotropy;
+    out.minFilter = THREE.LinearMipmapLinearFilter;
+    out.generateMipmaps = true;
+    out.name = tex.name;
+    tex.dispose();
+    return out;
+  } catch {
+    // A tainted or undecodable image: keep the scan as it is.
+    return tex;
+  }
+}
 
 function procedural(name: SurfaceName): PbrSet {
   switch (name) {
@@ -53,7 +122,14 @@ async function loadScanned(name: SurfaceName, loader: THREE.TextureLoader): Prom
     t.anisotropy = 8;
   }
   map.colorSpace = THREE.SRGBColorSpace;
-  return { map, normalMap, roughnessMap: armMap, armMap };
+  const soft = SOFTEN[name];
+  return {
+    map: softenAlbedo(map, soft.albedo),
+    normalMap,
+    roughnessMap: armMap,
+    armMap,
+    normalStrength: soft.normal,
+  };
 }
 
 export async function loadSurfaces(): Promise<Record<SurfaceName, SurfaceSet>> {
@@ -64,7 +140,7 @@ export async function loadSurfaces(): Promise<Record<SurfaceName, SurfaceSet>> {
       try {
         return await loadScanned(n, loader);
       } catch {
-        return { ...procedural(n), armMap: null };
+        return { ...procedural(n), armMap: null, normalStrength: SOFTEN[n].normal };
       }
     }),
   );
@@ -73,14 +149,16 @@ export async function loadSurfaces(): Promise<Record<SurfaceName, SurfaceSet>> {
 
 /** Standard material parameters for a surface set. */
 export function surfaceParams(s: SurfaceSet): THREE.MeshStandardMaterialParameters {
+  const normalScale = new THREE.Vector2(s.normalStrength, s.normalStrength);
   return s.armMap
     ? {
         map: s.map,
         normalMap: s.normalMap,
+        normalScale,
         roughnessMap: s.armMap,
         metalnessMap: s.armMap,
         aoMap: s.armMap,
         metalness: 1,
       }
-    : { map: s.map, normalMap: s.normalMap, roughnessMap: s.roughnessMap };
+    : { map: s.map, normalMap: s.normalMap, normalScale, roughnessMap: s.roughnessMap };
 }

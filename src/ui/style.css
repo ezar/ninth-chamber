@@ -855,6 +855,11 @@ body.touch #hud-stats {
   background: rgba(12, 10, 8, 0.9);
 }
 
+/* From the title (e.g. confirming a renderer switch) the game is not paused. */
+.menu[data-context='title'] [data-panel='confirm'] .menu-kicker {
+  visibility: hidden;
+}
+
 .menu-body {
   position: relative;
   display: flex;

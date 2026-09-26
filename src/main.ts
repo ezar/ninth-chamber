@@ -13,8 +13,10 @@ import { FixedStepLoop } from './core/loop';
 import { GroundFx } from './render/fx';
 import {
   DynamicResolution,
+  MOBILE_DEFAULT_PIXEL_RATIO,
   QUALITY,
   TierBenchmark,
+  dynamicResolutionFor,
   heuristicTier,
   lowerTier,
   type DeviceHints,
@@ -112,7 +114,9 @@ async function main(): Promise<void> {
   // Quality: the stored tier, or on first run the device heuristic until the benchmark decides.
   const hints = deviceHints();
   let tier: QualityTier = settings.quality ?? heuristicTier(hints);
-  const renderer = new GameRenderer(canvas, QUALITY[tier]);
+  // Options → Renderer: WebGL 2 on request; otherwise WebGPU where the browser has it (three.js
+  // falls back to WebGL 2 by itself when WebGPU is missing or fails to start).
+  const renderer = new GameRenderer(canvas, QUALITY[tier], settings.renderer === 'webgl2');
   renderer.setReducedMotion(settings.reducedMotion);
   try {
     await renderer.init();
@@ -187,11 +191,37 @@ async function main(): Promise<void> {
 
   // ───────────────────────────── Settings ─────────────────────────────
 
+  /**
+   * The automatic resolution's pixel-ratio cap: the tier's, except on the
+   * mobile tier, where the first-run benchmark measured what the phone holds
+   * (while it measures, the tier's highest ratio).
+   */
+  const autoPixelRatio = (): number | null => {
+    if (tier !== 'mobile') return null;
+    if (benchmark) return QUALITY.mobile.pixelRatioCap;
+    return settings.mobilePixelRatio ?? MOBILE_DEFAULT_PIXEL_RATIO;
+  };
+  const applyResolution = (): void => {
+    renderer.setResolution(settings.resolution, autoPixelRatio());
+    drs.reset(QUALITY[tier].minRenderScale);
+    renderer.setRenderScale(1);
+  };
+  const applyImage = (): void => {
+    renderer.setImageOptions({
+      filmGrain: settings.filmGrain,
+      sharpen: settings.sharpen,
+      textureFiltering: settings.textureFiltering,
+    });
+  };
+  /** The corner readout (backend, tier, frame rate, resolution) only when asked for in options. */
+  const applyStats = (): void => {
+    stats.hidden = !settings.showStats;
+    if (!settings.showStats) stats.textContent = '';
+  };
   const applyTier = (t: QualityTier): void => {
     tier = t;
     renderer.setQuality(QUALITY[t]);
-    drs.reset(QUALITY[t].minRenderScale);
-    renderer.setRenderScale(1);
+    applyResolution();
   };
   const applyVolumes = (): void => {
     const m = settings.masterVolume;
@@ -226,6 +256,23 @@ async function main(): Promise<void> {
         document.body.classList.toggle('reduce-motion', settings.reducedMotion);
         document.documentElement.classList.toggle('reduce-motion', settings.reducedMotion);
         break;
+      case 'renderer':
+        // The backend is chosen when the renderer is created: save and start again.
+        saveSettings(storage, settings);
+        location.reload();
+        return;
+      case 'resolution':
+        applyResolution();
+        menu.refresh();
+        break;
+      case 'filmGrain':
+      case 'sharpen':
+      case 'textureFiltering':
+        applyImage();
+        break;
+      case 'showStats':
+        applyStats();
+        break;
       case 'language':
         setLocale(settings.language ?? pickLocale(navigator.languages));
         applyStaticStrings();
@@ -249,9 +296,17 @@ async function main(): Promise<void> {
     },
     change: applySetting,
     vibration: { get: hapticsEnabled, set: setHapticsEnabled },
+    graphics: {
+      activeBackend: () => renderer.backendName,
+      autoGrain: () => renderer.quality.filmGrain && !settings.reducedMotion,
+      autoSharpen: () => renderer.pixelRatio < (window.devicePixelRatio || 1) - 0.01,
+    },
   });
   applyVolumes();
   applyCamera();
+  applyResolution();
+  applyImage();
+  applyStats();
 
   // ───────────────────────────── Game flow ─────────────────────────────
 
@@ -642,16 +697,13 @@ async function main(): Promise<void> {
   canvas.classList.add('ready');
 
   if (settings.quality === null) {
+    // First run (spec §11): measure the title scene for ~3 s at the guessed tier.
+    // Phones too: they stay on the mobile tier, and the frames decide how
+    // sharp it renders (its pixel ratio).
     const guess = heuristicTier(hints);
-    if (guess === 'mobile') {
-      settings.quality = 'mobile';
-      saveSettings(storage, settings);
-      loadingDone();
-    } else {
-      // First run (spec §11): measure the title scene for ~3 s at the guessed tier.
-      benchmark = new TierBenchmark(guess);
-      loading.setStage('loading.calibrate', 0.9);
-    }
+    benchmark = new TierBenchmark(guess);
+    if (guess === 'mobile') applyResolution();
+    loading.setStage('loading.calibrate', 0.9);
   } else {
     loadingDone();
   }
@@ -660,8 +712,10 @@ async function main(): Promise<void> {
     const chosen = b.result() ?? heuristicTier(hints);
     settings.quality = chosen;
     settings.qualitySource = 'auto';
+    if (b.measured === 'mobile') settings.mobilePixelRatio = b.pixelRatio() ?? MOBILE_DEFAULT_PIXEL_RATIO;
     saveSettings(storage, settings);
     if (chosen !== tier) applyTier(chosen);
+    else applyResolution();
     menu.refresh();
     loadingDone();
   };
@@ -728,7 +782,7 @@ async function main(): Promise<void> {
         benchmark = null;
         finishBenchmark(b);
       }
-    } else {
+    } else if (dynamicResolutionFor(settings.resolution)) {
       const change = drs.update(rawDt);
       if (change === 'down' || change === 'up') renderer.setRenderScale(drs.scale);
       else if (change === 'floor' && settings.qualitySource === 'auto' && tier !== 'mobile') {
@@ -742,8 +796,17 @@ async function main(): Promise<void> {
     fpsFrames++;
     fpsTime += dt;
     if (fpsTime >= 0.5) {
-      const scale = drs.scale < 1 ? ` · ${Math.round(drs.scale * 100)}%` : '';
-      stats.textContent = `${renderer.backendName} · ${tier} · ${Math.round(fpsFrames / fpsTime)} fps${scale}`;
+      if (settings.showStats) {
+        // Technical readout for the owner: backend, tier, frame rate, pixel ratio and scene scale.
+        const scale = dynamicResolutionFor(settings.resolution) ? drs.scale : 1;
+        stats.textContent = [
+          renderer.backendName,
+          tier,
+          `${Math.round(fpsFrames / fpsTime)} fps`,
+          `${renderer.pixelRatio.toFixed(2)}×`,
+          `${Math.round(scale * 100)}%`,
+        ].join(' · ');
+      }
       fpsFrames = 0;
       fpsTime = 0;
     }

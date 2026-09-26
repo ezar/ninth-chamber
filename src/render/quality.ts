@@ -34,6 +34,11 @@ export interface QualityProfile {
   /** How many of the nearest fire lights cast shadows, and their cube map size. */
   fireShadows: number;
   fireShadowSize: number;
+  /**
+   * Fire lights: braziers lit at once, and the pool of plain lights behind
+   * them (extra lights let one brazier fade out while another fades in).
+   */
+  fireLights: { active: number; pool: number };
   /** At most one shadow map is re-rendered per frame: the sun where it shines, otherwise the nearest fire. */
   singleShadow: boolean;
   /** Ground-truth ambient occlusion (GTAO). */
@@ -50,6 +55,8 @@ export interface QualityProfile {
   particles: number;
   /** A soft blob under Nora in place of her dynamic shadow. */
   contactShadow: boolean;
+  /** Film grain on by default (the player can switch it either way). */
+  filmGrain: boolean;
 }
 
 export const QUALITY: Record<QualityTier, QualityProfile> = {
@@ -61,6 +68,7 @@ export const QUALITY: Record<QualityTier, QualityProfile> = {
     sun: { size: 2048, radius: 3, live: true },
     fireShadows: 2,
     fireShadowSize: 512,
+    fireLights: { active: 6, pool: 8 },
     singleShadow: false,
     ambientOcclusion: true,
     antialias: 'smaa',
@@ -70,6 +78,7 @@ export const QUALITY: Record<QualityTier, QualityProfile> = {
     anisotropy: 16,
     particles: 1,
     contactShadow: false,
+    filmGrain: true,
   },
   // Laptop with integrated graphics: one live shadow, bloom and SMAA.
   medium: {
@@ -79,6 +88,7 @@ export const QUALITY: Record<QualityTier, QualityProfile> = {
     sun: { size: 1024, radius: 2, live: true },
     fireShadows: 1,
     fireShadowSize: 256,
+    fireLights: { active: 6, pool: 8 },
     singleShadow: true,
     ambientOcclusion: false,
     antialias: 'smaa',
@@ -88,26 +98,93 @@ export const QUALITY: Record<QualityTier, QualityProfile> = {
     anisotropy: 8,
     particles: 0.6,
     contactShadow: false,
+    filmGrain: true,
   },
-  // Phones and tablets: no dynamic shadows except Nora's contact blob, no AO, FXAA.
+  // Phones and tablets: no dynamic shadows except Nora's contact blob, no AO.
+  // Modern phones sustain more than the 1.25 pixel ratio this tier began with:
+  // the first-run benchmark picks the ratio (mobilePixelRatio), up to this cap.
   mobile: {
     tier: 'mobile',
-    pixelRatioCap: 1.25,
-    minRenderScale: 0.5,
+    pixelRatioCap: 2,
+    minRenderScale: 0.6,
     sun: { size: 1024, radius: 1, live: false },
     fireShadows: 0,
     fireShadowSize: 256,
+    fireLights: { active: 4, pool: 6 },
     singleShadow: true,
     ambientOcclusion: false,
-    antialias: 'fxaa',
+    // SMAA's three passes are affordable on current phones and keep edges cleaner than FXAA.
+    antialias: 'smaa',
     bloom: true,
     depthOfField: false,
     godrays: false,
-    anisotropy: 4,
+    anisotropy: 8,
     particles: 0.35,
     contactShadow: true,
+    // Grain reads as noise on small, dense screens.
+    filmGrain: false,
   },
 };
+
+/** Mobile pixel ratio before the first-run benchmark has measured the phone. */
+export const MOBILE_DEFAULT_PIXEL_RATIO = 1.5;
+/** Highest pixel ratio anything renders at ("native" on 3× phones). */
+export const NATIVE_PIXEL_RATIO_CAP = 3;
+
+/** Options → Resolution. 'auto' follows the tier and dynamic resolution; the rest are fixed. */
+export type ResolutionMode = 'auto' | 'native' | '75' | '50';
+export const RESOLUTION_MODES: readonly ResolutionMode[] = ['50', '75', 'auto', 'native'];
+export const isResolutionMode = (v: unknown): v is ResolutionMode =>
+  typeof v === 'string' && (RESOLUTION_MODES as readonly string[]).includes(v);
+
+/**
+ * The renderer pixel ratio for a resolution mode. `dpr` is the display's
+ * devicePixelRatio, `autoCap` the tier's cap (or the phone's measured ratio).
+ */
+export function pixelRatioFor(mode: ResolutionMode, dpr: number, autoCap: number): number {
+  const d = Number.isFinite(dpr) && dpr > 0 ? dpr : 1;
+  const native = Math.min(d, NATIVE_PIXEL_RATIO_CAP);
+  switch (mode) {
+    case 'auto':
+      return Math.min(d, autoCap);
+    case 'native':
+      return native;
+    case '75':
+      return native * 0.75;
+    case '50':
+      return native * 0.5;
+  }
+}
+
+/** Dynamic resolution only runs in the automatic mode. */
+export const dynamicResolutionFor = (mode: ResolutionMode): boolean => mode === 'auto';
+
+/** Options → Texture filtering: anisotropy levels; 'auto' takes the tier's. */
+export type TextureFiltering = 'auto' | 'standard' | 'high' | 'max';
+export const TEXTURE_FILTERINGS: readonly TextureFiltering[] = ['auto', 'standard', 'high', 'max'];
+export const isTextureFiltering = (v: unknown): v is TextureFiltering =>
+  typeof v === 'string' && (TEXTURE_FILTERINGS as readonly string[]).includes(v);
+const ANISOTROPY: Record<Exclude<TextureFiltering, 'auto'>, number> = { standard: 4, high: 8, max: 16 };
+
+export function anisotropyFor(filtering: TextureFiltering, profile: QualityProfile): number {
+  return filtering === 'auto' ? profile.anisotropy : ANISOTROPY[filtering];
+}
+
+/**
+ * Phones: the pixel ratio the first-run benchmark allows, from frame times
+ * measured at the mobile cap. A phone that holds 50+ fps keeps the cap.
+ */
+export function mobilePixelRatioFromFrameTimes(frameMs: readonly number[]): number {
+  if (frameMs.length === 0) return MOBILE_DEFAULT_PIXEL_RATIO;
+  const median = percentile(
+    [...frameMs].sort((a, b) => a - b),
+    0.5,
+  );
+  if (median <= 20) return QUALITY.mobile.pixelRatioCap;
+  if (median <= 28) return 1.75;
+  if (median <= 36) return 1.5;
+  return 1.25;
+}
 
 /** The tier one step below (mobile stays mobile). */
 export function lowerTier(t: QualityTier): QualityTier {
@@ -205,6 +282,12 @@ export class TierBenchmark {
   }
 
   /** The chosen tier, or null when too few frames were seen to judge (e.g. a hidden tab). */
+  /** On phones (measured at the mobile tier): the pixel ratio the frames allow, or null. */
+  pixelRatio(): number | null {
+    if (this.measured !== 'mobile' || this.samples.length < 20) return null;
+    return mobilePixelRatioFromFrameTimes(this.samples);
+  }
+
   result(): QualityTier | null {
     if (this.samples.length < 20) return null;
     return tierFromFrameTimes(this.samples, this.measured);

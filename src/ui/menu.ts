@@ -5,7 +5,14 @@
  * item is the selected one, always marked in amber.
  */
 import { version } from '../../package.json';
-import { QUALITY_TIERS, type QualityTier } from '../render/quality';
+import {
+  QUALITY_TIERS,
+  RESOLUTION_MODES,
+  TEXTURE_FILTERINGS,
+  type QualityTier,
+  type ResolutionMode,
+  type TextureFiltering,
+} from '../render/quality';
 import type { Device } from './hud';
 import { t, type StringKey } from './i18n';
 import {
@@ -20,11 +27,11 @@ import {
   padHas,
   type PadSnapshot,
 } from './pad';
-import { SENSITIVITY_RANGE, type Language, type Settings } from './settings';
+import { SENSITIVITY_RANGE, type Language, type RendererChoice, type Settings } from './settings';
 
 export type MenuContext = 'pause' | 'title';
 type PanelName = 'pause' | 'options' | 'confirm';
-type ConfirmAction = 'restart' | 'quit';
+type ConfirmAction = 'restart' | 'quit' | 'renderer';
 
 export interface MenuCallbacks {
   resume(): void;
@@ -39,6 +46,14 @@ export interface MenuCallbacks {
    * (core/haptics.ts: hapticsEnabled / setHapticsEnabled). No row without it.
    */
   vibration?: { get(): boolean; set(on: boolean): void };
+  /** What the graphics rows show for settings left on automatic. No graphics extras without it. */
+  graphics?: {
+    /** The backend actually running: 'WebGPU' or 'WebGL2'. */
+    activeBackend(): string;
+    /** Film grain and sharpen as the tier and the resolution decide them. */
+    autoGrain(): boolean;
+    autoSharpen(): boolean;
+  };
 }
 
 interface OptionRow {
@@ -64,6 +79,9 @@ export class Menu {
   private context: MenuContext = 'pause';
   private panel: PanelName = 'pause';
   private confirming: ConfirmAction | null = null;
+  /** A renderer picked in options, waiting for the reload to be confirmed. */
+  private pendingRenderer: RendererChoice | null = null;
+  private rendererRow: OptionRow | null = null;
   private readonly rows: OptionRow[] = [];
   private readonly repeat = new DirectionRepeat();
   private device: Device = 'keyboard';
@@ -104,11 +122,17 @@ export class Menu {
     this.root.classList.remove('show');
     this.root.hidden = true;
     this.confirming = null;
+    this.pendingRenderer = null;
   }
 
   /** Escape / B: one step back, closing from the top level. */
   back(): void {
-    if (this.panel === 'confirm') {
+    if (this.panel === 'confirm' && this.confirming === 'renderer') {
+      this.confirming = null;
+      this.pendingRenderer = null;
+      this.rendererRow?.refresh();
+      this.show('options', undefined, this.rendererRow?.el);
+    } else if (this.panel === 'confirm') {
       this.show('pause', this.confirming ?? undefined);
       this.confirming = null;
     } else if (this.panel === 'options') {
@@ -203,7 +227,7 @@ export class Menu {
     return this.root.querySelector<HTMLElement>(`[data-panel="${this.panel}"]`) ?? this.root;
   }
 
-  private show(panel: PanelName, focusAction?: string): void {
+  private show(panel: PanelName, focusAction?: string, focusEl?: HTMLElement): void {
     this.panel = panel;
     for (const el of this.root.querySelectorAll<HTMLElement>('[data-panel]')) {
       el.hidden = el.dataset.panel !== panel;
@@ -216,6 +240,10 @@ export class Menu {
       : panel === 'confirm'
         ? current.querySelector<HTMLElement>('[data-action="cancel"]')
         : navItems(current)[0];
+    if (focusEl) {
+      focusItem(focusEl);
+      return;
+    }
     focusItem(target ?? navItems(current)[0]);
     if (panel === 'options') this.list.scrollTop = 0;
   }
@@ -256,6 +284,12 @@ export class Menu {
         this.confirming = null;
         if (what === 'restart') this.cb.restart();
         else if (what === 'quit') this.cb.quit();
+        else if (what === 'renderer' && this.pendingRenderer) {
+          // Main saves the choice and reloads the page.
+          this.settings.renderer = this.pendingRenderer;
+          this.pendingRenderer = null;
+          this.cb.change('renderer');
+        }
         break;
       }
       default:
@@ -322,6 +356,95 @@ export class Menu {
         },
       ),
     );
+
+    const gfx = this.cb.graphics;
+    if (gfx) {
+      // Auto in the middle, so either backend is one step away.
+      this.rendererRow = choiceRow<RendererChoice>(
+        'options.renderer',
+        ['webgl2', 'auto', 'webgpu'],
+        () => this.pendingRenderer ?? s.renderer,
+        (v) => {
+          if (v === s.renderer) {
+            this.pendingRenderer = null;
+            return;
+          }
+          this.pendingRenderer = v;
+          this.confirming = 'renderer';
+          this.fillConfirm('renderer');
+          this.show('confirm');
+        },
+        (v) => t(`options.renderer.${v}`),
+        () =>
+          `${t('options.renderer.hint')} ${t('options.renderer.active', {
+            backend: gfx.activeBackend() === 'WebGPU' ? 'WebGPU' : 'WebGL 2',
+          })}`,
+      );
+      this.addRow(this.rendererRow);
+      this.addRow(
+        choiceRow<ResolutionMode>(
+          'options.resolution',
+          RESOLUTION_MODES,
+          () => s.resolution,
+          (v) => {
+            s.resolution = v;
+            this.cb.change('resolution');
+          },
+          (v) => t(`options.resolution.${v}`),
+          () =>
+            s.resolution === 'auto'
+              ? t('options.resolution.auto.hint')
+              : s.resolution === 'native'
+                ? t('options.resolution.native.hint')
+                : t('options.resolution.scaled.hint'),
+        ),
+      );
+      this.addRow(
+        choiceRow<TextureFiltering>(
+          'options.filtering',
+          TEXTURE_FILTERINGS,
+          () => s.textureFiltering,
+          (v) => {
+            s.textureFiltering = v;
+            this.cb.change('textureFiltering');
+          },
+          (v) => t(`options.filtering.${v}`),
+          () => t('options.filtering.hint'),
+        ),
+      );
+      this.addRow(
+        toggleRow(
+          'options.sharpen',
+          () => s.sharpen ?? gfx.autoSharpen(),
+          (v) => {
+            s.sharpen = v;
+            this.cb.change('sharpen');
+          },
+          () => t('options.sharpen.hint'),
+        ),
+      );
+      this.addRow(
+        toggleRow(
+          'options.grain',
+          () => s.filmGrain ?? gfx.autoGrain(),
+          (v) => {
+            s.filmGrain = v;
+            this.cb.change('filmGrain');
+          },
+        ),
+      );
+      this.addRow(
+        toggleRow(
+          'options.stats',
+          () => s.showStats,
+          (v) => {
+            s.showStats = v;
+            this.cb.change('showStats');
+          },
+          () => t('options.stats.hint'),
+        ),
+      );
+    }
 
     group('options.group.audio');
     for (const [key, label] of [

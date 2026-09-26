@@ -27,6 +27,10 @@ import {
   vec2,
   vec3,
   vec4,
+  uv,
+  min,
+  clamp,
+  sqrt,
 } from 'three/tsl';
 import type * as PostNodes from './post-nodes';
 import type { GatedDepthOfField, GatedGodrays } from './post-nodes';
@@ -41,6 +45,8 @@ export interface PostOptions {
   depthOfField: boolean;
   /** Volumetric sun shafts ray-marched through the sun's shadow map. */
   godrays: boolean;
+  /** A light contrast-adaptive sharpen after anti-aliasing (and after any upscaling). */
+  sharpen: boolean;
 }
 
 /** The display nodes are vec4 at runtime; their typings omit the swizzles. */
@@ -52,6 +58,8 @@ const CONTRAST_PIVOT = 0.18;
 const AO_SCALE = 1;
 /** God-ray resolution: soft by nature, so half is plenty. */
 const RAYS_SCALE = 0.5;
+/** Strength of the sharpen's negative lobe (CAS peak is 1/5; this is a light touch). */
+const SHARPEN_LOBE = 0.12;
 /** Film grain cadence (updates per second): film, not video noise. */
 const GRAIN_FPS = 24;
 
@@ -61,7 +69,7 @@ export class PostStack {
   readonly saturation = uniform(1);
   readonly contrast = uniform(1);
   readonly vignette = uniform(0.35);
-  readonly grain = uniform(0.035);
+  readonly grain = uniform(0.022);
   readonly aoStrength = uniform(0.85);
   readonly bloomStrength = uniform(0.5);
   readonly bloomRadius = uniform(0.5);
@@ -79,6 +87,7 @@ export class PostStack {
   private readonly aspect = uniform(16 / 9);
   private readonly aoTexel = uniform(new THREE.Vector2(1 / 960, 1 / 540));
   private readonly raysTexel = uniform(new THREE.Vector2(1 / 640, 1 / 360));
+  private readonly outputTexel = uniform(new THREE.Vector2(1 / 1280, 1 / 720));
   /** God rays need the sun's shadow map, which exists only after a first render. */
   private raysPending = false;
   private raysNodes: GatedGodrays[] = [];
@@ -110,7 +119,8 @@ export class PostStack {
       o.antialias === options.antialias &&
       o.bloom === options.bloom &&
       o.depthOfField === options.depthOfField &&
-      o.godrays === options.godrays
+      o.godrays === options.godrays &&
+      o.sharpen === options.sharpen
     ) {
       return;
     }
@@ -236,7 +246,32 @@ export class PostStack {
       .mul(vec2(this.aspect.mul(0.75).max(1), 1))
       .mul(2);
     const vig = smoothstep(0.55, 1.6, length(centered)).mul(this.vignette).mul(0.9);
-    let out = vec4Node(aa).rgb.mul(float(1).sub(vig));
+    let image = vec4Node(aa).rgb;
+    if (options.sharpen) {
+      // Contrast-adaptive sharpening (after AMD's CAS): a negative cross lobe
+      // whose weight shrinks where the neighbourhood already has contrast, so
+      // edges do not ring and flat stone gains a little definition.
+      const src = rtt(vec4Node(aa));
+      this.disposables.push(src);
+      const p = uv();
+      const tx = this.outputTexel;
+      const c = src.sample(p).rgb;
+      const n = src.sample(p.add(vec2(0, tx.y))).rgb;
+      const so = src.sample(p.sub(vec2(0, tx.y))).rgb;
+      const e = src.sample(p.add(vec2(tx.x, 0))).rgb;
+      const w = src.sample(p.sub(vec2(tx.x, 0))).rgb;
+      const lc = luminance(c);
+      const ln = luminance(n);
+      const ls = luminance(so);
+      const le = luminance(e);
+      const lw = luminance(w);
+      const lo = min(lc, min(min(ln, ls), min(le, lw)));
+      const hi = max(lc, max(max(ln, ls), max(le, lw)));
+      const amp = sqrt(clamp(min(lo, hi.oneMinus()).div(max(hi, 1e-4)), 0, 1));
+      const lobe = amp.mul(-SHARPEN_LOBE);
+      image = c.add(n.add(so).add(e).add(w).mul(lobe)).div(lobe.mul(4).add(1)).max(0);
+    }
+    let out = image.mul(float(1).sub(vig));
 
     // Film grain: strongest in the midtones, absent in black and white.
     const noise = rand(screenUV.add(fract(vec2(this.grainSeed.mul(0.1731), this.grainSeed.mul(0.3317))))).sub(
@@ -270,6 +305,7 @@ export class PostStack {
   setSize(width: number, height: number): void {
     this.aspect.value = width / Math.max(1, height);
     this.aoTexel.value.set(1 / Math.max(1, width * AO_SCALE), 1 / Math.max(1, height * AO_SCALE));
+    this.outputTexel.value.set(1 / Math.max(1, width), 1 / Math.max(1, height));
     this.raysTexel.value.set(1 / Math.max(1, width * RAYS_SCALE), 1 / Math.max(1, height * RAYS_SCALE));
     // Bokeh radius in full-resolution pixels, tuned at 1080p.
     this.bokehScale.value = 10 * (height / 1080);

@@ -11,6 +11,7 @@ import { BLOCK } from '../sim/grid/units';
 import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
 import { CombatView } from './combat';
+import { FireLightScheduler, type FireSpot } from './fire-lights';
 import { buildLevelMeshes } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
 import type { NoraPose } from './nora';
@@ -18,14 +19,22 @@ import { NoraRig } from './nora-scan';
 import { Props } from './props';
 import { loadSurfaces, surfaceParams, type SurfaceName, type SurfaceSet } from './materials';
 import { PostStack } from './post';
-import { QUALITY, type QualityProfile } from './quality';
+import {
+  QUALITY,
+  anisotropyFor,
+  pixelRatioFor,
+  type QualityProfile,
+  type ResolutionMode,
+  type TextureFiltering,
+} from './quality';
 
 export interface PlayerPose {
   pos: Vec3;
   yaw: number;
 }
 
-const FIRE_SLOTS = 4;
+/** Fire light intensity per unit of the look's brazier candela (the lights also stand in for bounce). */
+const FIRE_GAIN = 1.8;
 /**
  * Nora's meshes live on this layer only, so a shadow camera can leave her out
  * (the mobile tier's occasionally refreshed sun shadow) while the view camera
@@ -34,8 +43,19 @@ const FIRE_SLOTS = 4;
 const CHARACTER_LAYER = 1;
 /** Seconds between refreshes of a non-live (mobile) sun shadow. */
 const STATIC_SHADOW_REFRESH = 1;
-/** Film grain amplitude on the display image (art bible: subtle). */
-const GRAIN = 0.035;
+/** Film grain amplitude on the display image (art bible: subtle; lowered after phone feedback). */
+const GRAIN = 0.022;
+/** Frames between passes that bring newly loaded textures (prop models) to the filtering level. */
+const FILTERING_SWEEP_FRAMES = 90;
+
+/** How the player wants the image finished (Options → Graphics). */
+export interface ImageOptions {
+  /** Null: the tier's default. */
+  filmGrain: boolean | null;
+  /** Null: on whenever the image is drawn below the screen's resolution. */
+  sharpen: boolean | null;
+  textureFiltering: TextureFiltering;
+}
 
 export class GameRenderer {
   readonly renderer: THREE.WebGPURenderer;
@@ -45,7 +65,18 @@ export class GameRenderer {
   private profile: QualityProfile;
   private readonly hemi = new THREE.HemisphereLight('#6f7f8f', '#2a1f17', 0.4);
   private readonly sun = new THREE.DirectionalLight('#ffffff', 0);
+  /**
+   * Two fixed pools created once: plain fire lights and shadow casters. Their
+   * castShadow flags and shadow map sizes never change afterwards (disposing
+   * a shadow map a render still binds floods WebGPU with validation errors);
+   * the scheduler moves them between braziers with fades instead.
+   */
   private readonly fireLights: THREE.PointLight[] = [];
+  private readonly fireCasters: THREE.PointLight[] = [];
+  private readonly fireSchedule: FireLightScheduler;
+  private fireSpots: FireSpot[] = [];
+  /** Rooms touching each room (their braziers rank with the current room's). */
+  private neighbours = new Map<string, Set<string>>();
   private readonly characterFill = new THREE.PointLight('#ffe2c4', 1.6, 4.5, 2);
   private readonly nora = new NoraRig();
   /** Jackals, pistols, muzzle flashes and the target marker. */
@@ -64,13 +95,23 @@ export class GameRenderer {
   private readonly contactShadow: THREE.Mesh;
   private readonly contactStrength: THREE.UniformNode<'float', number>;
   private focus: { at: THREE.Vector3; amount: number } | null = null;
+  private resolution: ResolutionMode = 'auto';
+  /** Pixel ratio cap in the automatic mode; null uses the tier's. */
+  private autoCap: number | null = null;
+  private image: ImageOptions = { filmGrain: null, sharpen: null, textureFiltering: 'auto' };
+  private filteringSweep = 0;
 
+  /**
+   * `forceWebGL` picks the WebGL 2 backend (Options → Renderer); otherwise
+   * three.js uses WebGPU where the browser has it and falls back to WebGL 2.
+   */
   constructor(
     private readonly canvas: HTMLCanvasElement,
     profile: QualityProfile = QUALITY.high,
+    forceWebGL = false,
   ) {
     // No MSAA on the canvas: the scene is drawn into the post pipeline's own target.
-    this.renderer = new THREE.WebGPURenderer({ canvas, antialias: false });
+    this.renderer = new THREE.WebGPURenderer({ canvas, antialias: false, forceWebGL });
     this.renderer.toneMapping = THREE.AgXToneMapping;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -85,15 +126,28 @@ export class GameRenderer {
     this.sun.castShadow = true;
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.03;
-    for (let i = 0; i < FIRE_SLOTS; i++) {
+    // Fixed for the session, like the fire casters' maps (see fireLights).
+    this.sun.shadow.mapSize.set(profile.sun.size, profile.sun.size);
+    for (let i = 0; i < profile.fireLights.pool; i++) {
       const l = new THREE.PointLight('#ff8a3d', 0, 18, 2);
+      this.fireLights.push(l);
+      this.scene.add(l);
+    }
+    for (let i = 0; i < profile.fireShadows; i++) {
+      const l = new THREE.PointLight('#ff8a3d', 0, 18, 2);
+      l.castShadow = true;
+      l.shadow.mapSize.set(profile.fireShadowSize, profile.fireShadowSize);
       // Point shadows: a small bias against acne on rough stone, a normal bias for grazing walls.
       l.shadow.bias = -0.004;
       l.shadow.normalBias = 0.05;
       l.shadow.camera.layers.enable(CHARACTER_LAYER);
-      this.fireLights.push(l);
+      this.fireCasters.push(l);
       this.scene.add(l);
     }
+    this.fireSchedule = new FireLightScheduler({
+      plain: this.fireLights.length,
+      casters: this.fireCasters.length,
+    });
     this.scene.add(this.nora.root, this.combat.group);
     // A soft fill that follows Nora so she reads against backlight (a common
     // character-lighting cheat); short range, so it barely touches the set.
@@ -136,29 +190,75 @@ export class GameRenderer {
     this.applyProfile(anisotropyChanged);
   }
 
-  private applyProfile(anisotropyChanged: boolean): void {
-    const p = this.profile;
-    // Sun: a live shadow sees Nora; the static (mobile) one leaves her to the contact blob.
-    const sun = this.sun.shadow;
-    sun.mapSize.set(p.sun.size, p.sun.size);
-    sun.radius = p.sun.radius;
-    if (p.sun.live) sun.camera.layers.enable(CHARACTER_LAYER);
-    else sun.camera.layers.disable(CHARACTER_LAYER);
-    sun.autoUpdate = p.sun.live;
-    this.sunShadowAge = Infinity;
-    this.fireLights.forEach((l, i) => {
-      l.castShadow = i < p.fireShadows;
-      l.shadow.mapSize.set(p.fireShadowSize, p.fireShadowSize);
-    });
-    this.contactShadow.visible = p.contactShadow;
+  /**
+   * Options → Resolution. `autoCap` bounds the automatic mode (the phone's
+   * measured pixel ratio); null uses the tier's cap.
+   */
+  setResolution(mode: ResolutionMode, autoCap: number | null = null): void {
+    this.resolution = mode;
+    this.autoCap = autoCap;
+    this.resize();
+    this.configurePost();
+  }
 
+  /** Options → film grain, sharpen and texture filtering. */
+  setImageOptions(options: ImageOptions): void {
+    const filteringChanged = options.textureFiltering !== this.image.textureFiltering;
+    this.image = { ...options };
+    this.configurePost();
+    if (filteringChanged) this.applyAnisotropy();
+  }
+
+  /** The pixel ratio the canvas renders at now. */
+  get pixelRatio(): number {
+    return pixelRatioFor(
+      this.resolution,
+      window.devicePixelRatio || 1,
+      this.autoCap ?? this.profile.pixelRatioCap,
+    );
+  }
+
+  /** Whether the sharpen pass runs (the option, or automatically when the image is upscaled). */
+  get sharpening(): boolean {
+    return this.image.sharpen ?? this.pixelRatio < (window.devicePixelRatio || 1) - 0.01;
+  }
+
+  private get grainOn(): boolean {
+    return !this.reducedMotion && (this.image.filmGrain ?? this.profile.filmGrain);
+  }
+
+  /** The anisotropy the surfaces use: the option, or the tier's; capped by the GPU. */
+  private get anisotropy(): number {
+    return Math.min(
+      anisotropyFor(this.image.textureFiltering, this.profile),
+      Math.max(1, this.renderer.getMaxAnisotropy()),
+    );
+  }
+
+  private configurePost(): void {
+    const p = this.profile;
     this.post.configure({
       ambientOcclusion: p.ambientOcclusion,
       antialias: p.antialias,
       bloom: p.bloom,
       depthOfField: p.depthOfField,
       godrays: p.godrays,
+      sharpen: this.sharpening,
     });
+  }
+
+  private applyProfile(anisotropyChanged: boolean): void {
+    const p = this.profile;
+    // Sun: a live shadow sees Nora; the static (mobile) one leaves her to the contact blob.
+    const sun = this.sun.shadow;
+    sun.radius = p.sun.radius;
+    if (p.sun.live) sun.camera.layers.enable(CHARACTER_LAYER);
+    else sun.camera.layers.disable(CHARACTER_LAYER);
+    sun.autoUpdate = p.sun.live;
+    this.sunShadowAge = Infinity;
+    this.contactShadow.visible = p.contactShadow;
+
+    this.configurePost();
     // Volumetric shafts replace the modelled cones; the dust stays.
     for (const s of this.shafts) s.mesh.visible = !p.godrays;
     this.applyParticleBudget();
@@ -166,17 +266,44 @@ export class GameRenderer {
     this.resize();
   }
 
-  /** Anisotropic filtering on the scanned surfaces, capped by the GPU. */
+  /**
+   * Texture filtering everywhere in the scene (level surfaces, prop models,
+   * characters): trilinear mipmaps and the anisotropy level. Prop models load
+   * later, so this also runs as a periodic sweep; only textures that change
+   * are re-uploaded.
+   */
   private applyAnisotropy(): void {
-    if (!this.surfaces) return;
-    const level = Math.min(this.profile.anisotropy, Math.max(1, this.renderer.getMaxAnisotropy()));
-    for (const set of Object.values(this.surfaces)) {
-      for (const t of [set.map, set.normalMap, set.roughnessMap, set.armMap]) {
-        if (!t || t.anisotropy === level) continue;
-        t.anisotropy = level;
-        t.needsUpdate = true;
+    const level = this.anisotropy;
+    const fix = (t: THREE.Texture | null | undefined): void => {
+      if (!t || t.isRenderTargetTexture || !t.image) return;
+      let changed = false;
+      if (t.minFilter === THREE.LinearFilter || t.minFilter === THREE.NearestFilter) {
+        t.minFilter = THREE.LinearMipmapLinearFilter;
+        t.generateMipmaps = true;
+        changed = true;
       }
+      if (t.minFilter === THREE.LinearMipmapLinearFilter && t.anisotropy !== level) {
+        t.anisotropy = level;
+        changed = true;
+      }
+      if (changed) t.needsUpdate = true;
+    };
+    for (const set of Object.values(this.surfaces ?? {})) {
+      for (const t of [set.map, set.normalMap, set.roughnessMap, set.armMap]) fix(t);
     }
+    this.scene.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const mats: THREE.Material[] = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) {
+        if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+        fix(m.map);
+        fix(m.normalMap);
+        fix(m.roughnessMap);
+        fix(m.metalnessMap);
+        fix(m.aoMap);
+        fix(m.emissiveMap);
+      }
+    });
   }
 
   /** Draws only the tier's share of every particle system (sun-shaft dust, brazier embers). */
@@ -220,7 +347,7 @@ export class GameRenderer {
    */
   warmup(): void {
     // Every shadow map gets created now rather than on entering its room.
-    for (const l of [this.sun, ...this.fireLights]) if (l.castShadow) l.shadow.needsUpdate = true;
+    for (const l of [this.sun, ...this.fireCasters]) l.shadow.needsUpdate = true;
     this.post.dofAmount.value = this.post.hasDepthOfField ? 0.5 : 0;
     this.post.raysStrength.value = Math.max(this.post.raysStrength.value, 0.01);
     // Twice: god rays join the pipeline once the first frame has made the sun's shadow map.
@@ -273,6 +400,7 @@ export class GameRenderer {
       gold: new THREE.MeshStandardMaterial({ color: '#e8b75a', roughness: 0.25, metalness: 1 }),
     });
     this.scene.add(this.props.group);
+    this.indexFires();
 
     this.buildShafts(meshes.skylights, sunRooms);
     void this.loadLightmap(level.id);
@@ -428,7 +556,7 @@ export class GameRenderer {
   resize(): void {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.profile.pixelRatioCap));
+    this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -486,7 +614,7 @@ export class GameRenderer {
     this.applyLook();
 
     this.props?.update(world, this.time, dt);
-    this.updateFireLights(eye);
+    this.updateFireLights(eye, dt);
     this.updateShafts(dt);
     this.updateContactShadow(world, px, py, pz);
 
@@ -494,7 +622,11 @@ export class GameRenderer {
     this.camera.lookAt(lookAt.x, lookAt.y, lookAt.z);
     this.updateShadowBudget(dt);
     this.updateFocus();
-    this.post.grain.value = this.reducedMotion ? 0 : GRAIN;
+    this.post.grain.value = this.grainOn ? GRAIN : 0;
+    if (++this.filteringSweep >= FILTERING_SWEEP_FRAMES) {
+      this.filteringSweep = 0;
+      this.applyAnisotropy();
+    }
     this.post.render(dt);
   }
 
@@ -532,11 +664,8 @@ export class GameRenderer {
         this.sunShadowAge = 0;
       }
     }
-    this.fireLights.forEach((l, i) => {
-      if (i >= p.fireShadows) return;
-      const near = l.position.distanceTo(this.camera.position) < l.distance + 4;
-      l.shadow.autoUpdate = l.intensity > 0 && near && !(p.singleShadow && sunOn);
-    });
+    // Casters that are dark keep their last map (the scheduler moves them only while dark).
+    for (const l of this.fireCasters) l.shadow.autoUpdate = l.intensity > 0;
   }
 
   /** Depth of field follows the camera's focus shot. */
@@ -597,26 +726,61 @@ export class GameRenderer {
   /** Brightness of the volumetric sun shafts per unit of sun intensity (art direction knob). */
   static RAYS_GAIN = 0.24;
 
-  /** The fire light pool follows the nearest braziers. */
-  private updateFireLights(eye: Vec3): void {
+  /** Braziers with their rooms, and which rooms touch, for the fire light scheduler. */
+  private indexFires(): void {
+    const level = this.world?.level;
+    if (!level) return;
+    this.fireSpots = (this.props?.fires ?? []).map((f) => ({
+      x: f.pos.x,
+      y: f.pos.y,
+      z: f.pos.z,
+      room: level.roomAt(Math.floor(f.pos.x / BLOCK), Math.floor(f.pos.z / BLOCK))?.id ?? null,
+    }));
+    this.neighbours = new Map();
+    for (const a of level.rooms) {
+      const touching = new Set([a.id]);
+      for (const b of level.rooms) {
+        const overlaps =
+          a.minX - 1 <= b.maxX && b.minX <= a.maxX + 1 && a.minZ - 1 <= b.maxZ && b.minZ <= a.maxZ + 1;
+        if (overlaps) touching.add(b.id);
+      }
+      this.neighbours.set(a.id, touching);
+    }
+  }
+
+  /**
+   * Fire lights fade between braziers (fire-lights.ts): the current room's
+   * and its neighbours' first, casters handed over by crossfading.
+   */
+  private updateFireLights(eye: Vec3, dt: number): void {
     const fires = this.props?.fires ?? [];
-    const sorted = [...fires].sort(
-      (a, b) =>
-        (a.pos.x - eye.x) ** 2 + (a.pos.z - eye.z) ** 2 - ((b.pos.x - eye.x) ** 2 + (b.pos.z - eye.z) ** 2),
-    );
-    this.fireLights.forEach((light, i) => {
-      const f = sorted[i];
-      if (!f) {
+    if (this.fireSpots.length !== fires.length) this.indexFires();
+    const p = this.profile;
+    const preferred = this.neighbours.get(this.currentRoom ?? '') ?? new Set<string>();
+    // Single-shadow tiers give the budget to the sun where it shines.
+    const casters = p.singleShadow && this.sun.intensity > 0.05 ? 0 : p.fireShadows;
+    const levels = this.fireSchedule.update(this.fireSpots, eye, preferred, p.fireLights.active, casters, dt);
+    const base = Math.max(this.look.fireIntensity, 20) * FIRE_GAIN;
+    const t = this.time;
+    const drive = (light: THREE.PointLight, fire: number, level: number): void => {
+      const f = fires[fire];
+      if (!f || level <= 0) {
         light.intensity = 0;
         return;
       }
-      const t = this.time;
       const flick =
         1 - this.look.flicker * (0.5 + 0.5 * Math.sin(t * 13 + f.phase) * Math.sin(t * 7.3 + f.phase * 1.7));
       light.position.set(f.pos.x, f.pos.y + 0.3, f.pos.z);
       light.color.copy(this.look.fireColor);
-      // Look values are per-brazier candela; the pool lights stand in for several fires, so they run hotter.
-      light.intensity = Math.max(this.look.fireIntensity, 20) * 2.5 * flick;
+      light.intensity = base * flick * level;
+    };
+    levels.plain.forEach((l, i) => {
+      const light = this.fireLights[i];
+      if (light) drive(light, l.fire, l.level);
+    });
+    levels.casters.forEach((l, i) => {
+      const light = this.fireCasters[i];
+      if (light) drive(light, l.fire, l.level);
     });
   }
 
