@@ -153,10 +153,19 @@ class ScannedSkin {
       const t = this.targets.get(name);
       const w = this.pose.get(name);
       if (!t || !w) continue;
-      // Target model-space rotation: procedural delta × rest correction × bind.
       const target = (this.world.get(name) ??
         this.world.set(name, new THREE.Quaternion()).get(name)) as THREE.Quaternion;
-      target.copy(w).multiply(t.correction).multiply(t.bind);
+      const fore = name === 'hand_L' ? 'lowerArm_L' : name === 'hand_R' ? 'lowerArm_R' : null;
+      const foreTarget = fore ? this.world.get(fore) : undefined;
+      const foreBind = fore ? this.targets.get(fore)?.bind : undefined;
+      if (foreTarget && foreBind) {
+        // Hands keep the scan's relaxed wrist relative to the forearm: the
+        // procedural wrist flex reads as bent, cupped hands on this model.
+        target.copy(foreTarget).multiply(_q.copy(foreBind).invert()).multiply(t.bind);
+      } else {
+        // Target model-space rotation: procedural delta × rest correction × bind.
+        target.copy(w).multiply(t.correction).multiply(t.bind);
+      }
       const parent = t.parent ? this.world.get(t.parent) : t.staticParent;
       t.bone.quaternion.copy(
         _q
