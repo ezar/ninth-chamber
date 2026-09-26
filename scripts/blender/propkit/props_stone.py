@@ -463,8 +463,10 @@ def _chunk(rng: random.Random, size, cuts: int, name: str):
     planes = []
     for _ in range(cuts):
         d = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.2, 1))).normalized()
-        c = Vector((d.x * sx * rng.uniform(0.12, 0.34), d.y * sy * rng.uniform(0.12, 0.34),
-                    sz * 0.5 + d.z * sz * rng.uniform(0.1, 0.32)))
+        # Cut between 40% and 80% of the way from the centre to the furthest corner along d,
+        # so every plane bites off a real piece.
+        reach = abs(d.x) * sx / 2 + abs(d.y) * sy / 2 + abs(d.z) * sz / 2
+        c = Vector((0, 0, sz / 2)) + d * reach * rng.uniform(0.4, 0.8)
         geom = list(bm.verts) + list(bm.edges) + list(bm.faces)
         bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=c, plane_no=d, clear_outer=True)
         edges = [e for e in bm.edges if e.is_boundary]
@@ -508,17 +510,17 @@ def _rubble(ctx: Ctx, name: str, seed: int, chunks) -> list:
         _frac_attr(src, planes)
         s = float(seed * 10 + i)
 
-        amp = 0.045 * max(size)
+        amp = 0.09 * max(size)
 
         def disp(g, s=s, amp=amp):
             p = g.pos()
             fr = g.attr("frac").smooth(0.0, 0.5)
             dressed = looks.stone_disp(g, amp=0.004, chip=0.022, seed=s, chip_density=0.85, chip_scale=10.0)
             # Fracture: multi-scale rough relief with a few sharp ridges (no cellular pattern).
-            rough = ((g.noise(p, scale=2.2, detail=5.0, rough=0.6, w=s + 1.5) - 0.5) * (amp * 1.7)
-                     + g.noise(p, scale=5.0, detail=5.0, rough=0.55, w=s + 0.5, kind="RIDGED_MULTIFRACTAL")
-                     * (amp * 0.1)
-                     + (g.noise(p, scale=14.0, detail=3.0, w=s + 2.5) - 0.5) * (amp * 0.35))
+            rough = ((g.noise(p, scale=2.6, detail=6.0, rough=0.62, w=s + 1.5) - 0.5) * (amp * 1.8)
+                     + g.noise(p, scale=6.0, detail=5.0, rough=0.55, w=s + 0.5, kind="RIDGED_MULTIFRACTAL")
+                     * (amp * 0.15)
+                     + (g.noise(p, scale=16.0, detail=3.0, w=s + 2.5) - 0.5) * (amp * 0.4))
             whole = (g.noise(p, scale=1.3, detail=3.0, w=s + 3.5) - 0.5) * (amp * 0.6)
             return g.mixf(fr, dressed, rough) + whole
 
