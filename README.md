@@ -1,5 +1,7 @@
 # The Ninth Chamber · La Novena Cámara
 
+Play the latest build from `main`: https://ezar.github.io/ninth-chamber/
+
 Third-person tomb-exploration adventure for the browser. The full spec is in [docs/spec.md](docs/spec.md) (Spanish) and the rules for Claude Code are in [CLAUDE.md](CLAUDE.md).
 
 ## Development
