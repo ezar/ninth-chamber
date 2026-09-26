@@ -184,7 +184,8 @@ describe('The Antechamber', () => {
     expect(errors).toEqual([]);
   });
 
-  it('can be finished through every room with all three secrets and no deaths', () => {
+  // About 13 000 simulated ticks: allow more than the default 5 s on a busy machine.
+  it('can be finished through every room with all three secrets and no deaths', { timeout: 30_000 }, () => {
     const bot = playAntechamber();
     const w = bot.w;
     expect(w.ended).toBe(true);
