@@ -28,28 +28,19 @@ import {
   vec3,
   vec4,
 } from 'three/tsl';
-import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import DepthOfFieldNode from 'three/addons/tsl/display/DepthOfFieldNode.js';
-import { depthAwareBlur } from 'three/addons/tsl/display/depthAwareBlur.js';
-import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
-import { ao } from 'three/addons/tsl/display/GTAONode.js';
-import { smaa } from 'three/addons/tsl/display/SMAANode.js';
+import type * as PostNodes from './post-nodes';
+import type { GatedDepthOfField, GatedGodrays } from './post-nodes';
+
+/** The addon nodes, loaded as a separate chunk (see post-nodes.ts). */
+let nodes: typeof PostNodes | null = null;
 
 export interface PostOptions {
   ambientOcclusion: boolean;
   antialias: 'smaa' | 'fxaa';
   bloom: boolean;
   depthOfField: boolean;
-}
-
-/** Depth of field that skips its seven passes while no focus shot is running. */
-class GatedDepthOfField extends DepthOfFieldNode {
-  active = false;
-
-  override updateBefore(frame: THREE.NodeFrame): boolean | undefined {
-    if (!this.active) return undefined;
-    return super.updateBefore(frame);
-  }
+  /** Volumetric sun shafts ray-marched through the sun's shadow map. */
+  godrays: boolean;
 }
 
 /** The display nodes are vec4 at runtime; their typings omit the swizzles. */
@@ -57,8 +48,10 @@ const vec4Node = (n: THREE.Node): THREE.Node<'vec4'> => n as unknown as THREE.No
 
 /** Mid-grey in linear light: the pivot of the log-space contrast. */
 const CONTRAST_PIVOT = 0.18;
-/** AO resolution relative to the drawing buffer. */
-const AO_SCALE = 0.5;
+/** AO resolution relative to the drawing buffer (full: half leaves dashes along silhouettes). */
+const AO_SCALE = 1;
+/** God-ray resolution: soft by nature, so half is plenty. */
+const RAYS_SCALE = 0.5;
 /** Film grain cadence (updates per second): film, not video noise. */
 const GRAIN_FPS = 24;
 
@@ -78,10 +71,18 @@ export class PostStack {
   readonly focusDistance = uniform(8);
   readonly focusRange = uniform(3);
   readonly bokehScale = uniform(6);
+  // Sun shafts: colour and strength follow the room's sun.
+  readonly raysColor = uniform(new THREE.Color('#ffffff'));
+  readonly raysStrength = uniform(0);
 
   private readonly grainSeed = uniform(0);
   private readonly aspect = uniform(16 / 9);
   private readonly aoTexel = uniform(new THREE.Vector2(1 / 960, 1 / 540));
+  private readonly raysTexel = uniform(new THREE.Vector2(1 / 640, 1 / 360));
+  /** God rays need the sun's shadow map, which exists only after a first render. */
+  private raysPending = false;
+  private raysNodes: GatedGodrays[] = [];
+  private raysBlur: ReturnType<typeof rtt> | null = null;
 
   private pipeline: THREE.RenderPipeline | null = null;
   private scenePass: ReturnType<typeof pass> | null = null;
@@ -95,6 +96,9 @@ export class PostStack {
     private readonly renderer: THREE.WebGPURenderer,
     private readonly scene: THREE.Scene,
     private readonly camera: THREE.PerspectiveCamera,
+    private readonly sun: THREE.DirectionalLight,
+    /** Development only: 'ao' shows the occlusion buffer, 'rays' the sun shafts, 'raw' no post. */
+    private readonly debugView: string | null = null,
   ) {}
 
   /** (Re)builds the pipeline when the enabled effects change. */
@@ -105,7 +109,8 @@ export class PostStack {
       o.ambientOcclusion === options.ambientOcclusion &&
       o.antialias === options.antialias &&
       o.bloom === options.bloom &&
-      o.depthOfField === options.depthOfField
+      o.depthOfField === options.depthOfField &&
+      o.godrays === options.godrays
     ) {
       return;
     }
@@ -113,7 +118,21 @@ export class PostStack {
     this.build(options);
   }
 
+  /** Loads the addon nodes (a separate chunk) and builds the pipeline configured so far. */
+  async load(): Promise<void> {
+    nodes ??= await import('./post-nodes');
+    if (this.options && !this.pipeline) this.build(this.options);
+  }
+
+  /** True while volumetric shafts replace the modelled light beams. */
+  get hasGodrays(): boolean {
+    return this.options?.godrays === true;
+  }
+
   private build(options: PostOptions): void {
+    const n = nodes;
+    if (!n) return;
+    const { GatedDepthOfField, GatedGodrays, ao, bloom, depthAwareBlur, fxaa, smaa } = n;
     for (const d of this.disposables) d.dispose();
     this.disposables = [];
     this.pipeline?.dispose();
@@ -128,6 +147,8 @@ export class PostStack {
     const depth = scenePass.getTextureNode('depth');
 
     let hdr = color.rgb;
+    let occlusionView: THREE.Node<'float'> | null = null;
+    let raysView: THREE.Node<'float'> | null = null;
 
     if (options.depthOfField) {
       const dof = new GatedDepthOfField(
@@ -160,9 +181,35 @@ export class PostStack {
       });
       this.disposables.push(blurX);
       const occlusion = depthAwareBlur(blurX, depth, vec2(0, this.aoTexel.y), camera, 2, 1);
+      occlusionView = occlusion;
       // Occlusion is about ambient light: keep flames, sunlit stone and the relic clean.
       const lit = smoothstep(0.5, 2.5, luminance(hdr));
       hdr = hdr.mul(mix(float(1), occlusion, this.aoStrength.mul(lit.oneMinus())));
+    }
+
+    this.raysNodes = [];
+    this.raysBlur = null;
+    this.raysPending = options.godrays && !this.sun.shadow.map;
+    if (options.godrays && this.sun.shadow.map) {
+      // Light scattered by the dust wherever a view ray crosses sunlit air: the
+      // shafts come from the real shadow of the skylight, not from modelled cones.
+      const rays = new GatedGodrays(depth, camera, this.sun);
+      rays.raymarchSteps.value = 48;
+      rays.density.value = 3.2;
+      rays.maxDensity.value = 0.85;
+      rays.distanceAttenuation.value = 0;
+      rays.resolutionScale = RAYS_SCALE;
+      this.disposables.push(rays);
+      this.raysNodes = [rays];
+      const raw = rays.getTextureNode();
+      const blurX = rtt(depthAwareBlur(raw, depth, vec2(this.raysTexel.x, 0), camera, 1, 2), null, null, {
+        resolutionScale: RAYS_SCALE,
+      });
+      this.raysBlur = blurX;
+      this.disposables.push(blurX);
+      const shaft = depthAwareBlur(blurX, depth, vec2(0, this.raysTexel.y), camera, 1, 2);
+      raysView = shaft;
+      hdr = hdr.add(mix(vec3(0, 0, 0), this.raysColor, shaft.mul(this.raysStrength)));
     }
 
     if (options.bloom) {
@@ -202,6 +249,10 @@ export class PostStack {
     const pipeline = new THREE.RenderPipeline(this.renderer);
     pipeline.outputColorTransform = false;
     pipeline.outputNode = vec4(out, 1);
+    // Development views for art review: the AO buffer, or the scene with no post at all.
+    if (this.debugView === 'ao' && occlusionView) pipeline.outputNode = vec4(vec3(occlusionView), 1);
+    if (this.debugView === 'rays' && raysView) pipeline.outputNode = vec4(vec3(raysView), 1);
+    if (this.debugView === 'raw') pipeline.outputNode = renderOutput(color);
     this.pipeline = pipeline;
   }
 
@@ -219,6 +270,7 @@ export class PostStack {
   setSize(width: number, height: number): void {
     this.aspect.value = width / Math.max(1, height);
     this.aoTexel.value.set(1 / Math.max(1, width * AO_SCALE), 1 / Math.max(1, height * AO_SCALE));
+    this.raysTexel.value.set(1 / Math.max(1, width * RAYS_SCALE), 1 / Math.max(1, height * RAYS_SCALE));
     // Bokeh radius in full-resolution pixels, tuned at 1080p.
     this.bokehScale.value = 7 * (height / 1080);
   }
@@ -229,7 +281,12 @@ export class PostStack {
     const frame = Math.floor(this.grainClock * GRAIN_FPS);
     this.grainSeed.value = frame % 997;
     if (this.dof) this.dof.active = this.dofAmount.value > 0.005;
+    const raysOn = this.raysStrength.value > 0.001;
+    for (const r of this.raysNodes) r.active = raysOn;
+    if (this.raysBlur) this.raysBlur.autoUpdate = raysOn;
     this.pipeline.render();
+    // The sun's shadow map now exists: add the god rays that had to wait for it.
+    if (this.raysPending && this.sun.shadow.map && this.options) this.build(this.options);
   }
 
   dispose(): void {

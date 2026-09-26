@@ -70,7 +70,8 @@ export class GameRenderer {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.camera.layers.enable(CHARACTER_LAYER);
-    this.post = new PostStack(this.renderer, this.scene, this.camera);
+    const view = import.meta.env.DEV ? new URLSearchParams(location.search).get('view') : null;
+    this.post = new PostStack(this.renderer, this.scene, this.camera, this.sun, view);
     this.profile = profile;
 
     this.scene.fog = new THREE.FogExp2('#2a1f17', 0.03);
@@ -103,6 +104,7 @@ export class GameRenderer {
     [this.surfaces] = await Promise.all([
       loadSurfaces(),
       this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`),
+      this.post.load(),
     ]);
     this.nora.root.traverse((o) => {
       if (o instanceof THREE.Mesh) o.layers.set(CHARACTER_LAYER);
@@ -148,7 +150,10 @@ export class GameRenderer {
       antialias: p.antialias,
       bloom: p.bloom,
       depthOfField: p.depthOfField,
+      godrays: p.godrays,
     });
+    // Volumetric shafts replace the modelled cones; the dust stays.
+    for (const s of this.shafts) s.mesh.visible = !p.godrays;
     this.applyParticleBudget();
     if (anisotropyChanged) this.applyAnisotropy();
     this.resize();
@@ -207,7 +212,12 @@ export class GameRenderer {
    * the first frames of play.
    */
   warmup(): void {
+    // Every shadow map gets created now rather than on entering its room.
+    for (const l of [this.sun, ...this.fireLights]) if (l.castShadow) l.shadow.needsUpdate = true;
     this.post.dofAmount.value = this.post.hasDepthOfField ? 0.5 : 0;
+    this.post.raysStrength.value = Math.max(this.post.raysStrength.value, 0.01);
+    // Twice: god rays join the pipeline once the first frame has made the sun's shadow map.
+    this.post.render(0);
     this.post.render(0);
     this.post.dofAmount.value = 0;
   }
@@ -395,6 +405,7 @@ export class GameRenderer {
       );
       this.scene.add(dust);
       this.shafts.push({ mesh, dust, room: roomId });
+      mesh.visible = !this.profile.godrays;
     }
   }
 
@@ -562,7 +573,12 @@ export class GameRenderer {
     post.saturation.value = l.saturation;
     post.contrast.value = l.contrast;
     post.vignette.value = l.vignette;
+    post.raysColor.value.copy(l.sunColor);
+    post.raysStrength.value = l.sunIntensity * GameRenderer.RAYS_GAIN;
   }
+
+  /** Brightness of the volumetric sun shafts per unit of sun intensity (art direction knob). */
+  static RAYS_GAIN = 0.24;
 
   /** The fire light pool follows the nearest braziers. */
   private updateFireLights(eye: Vec3): void {

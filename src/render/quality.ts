@@ -42,6 +42,8 @@ export interface QualityProfile {
   bloom: boolean;
   /** Depth of field during camera focus shots. */
   depthOfField: boolean;
+  /** Volumetric sun shafts; otherwise light shafts are modelled cones (spec §11 "Medio"). */
+  godrays: boolean;
   /** Maximum anisotropic filtering for the scanned surfaces. */
   anisotropy: number;
   /** Fraction of the full particle counts (dust in sun shafts, brazier embers). */
@@ -64,6 +66,7 @@ export const QUALITY: Record<QualityTier, QualityProfile> = {
     antialias: 'smaa',
     bloom: true,
     depthOfField: true,
+    godrays: true,
     anisotropy: 16,
     particles: 1,
     contactShadow: false,
@@ -81,6 +84,7 @@ export const QUALITY: Record<QualityTier, QualityProfile> = {
     antialias: 'smaa',
     bloom: true,
     depthOfField: false,
+    godrays: false,
     anisotropy: 8,
     particles: 0.6,
     contactShadow: false,
@@ -98,6 +102,7 @@ export const QUALITY: Record<QualityTier, QualityProfile> = {
     antialias: 'fxaa',
     bloom: true,
     depthOfField: false,
+    godrays: false,
     anisotropy: 4,
     particles: 0.35,
     contactShadow: true,
