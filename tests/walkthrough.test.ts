@@ -89,6 +89,20 @@ class Bot {
     this.waitMode('ground');
   }
 
+  /** Holds Fire (auto-aim) until every enemy of `pack` is dead, then holsters. */
+  fight(pack: string, max = 900): void {
+    const alive = (): number =>
+      this.w.state.enemies.filter((e) => e.pack === pack && e.mode !== 'dead').length;
+    this.tick(frame({ held: ['fire'], pressed: ['fire'] }));
+    for (let i = 0; i < max && alive() > 0; i++) {
+      this.tick(frame({ held: ['fire'] }));
+      if (this.p.mode === 'dead') throw new Error('died fighting');
+    }
+    expect(alive(), `enemies of ${pack} left`).toBe(0);
+    this.tick(frame({ pressed: ['weapons'] }));
+    expect(this.p.weapon.drawn).toBe(false);
+  }
+
   /** Runs north from the current position and jumps at `edgeZ` (metres). */
   runningJumpNorth(edgeZ: number): void {
     for (let i = 0; i < 300 && this.p.pos.z > edgeZ + 0.15; i++) this.tick(frame({ y: 1 }));
@@ -118,7 +132,12 @@ describe('The Antechamber', () => {
     bot.goTo(4, 1);
     bot.goTo(4, -1);
 
-    // Brazier hall: gold idol in the north-east niche.
+    // Brazier hall: a pair of jackals rests in the middle. Shoot them from the entrance side.
+    bot.goTo(4, -4);
+    bot.fight('hall');
+    expect(w.stats.kills).toBe(2);
+
+    // Gold idol in the north-east niche.
     bot.goTo(8, -11);
     bot.goTo(8, -13);
     bot.climb('E');

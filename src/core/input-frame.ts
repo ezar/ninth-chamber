@@ -15,6 +15,8 @@ export const BUTTONS = [
   'inventory',
   'pause',
   'recenter',
+  /** Cycles the locked target while aiming. */
+  'target',
 ] as const;
 
 export type Button = (typeof BUTTONS)[number];

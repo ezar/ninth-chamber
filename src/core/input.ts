@@ -28,7 +28,8 @@ const KEY_BUTTONS: Record<string, Button> = {
   KeyH: 'medkit',
   KeyG: 'flare',
   KeyI: 'inventory',
-  Tab: 'inventory',
+  // Spec §6 "Apuntado": Tab switches target (the inventory keeps I).
+  Tab: 'target',
   Escape: 'pause',
   KeyC: 'recenter',
 };
@@ -150,6 +151,7 @@ const PAD_BUTTONS: [number, Button][] = [
   [8, 'inventory'], // Select
   [9, 'pause'], // Start
   [11, 'recenter'], // right stick click
+  [15, 'target'], // d-pad right
 ];
 
 const DEADZONE = 0.18;

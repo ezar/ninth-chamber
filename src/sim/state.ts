@@ -3,6 +3,7 @@
  * saved, restored at checkpoints and hashed for replays.
  */
 import type { Dir } from './grid/units';
+import type { EnemyType } from './player/tuning';
 
 export interface Vec3 {
   x: number;
@@ -27,6 +28,19 @@ export interface Move {
   from: Vec3;
   to: Vec3;
   duration: number;
+}
+
+/** Nora's dual pistols (spec §7). */
+export interface WeaponState {
+  drawn: boolean;
+  /** Seconds left of a draw or holster motion. */
+  busy: number;
+  /** Seconds until the next shot may fire. */
+  cooldown: number;
+  /** Locked enemy id, kept while Fire is held and it stays visible. */
+  target: string | null;
+  /** Hand that fires next: 0 = left, 1 = right. */
+  hand: 0 | 1;
 }
 
 export interface PlayerState {
@@ -58,6 +72,7 @@ export interface PlayerState {
   target: string | null;
   /** Direction of the current interaction. */
   dir: Dir | null;
+  weapon: WeaponState;
 }
 
 export interface BlockActor {
@@ -126,6 +141,54 @@ export interface ZoneActor {
 
 export type Actor = BlockActor | DoorActor | LeverActor | PlateActor | PickupActor | ZoneActor;
 
+/** Enemy behaviour states (spec §7 "Comportamiento"). */
+export type EnemyMode = 'idle' | 'alert' | 'chase' | 'attack' | 'hurt' | 'flee' | 'dead';
+
+/**
+ * A living (or dead) enemy. It lives in DynamicState so checkpoints capture
+ * it; respawning sends the living ones home and makes them forget Nora.
+ */
+export interface EnemyState {
+  id: string;
+  /** Key into enemyTypes (player/tuning.ts). */
+  type: EnemyType;
+  /** Enemies of the same pack alert each other and flank together. */
+  pack: string | null;
+  /** Slot in the pack (0, 1, …), for flanking. */
+  slot: number;
+  /** Start position and facing: where it returns and rests. */
+  home: Vec3;
+  homeYaw: number;
+  /** Feet position (m). */
+  pos: Vec3;
+  /** Horizontal velocity (m/s). */
+  vel: { x: number; z: number };
+  /** Facing (rad), same convention as the player. */
+  yaw: number;
+  health: number;
+  mode: EnemyMode;
+  /** Seconds in the current mode. */
+  modeTime: number;
+  /** Mode to go back to after a stagger. */
+  resume: EnemyMode;
+  /** Seconds since the last stagger. */
+  sinceStagger: number;
+  /** Knows about Nora and hunts her. */
+  aware: boolean;
+  /** Cells to walk through, next first. */
+  path: [number, number][];
+  /** Seconds until the path may be searched again. */
+  repathIn: number;
+  /** Whether the last search found a way to Nora. */
+  reachable: boolean;
+  /** Seconds Nora has been out of reach (on a refuge). */
+  outOfReach: number;
+  /** Seconds during which sight alone does not alert it (after giving up). */
+  calm: number;
+  /** Seconds until the next bite while attacking. */
+  biteIn: number;
+}
+
 export interface TileState {
   /** Seconds since it cracked; null while intact. */
   cracked: number | null;
@@ -143,12 +206,18 @@ export interface Stats {
   distance: number;
   deaths: number;
   secrets: number;
+  /** Medkits picked up. */
   medkits: number;
+  medkitsUsed: number;
+  shots: number;
+  hits: number;
+  kills: number;
 }
 
 export interface DynamicState {
   player: PlayerState;
   actors: Actor[];
+  enemies: EnemyState[];
   tiles: Record<string, TileState>;
   signals: Record<string, boolean>;
   flags: string[];

@@ -125,6 +125,24 @@
     { "id": "brazier4", "type": "brazier", "room": "brazier_hall", "at": [10, 8] },
     { "id": "brazier5", "type": "brazier", "room": "brazier_hall", "at": [5, 1] },
     { "id": "brazier6", "type": "brazier", "room": "brazier_hall", "at": [7, 1] },
+    {
+      "id": "jackal1",
+      "type": "enemy",
+      "enemy": "jackal",
+      "room": "brazier_hall",
+      "at": [6, 3],
+      "face": "S",
+      "pack": "hall"
+    },
+    {
+      "id": "jackal2",
+      "type": "enemy",
+      "enemy": "jackal",
+      "room": "brazier_hall",
+      "at": [7, 4],
+      "face": "S",
+      "pack": "hall"
+    },
 
     { "id": "z_gallery", "type": "zone", "room": "gallery", "at": [1, 12], "size": [10, 3] },
     { "id": "z_pit", "type": "zone", "room": "gallery", "at": [1, 8], "size": [10, 2] },
