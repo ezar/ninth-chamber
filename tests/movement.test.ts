@@ -63,6 +63,16 @@ describe('ground movement', () => {
     expect(w.state.player.pos.y).toBe(0);
   });
 
+  it('walking never drops off an edge, even when already standing over it', () => {
+    const w = testLevel(['#####', '#___#', '#...#', '#.S.#', '#####']);
+    // Feet on the ledge, the body box already overhanging the pit (as after a landing).
+    w.state.player.pos.z = 4 + 0.1;
+    run(w, frame({ y: 1, held: ['walk'] }), 120);
+    expect(w.state.player.mode).toBe('ground');
+    expect(w.state.player.pos.y).toBe(0);
+    expect(cellZ(w)).toBe(2);
+  });
+
   it('running off an edge falls', () => {
     const w = testLevel(['#####', '#___#', '#...#', '#.S.#', '#####']);
     run(w, frame({ y: 1 }), 40);

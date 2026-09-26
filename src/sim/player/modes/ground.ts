@@ -45,6 +45,19 @@ export function ground(c: Ctx): void {
   );
   if (res.hitX) p.vel.x = 0;
   if (res.hitZ) p.vel.z = 0;
+  if (walk) {
+    // The box may already overhang a drop (e.g. after a landing); the centre still never crosses it.
+    const drop = (x: number, z: number): boolean =>
+      q.cellFloor(Math.floor(x / BLOCK), Math.floor(z / BLOCK)) < feet - 0.5 - 1e-3;
+    if (drop(res.x, p.pos.z)) {
+      res.x = p.pos.x;
+      p.vel.x = 0;
+    }
+    if (drop(res.x, res.z)) {
+      res.z = p.pos.z;
+      p.vel.z = 0;
+    }
+  }
   p.pos.x = res.x;
   p.pos.z = res.z;
 
