@@ -31,6 +31,9 @@ export const cameraTuning = {
   fadeDistance: 1.2,
   /** Lateral over-the-shoulder offset to the right of the character (m). */
   shoulder: 0.42,
+  /** With the pistols out: over the right shoulder and closer (spec §6 "Apuntado"). */
+  aimShoulder: 0.5,
+  aimDistance: 4,
   /** Seconds without look input before the lazy follow takes over. */
   followDelay: 1.4,
   /** Maximum lazy-follow turn rate at full running speed (rad/s). */
@@ -81,6 +84,9 @@ export class OrbitCamera {
   private trauma = 0;
   private time = 0;
   private shoulderNow = cameraTuning.shoulder;
+  /** Pistols drawn: set by the game each frame. */
+  aiming = false;
+  private aimNow = 0;
   private readonly lead = { x: 0, z: 0 };
 
   look(dx: number, dy: number, zoom: number): void {
@@ -159,6 +165,13 @@ export class OrbitCamera {
       case 'door.closing':
         this.shake(0.22 * near(e.id, 18));
         break;
+      // Combat: a small kick per shot, a jolt when a jackal snaps at Nora (a landed bite adds player.hurt).
+      case 'weapon.fired':
+        this.shake(0.18);
+        break;
+      case 'enemy.bite':
+        this.shake(0.2);
+        break;
     }
   }
 
@@ -213,8 +226,12 @@ export class OrbitCamera {
 
     // Over-the-shoulder pivot, pulled toward the centre while hanging and
     // clipped against walls so the camera never starts inside stone.
-    const want0 = hanging || this.focus ? 0 : cameraTuning.shoulder;
+    this.aimNow += ((this.aiming && !hanging ? 1 : 0) - this.aimNow) * Math.min(1, dt * 4);
+    const shoulder = cameraTuning.shoulder + (cameraTuning.aimShoulder - cameraTuning.shoulder) * this.aimNow;
+    const want0 = hanging || this.focus ? 0 : shoulder;
     this.shoulderNow += (want0 - this.shoulderNow) * Math.min(1, dt * 3);
+    const distance =
+      this.distance + (Math.min(this.distance, cameraTuning.aimDistance) - this.distance) * this.aimNow;
     const right = { x: Math.cos(this.yaw), z: -Math.sin(this.yaw) };
     const reach = {
       x: this.target.x + right.x * (this.shoulderNow + cameraTuning.radius),
@@ -235,13 +252,12 @@ export class OrbitCamera {
     const h = Math.cos(this.pitch);
     const dir = { x: Math.sin(this.yaw) * h, y: Math.sin(this.pitch), z: Math.cos(this.yaw) * h };
     const want = {
-      x: pivot.x + dir.x * (this.distance + cameraTuning.radius),
-      y: pivot.y + dir.y * (this.distance + cameraTuning.radius),
-      z: pivot.z + dir.z * (this.distance + cameraTuning.radius),
+      x: pivot.x + dir.x * (distance + cameraTuning.radius),
+      y: pivot.y + dir.y * (distance + cameraTuning.radius),
+      z: pivot.z + dir.z * (distance + cameraTuning.radius),
     };
-    const free =
-      raycast(grid, pivot, want, 0.05) * (this.distance + cameraTuning.radius) - cameraTuning.radius;
-    const allowed = Math.max(0.3, Math.min(this.distance, free));
+    const free = raycast(grid, pivot, want, 0.05) * (distance + cameraTuning.radius) - cameraTuning.radius;
+    const allowed = Math.max(0.3, Math.min(distance, free));
     // Snap in on collision, ease back out slowly so passing columns does not jerk.
     this.actual =
       allowed < this.actual
