@@ -5,6 +5,8 @@
   "touch.jump": "Saltar",
   "touch.action": "Acción",
   "touch.walk": "Andar",
+  "touch.move": "Mover",
+  "touch.look": "Mirar",
   "error.noWebGL": "Tu navegador no soporta WebGPU ni WebGL2. Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.",
   "level.antechamber": "La Antesala",
   "hint.move": "Explora. La tumba premia la paciencia.",

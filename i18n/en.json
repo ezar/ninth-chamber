@@ -5,6 +5,8 @@
   "touch.jump": "Jump",
   "touch.action": "Action",
   "touch.walk": "Walk",
+  "touch.move": "Move",
+  "touch.look": "Look",
   "error.noWebGL": "Your browser supports neither WebGPU nor WebGL2. Try a recent version of Chrome, Edge, Firefox or Safari.",
   "level.antechamber": "The Antechamber",
   "hint.move": "Explore. The tomb rewards patience.",

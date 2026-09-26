@@ -348,68 +348,208 @@ body {
   color: var(--ui-bone);
 }
 
+/* ---- Touch controls ------------------------------------------------------
+   Left half: floating move stick (a faint ghost marks where it lives).
+   Right half: drag to look. Buttons sit in an arc around the right thumb,
+   primary (jump) largest and closest to the corner. */
+
 #touch {
   display: none;
+  --pad-r: max(18px, env(safe-area-inset-right));
+  --pad-b: max(18px, env(safe-area-inset-bottom));
+  --pad-l: max(18px, env(safe-area-inset-left));
 }
-body.touch #touch {
+body.touch.playing #touch {
   display: block;
 }
 body.touch .panel .help {
   display: none;
 }
 
+#stick,
+#stick-ghost {
+  position: fixed;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
 #stick {
   display: none;
-  position: fixed;
-  width: 120px;
-  height: 120px;
-  margin: -60px 0 0 -60px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(236, 227, 208, 0.35);
-  background: rgba(15, 13, 11, 0.2);
-  pointer-events: none;
+  margin: -64px 0 0 -64px;
+  border: 1.5px solid rgba(236, 227, 208, 0.38);
+  background: radial-gradient(circle, rgba(15, 13, 11, 0.05) 40%, rgba(15, 13, 11, 0.35) 100%);
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.35);
 }
 
 #stick-knob {
   position: absolute;
-  left: 35px;
-  top: 35px;
-  width: 50px;
-  height: 50px;
+  left: 36px;
+  top: 36px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: rgba(236, 227, 208, 0.45);
+  background: radial-gradient(circle at 40% 35%, rgba(236, 227, 208, 0.75), rgba(200, 188, 164, 0.45));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+#stick-ghost {
+  left: calc(var(--pad-l) + 28px);
+  bottom: calc(var(--pad-b) + 28px);
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed rgba(236, 227, 208, 0.18);
+}
+#look-ghost {
+  position: fixed;
+  top: 38%;
+  right: calc(var(--pad-r) + 24px);
+  pointer-events: none;
+}
+#stick-ghost span,
+#look-ghost span {
+  font: 600 10px var(--font-ui);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(236, 227, 208, 0.35);
+}
+#look-ghost span::before {
+  content: '⟷ ';
+  letter-spacing: 0;
+}
+body.stick-active #stick-ghost,
+body.touch.moved #look-ghost {
+  visibility: hidden;
 }
 
 .tbtn {
+  --size: 64px;
   position: fixed;
-  width: 64px;
-  height: 64px;
-  min-width: 56px;
-  min-height: 56px;
+  width: var(--size);
+  height: var(--size);
+  margin: 0 calc(var(--size) / -2) calc(var(--size) / -2) 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  padding: 0;
   border-radius: 50%;
-  border: 1.5px solid rgba(236, 227, 208, 0.35);
-  background: var(--ui-veil);
+  border: 1.5px solid rgba(236, 227, 208, 0.32);
+  background: radial-gradient(circle at 50% 35%, rgba(46, 40, 33, 0.62), rgba(15, 13, 11, 0.62));
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 244, 220, 0.08);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   color: var(--ui-bone);
-  font: 600 11px var(--font-ui);
-  letter-spacing: 0.05em;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    transform 0.08s,
+    background 0.12s,
+    border-color 0.12s;
 }
-
+.tbtn svg {
+  width: calc(var(--size) * 0.4);
+  height: calc(var(--size) * 0.4);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tbtn span {
+  font: 600 8.5px var(--font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
 .tbtn.on {
-  background: var(--ui-amber);
+  transform: scale(0.92);
+  border-color: var(--ui-amber);
+  background: radial-gradient(circle at 50% 35%, rgba(224, 160, 70, 0.95), rgba(170, 108, 36, 0.9));
   color: var(--ui-ink);
 }
+.tbtn.on span {
+  opacity: 0.9;
+}
+
+/* Arc slots, centres measured from the bottom-right safe corner. */
 .tbtn-jump {
-  right: max(24px, env(safe-area-inset-right));
-  bottom: 32px;
+  --size: 84px;
+  right: calc(var(--pad-r) + 42px);
+  bottom: calc(var(--pad-b) + 42px);
 }
 .tbtn-action {
-  right: calc(max(24px, env(safe-area-inset-right)) + 80px);
-  bottom: 20px;
+  --size: 66px;
+  right: calc(var(--pad-r) + 146px);
+  bottom: calc(var(--pad-b) + 30px);
 }
 .tbtn-walk {
-  right: max(24px, env(safe-area-inset-right));
-  bottom: 112px;
+  --size: 52px;
+  right: calc(var(--pad-r) + 36px);
+  bottom: calc(var(--pad-b) + 144px);
+}
+/* Free slots for later buttons (weapons): diagonal and far arc. */
+.tbtn-slot-a {
+  --size: 66px;
+  right: calc(var(--pad-r) + 124px);
+  bottom: calc(var(--pad-b) + 118px);
+}
+.tbtn-slot-b {
+  --size: 52px;
+  right: calc(var(--pad-r) + 36px);
+  bottom: calc(var(--pad-b) + 214px);
+}
+
+/* The action button glows when something can be used. */
+body.can-act .tbtn-action:not(.on) {
+  border-color: var(--ui-amber);
+  color: var(--ui-amber);
+  animation: ready 1.4s ease-in-out infinite;
+}
+@keyframes ready {
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(224, 160, 70, 0.16),
+      0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Touch: hints move to the top so they never sit under a thumb. */
+body.touch #hud-hint {
+  top: calc(max(20px, env(safe-area-inset-top)) + 22px);
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(420px, calc(100vw - 32px));
+  width: max-content;
+  font-size: 14px;
+}
+body.touch #hud-prompt {
+  bottom: auto;
+  top: 60%;
+}
+body.touch #hud-stats {
+  bottom: auto;
+  top: max(8px, env(safe-area-inset-top));
+}
+
+@media (orientation: portrait) {
+  .tbtn-action {
+    right: calc(var(--pad-r) + 132px);
+  }
+  #stick-ghost {
+    bottom: calc(var(--pad-b) + 48px);
+  }
+}
+@media (max-height: 420px) {
+  .tbtn-slot-b {
+    right: calc(var(--pad-r) + 214px);
+    bottom: calc(var(--pad-b) + 36px);
+  }
 }
 
 #fatal {
