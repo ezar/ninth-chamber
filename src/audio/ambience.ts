@@ -1,9 +1,17 @@
 /**
- * Continuous, discreet ambience (spec §12 "Ambiente por sala"): a low drone
- * around 55 Hz that breathes slowly, plus two bands of filtered air drifting
- * across the stereo field. Cisterns add sparse water drips. Everything is a
- * handful of long-lived nodes modulated by very slow LFOs: no per-frame work
- * except scheduling the occasional drip.
+ * Continuous, discreet ambience (spec §12 "Ambiente por sala").
+ *
+ * Recorded beds, once loaded: the air of a large stone interior ("room
+ * tone") and a soft wind through the galleries, each a mono loop played
+ * twice from different points and panned apart so one small buffer makes a
+ * wide, uncorrelated stereo bed. Water drips fall now and then, far away in
+ * dry rooms and often in cisterns.
+ *
+ * Underneath, and as the fallback before the files arrive, the procedural
+ * layers: a low drone around 55 Hz that breathes slowly and two bands of
+ * filtered air drifting across the stereo field. Everything is a handful of
+ * long-lived nodes modulated by very slow LFOs: no per-frame work except
+ * scheduling the occasional drip.
  */
 
 import { clamp, holdParam, rnd, type NoiseBank, type Strip } from './dsp';
@@ -14,19 +22,44 @@ interface RoomColour {
   drone: number;
   air: number;
   airFreq: number;
-  drips: boolean;
+  /** Recorded beds: interior air and gallery wind. */
+  room: number;
+  wind: number;
+  /** Seconds between drips (min, max); null: none. Dry rooms get rare, distant ones. */
+  drips: [number, number] | null;
+  /** Low-pass on recorded drips (Hz): lower is farther away. */
+  dripLp: number;
 }
 
 const ROOM: Record<ReverbPreset | 'none', RoomColour> = {
-  none: { drone: 1, air: 1, airFreq: 420, drips: false },
-  stone_small: { drone: 1.1, air: 0.6, airFreq: 520, drips: false },
-  stone_medium: { drone: 1, air: 0.9, airFreq: 440, drips: false },
-  hall_large: { drone: 0.9, air: 1.3, airFreq: 360, drips: false },
-  water_cistern: { drone: 0.8, air: 0.7, airFreq: 600, drips: true },
+  none: { drone: 1, air: 1, airFreq: 420, room: 1, wind: 0.6, drips: null, dripLp: 2500 },
+  stone_small: { drone: 1.1, air: 0.6, airFreq: 520, room: 0.8, wind: 0.3, drips: [14, 30], dripLp: 2200 },
+  stone_medium: { drone: 1, air: 0.9, airFreq: 440, room: 1, wind: 0.55, drips: [10, 24], dripLp: 2600 },
+  hall_large: { drone: 0.9, air: 1.3, airFreq: 360, room: 1.1, wind: 1, drips: [8, 20], dripLp: 3000 },
+  water_cistern: {
+    drone: 0.8,
+    air: 0.7,
+    airFreq: 600,
+    room: 0.9,
+    wind: 0.4,
+    drips: [0.9, 4.5],
+    dripLp: 9000,
+  },
 };
 
 const DRONE_LEVEL = 0.05;
 const AIR_LEVEL = 0.035;
+/** Recorded beds are levelled to -20 LUFS; these sit them under everything else. */
+const ROOM_BED_LEVEL = 0.34;
+const WIND_BED_LEVEL = 0.2;
+/** With the recorded beds playing, the synthesised air steps back and the drone thins out. */
+const SYNTH_WITH_BEDS = { drone: 0.55, air: 0.15 };
+const BED_FADE = 3;
+
+interface Bed {
+  gain: GainNode;
+  level: number;
+}
 
 export class Ambience {
   private readonly out: GainNode;
@@ -34,7 +67,12 @@ export class Ambience {
   private readonly airGain: GainNode;
   private readonly airFilters: BiquadFilterNode[] = [];
   private readonly sources: AudioScheduledSourceNode[] = [];
-  private drips = false;
+  private started = false;
+  private colour: RoomColour = ROOM.none;
+  private synth = { drone: 1, air: 1 };
+  private room: Bed | null = null;
+  private wind: Bed | null = null;
+  private pickDrip: (() => AudioBuffer | null) | null = null;
   private nextDrip = 0;
 
   constructor(
@@ -100,41 +138,105 @@ export class Ambience {
 
   start(fadeIn = 4): void {
     const t = this.ctx.currentTime;
+    this.started = true;
     for (const s of this.sources) {
       if (s instanceof AudioBufferSourceNode && s.buffer) s.start(t, Math.random() * s.buffer.duration);
       else s.start(t);
     }
     this.out.gain.setValueAtTime(0, t);
     this.out.gain.linearRampToValueAtTime(1, t + fadeIn);
+    this.nextDrip = t + rnd(2, 6);
+  }
+
+  /**
+   * Brings in the recorded beds (null ones are skipped) and recorded drips.
+   * Called once when the ambience files have loaded.
+   */
+  useBeds(
+    room: { buffer: AudioBuffer; end: number } | null,
+    wind: { buffer: AudioBuffer; end: number } | null,
+    pickDrip: () => AudioBuffer | null,
+  ): void {
+    this.pickDrip = pickDrip;
+    if (room && !this.room) this.room = this.bed(room.buffer, room.end, ROOM_BED_LEVEL, 0.6);
+    if (wind && !this.wind) this.wind = this.bed(wind.buffer, wind.end, WIND_BED_LEVEL, 0.8);
+    if (this.room || this.wind) this.synth = SYNTH_WITH_BEDS;
+    this.applyColour(BED_FADE);
+  }
+
+  /** A mono loop as a wide bed: two voices half a loop apart, panned to either side. */
+  private bed(buffer: AudioBuffer, end: number, level: number, width: number): Bed {
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const gain = new GainNode(ctx, { gain: 0 });
+    gain.connect(this.out);
+    for (const side of [-1, 1]) {
+      const src = new AudioBufferSourceNode(ctx, { buffer, loop: true, playbackRate: side < 0 ? 1 : 0.985 });
+      src.loopStart = 0;
+      src.loopEnd = end;
+      const p = new StereoPannerNode(ctx, { pan: side * width });
+      const g = new GainNode(ctx, { gain: 0.6 });
+      src.connect(g).connect(p).connect(gain);
+      // Started here, not in start(): beds may arrive before or after the ambience fades in.
+      src.start(t, side < 0 ? Math.random() * end * 0.5 : end * 0.5 + Math.random() * end * 0.5);
+    }
+    return { gain, level };
   }
 
   setRoom(preset: ReverbPreset | null): void {
     const c = ROOM[preset ?? 'none'];
+    const wasDry = !this.colour.drips || this.colour.drips[0] > 5;
+    this.colour = c;
+    this.applyColour(1.2);
+    const now = this.ctx.currentTime;
+    // Entering a cistern: the first drip should not wait for a dry-room interval.
+    if (c.drips && wasDry && c.drips[0] < 5) this.nextDrip = now + rnd(0.8, 2.5);
+  }
+
+  private applyColour(tc: number): void {
+    const c = this.colour;
     const t = this.ctx.currentTime;
     holdParam(this.droneGain.gain, t);
-    this.droneGain.gain.setTargetAtTime(DRONE_LEVEL * c.drone, t, 1.2);
+    this.droneGain.gain.setTargetAtTime(DRONE_LEVEL * c.drone * this.synth.drone, t, tc);
     holdParam(this.airGain.gain, t);
-    this.airGain.gain.setTargetAtTime(AIR_LEVEL * c.air, t, 1.2);
+    this.airGain.gain.setTargetAtTime(AIR_LEVEL * c.air * this.synth.air, t, tc);
     for (const f of this.airFilters) {
       holdParam(f.frequency, t);
       f.frequency.setTargetAtTime(c.airFreq, t, 1.5);
     }
-    if (c.drips && !this.drips) this.nextDrip = t + rnd(0.8, 2.5);
-    this.drips = c.drips;
+    for (const [bed, k] of [
+      [this.room, c.room],
+      [this.wind, c.wind],
+    ] as const) {
+      if (!bed) continue;
+      holdParam(bed.gain.gain, t);
+      bed.gain.gain.setTargetAtTime(bed.level * k, t, tc);
+    }
   }
 
   update(): void {
-    if (!this.drips) return;
+    const c = this.colour;
+    if (!this.started || !c.drips) return;
+    // Procedural drips only where they belong (cisterns); recorded ones also far off in dry rooms.
+    if (!this.pickDrip && c.drips[0] > 5) return;
     const now = this.ctx.currentTime;
     if (now < this.nextDrip) return;
     const s = this.strip();
     if (s) {
       const pan = rnd(-0.85, 0.85);
-      const gain = rnd(0.02, 0.05);
-      drip(s, now + 0.02, pan, gain);
-      if (Math.random() < 0.25) drip(s, now + rnd(0.12, 0.3), clamp(pan + rnd(-0.1, 0.1), -1, 1), gain * 0.6);
+      const near = c.drips[0] < 5;
+      const buf = this.pickDrip?.() ?? null;
+      if (buf) {
+        const gain = near ? rnd(0.35, 0.8) : rnd(0.15, 0.35);
+        s.sample(now + 0.02, buf, { gain, pan, rate: rnd(0.9, 1.1), lp: c.dripLp });
+      } else {
+        const gain = rnd(0.02, 0.05);
+        drip(s, now + 0.02, pan, gain);
+        if (Math.random() < 0.25)
+          drip(s, now + rnd(0.12, 0.3), clamp(pan + rnd(-0.1, 0.1), -1, 1), gain * 0.6);
+      }
       s.seal();
     }
-    this.nextDrip = now + rnd(0.9, 4.5);
+    this.nextDrip = now + rnd(c.drips[0], c.drips[1]);
   }
 }

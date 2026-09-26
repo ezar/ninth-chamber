@@ -220,11 +220,27 @@ async function main(): Promise<void> {
    */
   let starting = false;
   const curtain = $('#curtain');
+  // The first gesture on the title screen unlocks audio and brings in the title theme.
+  const titleMusic = (): void => {
+    if (playing) return;
+    void audio.unlock();
+    audio.playTrack('title', 3);
+  };
+  window.addEventListener('pointerdown', titleMusic, { capture: true });
+  window.addEventListener('keydown', titleMusic, { capture: true });
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#start-button, #end-restart')) {
+    b.addEventListener('pointerenter', () => audio.ui('hover'));
+  }
+
   const start = (): void => {
     if (playing || starting || !loading.isReady || menu.isOpen) return;
     starting = true;
     // Audio and fullscreen must be requested inside the gesture itself.
     void audio.unlock();
+    audio.ui('confirm');
+    // The theme opens the level (it starts now if the title screen was silent), then leaves the tomb to its ambience.
+    audio.playTrack('title', 3);
+    audio.stopMusic(8, 6);
     if (document.body.classList.contains('touch')) {
       // Phones: reclaim the browser chrome for the game.
       void document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
@@ -290,6 +306,7 @@ async function main(): Promise<void> {
   };
 
   const restart = (): void => {
+    audio.ui('confirm');
     world = createWorld(level, 1);
     renderer.setWorld(world);
     prev = pose();
@@ -381,9 +398,20 @@ async function main(): Promise<void> {
   let lastMaterial = 'stone';
   let stepDistance = 0;
 
+  /** Where an event sounds: at the actor or tile it names, else at the player. */
+  const soundAt = (e: SimEvent): { x: number; y: number; z: number } => {
+    let cell: { cx: number; cz: number } | undefined;
+    if (typeof e.id === 'string') cell = world.state.actors.find((a) => a.id === e.id);
+    else if (typeof e.cx === 'number' && typeof e.cz === 'number') cell = { cx: e.cx, cz: e.cz };
+    if (!cell) return world.state.player.pos;
+    const x = cell.cx * BLOCK + BLOCK / 2;
+    const z = cell.cz * BLOCK + BLOCK / 2;
+    return { x, y: level.floorAt(x, z) + 1, z };
+  };
+
   const onEvent = (e: SimEvent): void => {
     const p = world.state.player.pos;
-    audio.onEvent(e, p);
+    audio.onEvent(e, soundAt(e));
     hud.onEvent(e, world);
     renderer.combat.onEvent(e, world);
     if (e.type === 'camera.focus') {

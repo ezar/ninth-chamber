@@ -122,6 +122,11 @@ export class Mixer {
     return this.room;
   }
 
+  /** Input of the room reverb, for per-sound sends on top of the bus sends. */
+  get reverbSend(): AudioNode {
+    return this.reverbIn;
+  }
+
   setRoom(preset: ReverbPreset | null): void {
     if (preset === this.room) return;
     this.room = preset;
