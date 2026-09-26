@@ -3,6 +3,7 @@
  * Only this layer touches the DOM; the simulation receives InputFrames.
  */
 import { buttonBit, type Button, type ButtonMask, type RawInput } from './input-frame';
+import { buzz } from './haptics';
 
 export interface InputDevice {
   /** Current device state. */
@@ -214,15 +215,6 @@ const JOY_RADIUS = 64;
 const JOY_DEAD = 0.12;
 /** A gentle push below this deflection walks (and so stops at edges), like a light analog tilt. */
 const JOY_WALK = 0.55;
-
-/** Short haptic tick where the browser supports it. */
-function buzz(ms: number): void {
-  try {
-    navigator.vibrate?.(ms);
-  } catch {
-    /* unsupported */
-  }
-}
 
 /**
  * Floating joystick on the left half, camera drag on the right half and
