@@ -1,0 +1,13 @@
+# Despliegue y previsualización por pull request con la integración Git de Netlify.
+# El hosting sigue abierto en el spec (§18): si se elige Vercel, basta con borrar este archivo.
+[build]
+  command = "pnpm build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
