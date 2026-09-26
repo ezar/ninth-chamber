@@ -143,9 +143,9 @@ export function dressLevel(level: Level, lib: PropLibrary, busy: ReadonlySet<str
     if (!flat || s.pit || s.water !== null || s.flags.size > 0 || busy.has(`${s.cx},${s.cz}`)) continue;
     const walls = DIRS.filter((d) => isWall(neighbour(s, d)));
 
-    // Sand drifts at the foot of walls (their ends match, so neighbours chain).
+    // Sand drifts at the foot of walls on sand floors (their ends match, so neighbours chain).
     walls.forEach((d, i) => {
-      if (hash(s.cx, s.cz, 11 + i) < 0.34) {
+      if (s.mat === 'sand' && hash(s.cx, s.cz, 11 + i) < 0.34) {
         const v = DIR_VEC[d];
         put('sand_drift', cx + (v.x * BLOCK) / 2, top, cz + (v.z * BLOCK) / 2, DIR_YAW[d], false);
       }
