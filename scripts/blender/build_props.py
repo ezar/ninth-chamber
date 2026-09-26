@@ -53,7 +53,7 @@ class PropDef:
 PROPS: dict[str, PropDef] = {
     "brazier": PropDef(props_metal.brazier, 3000, elevation=24),
     "column_base": PropDef(props_stone.column_base, 2000, elevation=22),
-    "column_capital": PropDef(props_stone.column_capital, 2000, elevation=-12),
+    "column_capital": PropDef(props_stone.column_capital, 2000, elevation=22),
     "door": PropDef(props_stone.door, 4000, azimuth=28),
     "lever": PropDef(props_metal.lever, 1500, front=-1.0, azimuth=40),
     "block": PropDef(props_stone.block, 1500),

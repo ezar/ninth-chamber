@@ -10,6 +10,7 @@ import { mechanics } from '../sim/player/tuning';
 import type { Actor } from '../sim/state';
 import type { World } from '../sim/world';
 import { surfaceParams, type SurfaceSet } from './materials';
+import { DOOR_MODEL_HEIGHT, dressLevel, PropLibrary, type PropModel } from './prop-models';
 import { cracked } from './textures';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
@@ -33,13 +34,20 @@ export class Props {
   readonly fires: FireSource[] = [];
   readonly relicLight: THREE.PointLight;
   private readonly actorViews = new Map<string, THREE.Object3D>();
+  private readonly actors = new Map<string, Actor>();
   private readonly tileViews = new Map<string, THREE.Mesh>();
   private readonly flames: { sprite: THREE.Sprite; base: THREE.Vector3; phase: number; scale: number }[] = [];
   private readonly embers: THREE.Points;
   private readonly emberData: { origin: THREE.Vector3; t: number; speed: number; drift: THREE.Vector2 }[] =
     [];
   private relicMesh: THREE.Mesh | null = null;
+  /** Emissive gain of the current relic view (the baked gem needs more than the stand-in). */
+  private relicGain = 1;
   private relicBase = new THREE.Vector3();
+  /** Baked models once loaded (see prop-models.ts); null while the stand-ins show. */
+  private lib: PropLibrary | null = null;
+  private readonly brazierViews: THREE.Group[] = [];
+  private coals: THREE.MeshStandardMaterial | null = null;
 
   constructor(
     private readonly level: Level,
@@ -53,9 +61,11 @@ export class Props {
       if (e.type !== 'brazier') continue;
       const [cx, cz] = e.at;
       const y = level.floorAt(center(cx), center(cz));
-      const b = brazier(mats);
+      const b = new THREE.Group();
+      b.add(brazier(mats));
       b.position.set(center(cx), y, center(cz));
       this.group.add(b);
+      this.brazierViews.push(b);
       const firePos = new THREE.Vector3(center(cx), y + 1.25, center(cz));
       this.fires.push({ pos: firePos, phase: this.fires.length * 1.7 });
       for (let k = 0; k < 4; k++) {
@@ -107,6 +117,79 @@ export class Props {
 
     this.buildSpikes();
     this.buildCrumbleTiles();
+    void PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
+  }
+
+  /** Swaps the procedural stand-ins for the baked models and dresses the rooms. */
+  private useModels(lib: PropLibrary): void {
+    this.lib = lib;
+    this.coals = lib.material('brazier', 'coals');
+    for (const b of this.brazierViews) {
+      const m = lib.instance('brazier');
+      if (!m) break;
+      b.clear();
+      b.add(m);
+    }
+    for (const [id, holder] of this.actorViews) {
+      const a = this.actors.get(id);
+      if (a) this.upgrade(holder, a);
+    }
+    const busy = new Set<string>();
+    for (const e of this.level.entities) busy.add(`${e.at[0]},${e.at[1]}`);
+    for (const a of this.actors.values()) busy.add(`${a.cx},${a.cz}`);
+    this.group.add(dressLevel(this.level, lib, busy));
+  }
+
+  /** Replaces an actor's stand-in with its baked model, when there is one. */
+  private upgrade(holder: THREE.Object3D, a: Actor): void {
+    const lib = this.lib;
+    if (!lib || holder.userData.model) return;
+    let m: THREE.Object3D | null = null;
+    switch (a.kind) {
+      case 'block':
+        m = lib.instance('block');
+        m?.scale.set((BLOCK - 0.03) / BLOCK, 1, (BLOCK - 0.03) / BLOCK);
+        break;
+      case 'door':
+        m = lib.instance('door');
+        if (m) {
+          m.rotation.y = this.doorYaw(a.cx, a.cz);
+          // Keep the seal round: shorter doors sink into the floor, taller ones stretch.
+          if (a.height >= DOOR_MODEL_HEIGHT) m.scale.y = a.height / DOOR_MODEL_HEIGHT;
+          else m.position.y = a.height - DOOR_MODEL_HEIGHT;
+        }
+        break;
+      case 'lever':
+        m = lib.instance('lever');
+        // The baked handle points out along +Z: negative tilts the knob up.
+        if (m) holder.userData.swing = [-0.7, 0.7];
+        break;
+      case 'secret': {
+        const name = `idol_${a.variant}` as PropModel;
+        m = lib.has(name) ? lib.instance(name) : null;
+        break;
+      }
+      case 'relic': {
+        m = lib.instance('relic');
+        const gem = m?.getObjectByName('gem');
+        if (m && gem instanceof THREE.Mesh && gem.material instanceof THREE.MeshStandardMaterial) {
+          m.position.y = -0.11; // the view is placed at the relic's centre
+          gem.material = gem.material.clone();
+          this.relicMesh = gem;
+          this.relicGain = 2.4;
+        }
+        break;
+      }
+      case 'medkit':
+        m = lib.instance('medkit');
+        break;
+      default:
+        break;
+    }
+    if (!m) return;
+    holder.clear();
+    holder.add(m);
+    holder.userData.model = true;
   }
 
   private buildSpikes(): void {
@@ -193,9 +276,14 @@ export class Props {
     obj.traverse((o) => {
       if (o instanceof THREE.Mesh) o.castShadow = o.receiveShadow = true;
     });
-    this.group.add(obj);
-    this.actorViews.set(a.id, obj);
-    return obj;
+    // The view is a holder whose child is swapped for the baked model when it loads.
+    const holder = new THREE.Group();
+    holder.add(obj);
+    this.group.add(holder);
+    this.actorViews.set(a.id, holder);
+    this.actors.set(a.id, a);
+    this.upgrade(holder, a);
+    return holder;
   }
 
   /** Doors face along the corridor they block. */
@@ -236,7 +324,8 @@ export class Props {
           v.rotation.y = DIR_YAW[a.wall];
           const handle = v.getObjectByName('handle');
           if (handle) {
-            const target = a.used ? -0.9 : 0.9;
+            const [off, on] = (v.userData.swing as [number, number] | undefined) ?? [0.9, -0.9];
+            const target = a.used ? on : off;
             handle.rotation.x += (target - handle.rotation.x) * Math.min(1, dt * 6);
           }
           break;
@@ -305,8 +394,11 @@ export class Props {
     });
     attr.needsUpdate = true;
     if (this.relicMesh) {
-      const m = this.relicMesh.material as THREE.MeshPhysicalMaterial;
-      m.emissiveIntensity = 2.2 + Math.sin(time * 2.1) * 0.5;
+      const m = this.relicMesh.material as THREE.MeshStandardMaterial;
+      m.emissiveIntensity = (2.2 + Math.sin(time * 2.1) * 0.5) * this.relicGain;
+    }
+    if (this.coals) {
+      this.coals.emissiveIntensity = 2.8 + Math.sin(time * 5.3) * 0.25 + Math.sin(time * 11.7) * 0.15;
     }
   }
 }
