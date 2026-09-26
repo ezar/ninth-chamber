@@ -206,17 +206,41 @@ async function main(): Promise<void> {
     framer.next(raw, 0, camera.yaw);
   };
 
+  /**
+   * Entering the tomb: the button answers at once (press flash, busy), the
+   * screen cuts to black, play begins under the curtain with the camera
+   * already behind Nora, and the curtain lifts on the level title.
+   */
+  let starting = false;
+  const curtain = $('#curtain');
   const start = (): void => {
-    if (playing || !loading.isReady || menu.isOpen) return;
-    playing = true;
+    if (playing || starting || !loading.isReady || menu.isOpen) return;
+    starting = true;
+    // Audio must be unlocked inside the gesture itself.
     void audio.unlock();
-    $('#start').classList.add('hidden');
-    document.body.classList.add('playing');
-    hud.showTitle(level.name as StringKey);
-    camera.recenter(world.state.player.yaw);
-    keyboard.setEnabled(true);
-    flushInput();
-    canvas.focus();
+    startButton.classList.add('pressed');
+    startButton.setAttribute('aria-busy', 'true');
+    curtain.classList.add('in');
+    window.setTimeout(() => {
+      starting = false;
+      playing = true;
+      $('#start').classList.add('hidden');
+      startButton.classList.remove('pressed');
+      startButton.removeAttribute('aria-busy');
+      document.body.classList.add('playing');
+      camera.yaw = world.state.player.yaw;
+      camera.recenter(world.state.player.yaw);
+      keyboard.setEnabled(true);
+      flushInput();
+      canvas.focus();
+      // Two frames of play under the curtain, then lift it on the title.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          curtain.classList.remove('in');
+          hud.showTitle(level.name as StringKey);
+        }),
+      );
+    }, 480);
   };
   startButton.addEventListener('click', start);
   $('#start-options').addEventListener('click', () => {
@@ -417,12 +441,16 @@ async function main(): Promise<void> {
     );
   };
 
-  // First frames behind the loading screen: compile what the title view shows, then the rest.
+  // First frames behind the loading screen compile every shader the opening
+  // needs: the gameplay view behind Nora, every effect, then the title view.
   loading.setStage('loading.prepare', 0.8);
+  await nextFrame();
+  camera.yaw = world.state.player.yaw;
+  draw(0, 1);
+  renderer.warmup();
   await nextFrame();
   camera.yaw = world.state.player.yaw + Math.PI * 0.85;
   draw(0, 1);
-  renderer.warmup();
   canvas.classList.add('ready');
 
   if (settings.quality === null) {

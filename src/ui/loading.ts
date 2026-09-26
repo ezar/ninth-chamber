@@ -66,6 +66,7 @@ export class LoadingScreen {
     this.button.removeAttribute('aria-busy');
     document.body.classList.remove('loading');
     this.root.classList.add('done');
+    byId('start').classList.add('ready');
     DefaultLoadingManager.onProgress = () => undefined;
     this.button.focus({ preventScroll: true });
   }

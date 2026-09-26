@@ -8,14 +8,41 @@
     />
     <meta name="theme-color" content="#0f0d0b" />
     <title>The Ninth Chamber</title>
+    <script>
+      // Before any bundle arrives: the language for the loading screen's fallback text
+      // (the stored choice, else the first of the browser's languages we have).
+      (function () {
+        var lang = 'en';
+        try {
+          var saved = JSON.parse(localStorage.getItem('nc.settings') || '{}').language;
+          var prefs = navigator.languages || [navigator.language || 'en'];
+          if (saved === 'en' || saved === 'es') lang = saved;
+          else
+            for (var i = 0; i < prefs.length; i++) {
+              var l = String(prefs[i]).toLowerCase().split('-')[0];
+              if (l === 'en' || l === 'es') {
+                lang = l;
+                break;
+              }
+            }
+        } catch (e) {
+          /* storage blocked: English */
+        }
+        document.documentElement.lang = lang;
+      })();
+    </script>
+    <link rel="preload" as="image" href="/loading/reel-1.webp" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fonts load without blocking the first paint (the fallbacks are close enough). -->
     <link
       href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@500&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media = 'all'"
     />
   </head>
-  <body>
+  <body class="loading">
     <canvas id="game" tabindex="0"></canvas>
 
     <div id="hud">
@@ -42,22 +69,56 @@
       </div>
     </div>
 
+    <!--
+      The start screen renders its loading state from the first paint, before
+      any script: the button is disabled and busy, the line shimmers, the seal
+      breathes and a reel of in-game renders drifts behind the title. The
+      bilingual fallbacks are replaced from i18n/*.json once the game loads.
+    -->
     <div id="start">
+      <div id="loading-reel" aria-hidden="true">
+        <div class="reel reel-1"></div>
+        <div class="reel reel-2"></div>
+        <div class="reel reel-3"></div>
+        <div class="reel reel-4"></div>
+      </div>
       <div class="panel">
-        <p class="kicker" data-i18n="start.kicker"></p>
-        <h1 data-i18n="title"></h1>
-        <p class="sub" data-i18n="level.antechamber"></p>
+        <p class="kicker fallback" data-i18n="start.kicker">
+          <span lang="en">Tomb of Qarrum · First chamber</span
+          ><span lang="es">Tumba de Qarrum · Primera cámara</span>
+        </p>
+        <h1 data-i18n="title" class="fallback">
+          <span lang="en">The Ninth Chamber</span><span lang="es">La Novena Cámara</span>
+        </h1>
+        <p class="sub fallback" data-i18n="level.antechamber">
+          <span lang="en">The Antechamber</span><span lang="es">La Antesala</span>
+        </p>
         <div class="start-actions">
-          <button id="start-button" data-nav data-i18n="start.play"></button>
+          <button
+            id="start-button"
+            class="fallback"
+            data-nav
+            data-i18n="start.play"
+            disabled
+            aria-busy="true"
+          >
+            <span lang="en">Enter the tomb</span><span lang="es">Entrar en la tumba</span>
+          </button>
           <button id="start-options" class="ghost" data-nav data-i18n="start.options"></button>
         </div>
         <div id="loading" role="status" aria-live="polite">
+          <div class="load-seal" aria-hidden="true"></div>
           <div class="load-track"><div id="loading-fill"></div></div>
-          <p id="loading-label"></p>
+          <p id="loading-label" class="fallback">
+            <span lang="en">Loading…</span><span lang="es">Cargando…</span>
+          </p>
         </div>
         <p class="help" data-i18n="help"></p>
       </div>
     </div>
+
+    <!-- The cinematic cut into play: a short fade to black and back. -->
+    <div id="curtain" aria-hidden="true"></div>
 
     <div id="menu" class="menu" role="dialog" aria-modal="true" hidden>
       <div class="menu-veil" aria-hidden="true"></div>

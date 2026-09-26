@@ -6,6 +6,7 @@
  * quality tier (render/quality.ts).
  */
 import * as THREE from 'three/webgpu';
+import { length, smoothstep, uniform, uv } from 'three/tsl';
 import { BLOCK } from '../sim/grid/units';
 import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
@@ -58,6 +59,7 @@ export class GameRenderer {
   private reducedMotion = false;
   private sunShadowAge = Infinity;
   private readonly contactShadow: THREE.Mesh;
+  private readonly contactStrength: THREE.UniformNode<'float', number>;
   private focus: { at: THREE.Vector3; amount: number } | null = null;
 
   constructor(
@@ -94,7 +96,9 @@ export class GameRenderer {
     // character-lighting cheat); short range, so it barely touches the set.
     this.characterFill.position.set(0.6, 2.2, 1.6);
     this.nora.root.add(this.characterFill);
-    this.contactShadow = makeContactShadow();
+    const contact = makeContactShadow();
+    this.contactShadow = contact.mesh;
+    this.contactStrength = contact.strength;
     this.scene.add(this.contactShadow);
     this.applyProfile(false);
   }
@@ -548,7 +552,7 @@ export class GameRenderer {
     const h = Math.max(0, y - floor);
     blob.position.set(x, floor + 0.015, z);
     blob.scale.setScalar(1 - Math.min(0.45, h * 0.15));
-    (blob.material as THREE.MeshBasicMaterial).opacity = 0.75 * Math.max(0, 1 - h / 3);
+    this.contactStrength.value = 0.75 * Math.max(0, 1 - h / 3);
   }
 
   private applyLook(): void {
@@ -630,34 +634,28 @@ export class GameRenderer {
   }
 }
 
-/** A radial gradient quad lying on the floor: the mobile tier's contact shadow. */
-function makeContactShadow(): THREE.Mesh {
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const g = c.getContext('2d');
-  if (g) {
-    // Black with a soft alpha falloff (an alphaMap does not draw on the WebGL2 backend here).
-    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    r.addColorStop(0, 'rgba(0,0,0,0.85)');
-    r.addColorStop(0.45, 'rgba(0,0,0,0.45)');
-    r.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = r;
-    g.fillRect(0, 0, 64, 64);
-  }
-  const map = new THREE.CanvasTexture(c);
-  map.colorSpace = THREE.SRGBColorSpace;
-  const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.1, 1.1),
-    new THREE.MeshBasicMaterial({
-      map,
-      transparent: true,
-      depthWrite: false,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-    }),
-  );
+/**
+ * The mobile tier's contact shadow: a quad lying on the floor whose opacity
+ * falls off radially, computed in the shader (textured versions drew nothing
+ * on the WebGL2 backend). `strength` fades it as Nora leaves the ground.
+ */
+function makeContactShadow(): { mesh: THREE.Mesh; strength: THREE.UniformNode<'float', number> } {
+  const strength = uniform(0.75);
+  const material = new THREE.MeshBasicNodeMaterial({
+    color: '#000000',
+    transparent: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+  });
+  const r = length(uv().sub(0.5)).mul(2);
+  // A flat core under the feet that fades out towards the rim.
+  material.opacityNode = smoothstep(0.15, 1, r).oneMinus().mul(0.85).mul(strength);
+  // Fog would lift the black towards the fog colour; the blob sits under Nora's feet anyway.
+  material.fog = false;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), material);
   mesh.rotation.x = -Math.PI / 2;
   mesh.renderOrder = 1;
   mesh.visible = false;
-  return mesh;
+  return { mesh, strength };
 }
