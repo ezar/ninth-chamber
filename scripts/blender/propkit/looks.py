@@ -130,11 +130,11 @@ def sandstone(
         base = g.mix(lam.smooth(0.42, 0.25) * 0.25, base, "#caa67c")
         # Grain: dark and light sand speckles.
         grain = g.noise(p, scale=180.0, detail=2.0, w=seed + 4.0)
-        base = g.mix(grain.smooth(0.35, 0.65) * 0.14, "#8a6644", base)
-        dk = g.voronoi(p, scale=260.0, feature="F1", w=seed + 6.0).smooth(0.14, 0.02)
-        base = g.mix(dk * 0.4, base, "#5a432f")
-        lt = g.voronoi(p, scale=200.0, feature="F1", w=seed + 16.0).smooth(0.12, 0.02)
-        base = g.mix(lt * 0.35, base, "#e0cba6")
+        base = g.mix(grain.smooth(0.3, 0.7) * 0.22, "#8a6644", base)
+        dk = g.voronoi(p, scale=260.0, feature="F1", w=seed + 6.0).smooth(0.2, 0.03)
+        base = g.mix(dk * 0.5, base, "#5a432f")
+        lt = g.voronoi(p, scale=200.0, feature="F1", w=seed + 16.0).smooth(0.18, 0.02)
+        base = g.mix(lt * 0.45, base, "#e6d4b0")
         # Worn convex edges: paler.
         base = g.mix(convex * 0.5, base, "#d4ba92")
         rough = 0.88 + (grain - 0.5) * 0.1 - convex * 0.06
@@ -155,9 +155,9 @@ def sandstone(
         if carve is not None:
             cv = carve(g, p)  # 0 surface .. 1 bottom of the carving
             height = height - cv * 6.0
-            dust = (cv.smooth(0.25, 0.9) * (sand_n.smooth(0.2, 0.6))).clamp()
-            sand = (sand + dust * 0.9).clamp()
-            base = g.mix(cv.smooth(0.05, 0.6) * 0.3, base, "#8a6645")
+            dust = (cv.smooth(0.25, 0.9) * (sand_n.smooth(0.35, 0.75))).clamp()
+            sand = (sand + dust * 0.55).clamp()
+            base = g.mix(cv.smooth(0.05, 0.6) * 0.45, base, "#6e5037")
             occl = cv.smooth(0.3, 1.0) * -0.35 + 1.0
         base = g.mix(sand, base, g.mix(sand_n, SAND, "#d8bf96"))
         rough = g.mixf(sand, rough, 0.96)
@@ -172,7 +172,7 @@ def sandstone(
             wet = band_d * wn.smooth(0.3, 0.6) * 0.4
             base = g.mix(wet, base, g.mix(0.5, base, "#5a3f2a", "MULTIPLY"))
             # Salt bloom just above the damp band.
-            salt = z.smooth(0.2, 0.3) * z.smooth(0.55, 0.36) * wn.smooth(0.55, 0.7) * 0.35
+            salt = z.smooth(0.2, 0.3) * z.smooth(0.55, 0.36) * wn.smooth(0.58, 0.72) * 0.16
             base = g.mix(salt, base, "#e3d6bf")
             grime = z.smooth(0.12, 0.0) * 0.45
             base = g.mix(grime, base, g.mix(0.6, base, "#4a3526", "MULTIPLY"))
@@ -347,12 +347,14 @@ def jade(carve: Mask = None, seed: float = 0.0) -> Callable[[Graph], Look]:
         convex, concave = edge_masks(g, 30.0, 150.0, -20.0, -120.0)
         n1 = g.noise(p, scale=9.0, detail=6.0, rough=0.6, distortion=1.5, w=seed)
         vein = g.noise(g.scale_vec(p, 14.0, 30.0, 10.0), scale=1.0, detail=5.0, distortion=2.0, w=seed + 1.0)
-        base = g.ramp(n1, [(0.3, "#1f3a22"), (0.5, "#3d6a3a"), (0.68, "#5f8a4c"), (0.8, "#86a863")])
-        base = g.mix(vein.smooth(0.56, 0.66) * 0.55, base, "#b5c79a")
+        base = g.ramp(n1, [(0.28, "#223524"), (0.48, "#3e5f3c"), (0.66, "#587a4c"), (0.82, "#7d9565")])
+        cloud = g.noise(p, scale=4.0, detail=5.0, w=seed + 8.0)
+        base = g.mix(cloud.smooth(0.55, 0.75) * 0.35, base, "#8f9c80")  # grey-white cloudy patches
+        base = g.mix(vein.smooth(0.58, 0.66) * 0.35, base, "#a9b98f")
         spots = g.voronoi(p, scale=60.0, feature="F1", w=seed + 2.0).smooth(0.14, 0.04)
         base = g.mix(spots * g.noise(p, scale=6.0, w=seed + 3.0).smooth(0.5, 0.6) * 0.7, base, "#17261a")
         base = g.mix(convex * 0.25, base, "#9dbb7d")
-        rough = 0.11 + (n1 - 0.5) * 0.06
+        rough = 0.17 + (n1 - 0.5) * 0.08 + g.noise(p, scale=40.0, w=seed + 9.0).smooth(0.5, 0.8) * 0.1
         dust = (concave * 1.3 - 0.15).clamp()
         occl = 1.0
         height = g.noise(p, scale=200.0, detail=2.0, w=seed + 4.0) * 0.05
@@ -417,10 +419,10 @@ def clay(seed: float = 0.0, band: Mask = None) -> Callable[[Graph], Look]:
         brk = g.attr("brk").smooth(0.2, 0.8)
         n1 = g.noise(p, scale=8.0, detail=5.0, w=seed)
         n2 = g.noise(p, scale=60.0, detail=3.0, w=seed + 1.0)
-        body = g.ramp(n1, [(0.3, "#8a4a2c"), (0.55, "#a55d36"), (0.75, "#b56d43")])
-        slip = g.ramp(n1, [(0.3, "#b0835e"), (0.55, "#c49a73"), (0.75, "#cfa885")])
-        worn = g.noise(p, scale=14.0, detail=4.0, w=seed + 2.0).smooth(0.55, 0.7)
-        outside = g.mix((worn + convex * 0.6).clamp() * 0.8, slip, body)
+        body = g.ramp(n1, [(0.3, "#7e4128"), (0.55, "#9a5433"), (0.75, "#ad643d")])
+        slip = g.ramp(n1, [(0.3, "#a47350"), (0.55, "#b88a63"), (0.75, "#c49a73")])
+        worn = g.noise(p, scale=9.0, detail=4.0, w=seed + 2.0).smooth(0.42, 0.6)
+        outside = g.mix((worn + convex * 0.6).clamp() * 0.9, slip, body)
         if band is not None:
             outside = g.mix(band(g, p) * (worn.inv() * 0.7 + 0.3), outside, "#3b2418")
         base = g.mix(inner, outside, g.mix(n2, "#6e3a22", "#7f4a2e"))
@@ -448,22 +450,25 @@ def leather(emblem: Mask = None, stitches: Mask = None, seed: float = 0.0) -> Ca
         convex, concave = edge_masks(g, 25.0, 110.0, -20.0, -120.0)
         n1 = g.noise(p, scale=10.0, detail=5.0, w=seed)
         pebble = g.voronoi(p, scale=380.0, feature="F1", w=seed + 1.0)
-        crease = g.noise(g.scale_vec(p, 40.0, 6.0, 40.0), scale=1.0, detail=4.0, distortion=2.0, w=seed + 2.0)
+        crease = g.noise(p, scale=28.0, detail=5.0, distortion=3.5, w=seed + 2.0, kind="RIDGED_MULTIFRACTAL")
+        crease = crease * 0.5
         base = g.ramp(n1, [(0.3, "#3f2716"), (0.5, "#56361f"), (0.72, "#6d4829")])
         wear = (convex * 1.2 + g.noise(p, scale=18.0, w=seed + 3.0).smooth(0.6, 0.75) * 0.5 - 0.2).clamp()
         base = g.mix(wear * 0.7, base, "#8d6541")
-        base = g.mix(crease.smooth(0.6, 0.7) * 0.3, base, "#2e1c10")
+        base = g.mix(crease.smooth(0.55, 0.8) * 0.35, base, "#2e1c10")
         base = g.mix((concave * 1.2).clamp() * 0.5, base, "#6f6049")  # dust in folds
         rough = 0.68 - wear * 0.2 + (n1 - 0.5) * 0.1
-        height = pebble.smooth(0.0, 0.5) * 0.4 - crease.smooth(0.6, 0.72) * 0.6
+        height = pebble.smooth(0.0, 0.5) * 0.4 - crease.smooth(0.5, 0.85) * 0.7
         if stitches is not None:
             st = stitches(g, p)
             base = g.mix(st, base, "#b8a582")
             height = height + st * 1.2
             rough = g.mixf(st, rough, 0.85)
         if emblem is not None:
-            em, emh = emblem(g, p)
+            em, emh, rim = emblem(g, p)
             thread = g.mix(g.noise(p, scale=400.0, w=seed + 6.0), "#58733a", "#8aa25e")
+            thread = g.mix(emh.smooth(0.2, 0.9) * 0.4, "#4a6230", thread)
+            thread = g.mix(rim, thread, "#39502a")
             base = g.mix(em, base, thread)
             rough = g.mixf(em, rough, 0.8)
             height = height + emh * 1.5
@@ -483,10 +488,10 @@ def canvas(seed: float = 0.0) -> Callable[[Graph], Look]:
         w2 = g.math("SINE", (y - z) * 1400.0)
         weave = (w1 * w2) * 0.5 + 0.5
         n1 = g.noise(p, scale=10.0, detail=4.0, w=seed)
-        base = g.mix(n1, "#6b6242", "#857a54")
-        base = g.mix(weave * 0.25, base, "#9a8e66")
+        base = g.mix(n1, "#57502f", "#6f6644")
+        base = g.mix(weave * 0.2, base, "#7d7350")
         base = g.mix((concave * 1.2).clamp() * 0.5, base, "#4c4530")
-        base = g.mix(convex * 0.4, base, "#a09472")
+        base = g.mix(convex * 0.3, base, "#8a7f5c")
         return Look(base=base, rough=0.9, metal=0.0, ao=g.ao(0.03, 8), height=weave * 0.4 + n1 * 0.2,
                     bump_dist=0.0004)
 

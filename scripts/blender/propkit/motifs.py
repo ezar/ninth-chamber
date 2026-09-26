@@ -28,39 +28,52 @@ def box_u(g: Graph, p: S) -> S:
     return g.mixf(on_x, uy, ux)
 
 
+# Nine-segment seal proportions (fractions of the seal radius ``r``).
+SEAL_R0, SEAL_R1 = 0.34, 0.86  # inner / outer radius of the segment ring
+SEAL_GAP = 0.05  # half gap between segments
+SEAL_RC = 0.085  # corner radius of each segment (rounded tablets)
+
+
+def seal_sd_np(x, y, r: float):
+    """Signed distance (metres, < 0 inside) to the ninth (top) segment, numpy version."""
+    import numpy as np
+
+    rr = np.hypot(x, y)
+    da = np.mod(np.arctan2(y, x) - math.pi / 2 + math.pi, 2 * math.pi) - math.pi  # angle from the top
+    mid, w = (SEAL_R0 + SEAL_R1) / 2 * r, (SEAL_R1 - SEAL_R0) / 2 * r
+    arc = np.abs(da) * rr
+    h = (math.pi / 9) * rr - SEAL_GAP * r
+    qa = arc - (h - SEAL_RC * r)
+    qr = np.abs(rr - mid) - (w - SEAL_RC * r)
+    return np.hypot(np.maximum(qa, 0), np.maximum(qr, 0)) + np.minimum(np.maximum(qa, qr), 0) - SEAL_RC * r
+
+
 def seal(g: Graph, lx: S, ly: S, r: float = 0.5, groove: float = 0.012, soft: float = 0.006,
          ninth: str = "outline") -> S:
-    """Nine-segment circular seal: eight carved segments, the ninth only outlined.
+    """Nine-segment circular seal: eight carved tablets, the ninth (top) only outlined.
 
-    The ninth segment is centred at the top (+ly). ``ninth`` = "outline" carves
-    its outline groove (for an inlay), "none" leaves it flat.
+    ``ninth`` = "outline" carves the outline groove that holds an inlay, "none" leaves it flat.
     """
     rr = g.vmath("LENGTH", g.combine(lx, ly, 0.0))
-    ang = g.math("ARCTAN2", ly, lx)  # -pi..pi, 0 = +lx
-    # Segment coordinate: 0..9 with segment 0 centred at the top.
+    ang = g.math("ARCTAN2", ly, lx)
     t = g.math("FLOORED_MODULO", (ang - (math.pi / 2 - math.pi / 9)) * (9 / (2 * math.pi)), 9.0)
     idx = g.math("FLOOR", t)
-    f = t - idx  # 0..1 within the segment
-    r0, r1 = 0.36 * r, 0.86 * r
-    seg_w = (r1 - r0) / 2
-    radial = band(g, rr - (r0 + r1) / 2, seg_w, soft)
-    # Constant-width gaps between segments: angular distance * radius.
-    arc = (f - 0.5).abs() * (2 * math.pi / 9) * rr  # metres from segment centre line
-    half_arc = (0.5 * (2 * math.pi / 9)) * rr - 0.011 * r / 0.5
-    in_arc = (half_arc - arc).smooth(0.0, soft)
-    solid = radial * in_arc
+    f = t - idx
+    mid, w = (SEAL_R0 + SEAL_R1) / 2 * r, (SEAL_R1 - SEAL_R0) / 2 * r
+    arc = (f - 0.5).abs() * (2 * math.pi / 9) * rr
+    h = rr * (math.pi / 9) - SEAL_GAP * r
+    qa = arc - (h - SEAL_RC * r)
+    qr = (rr - mid).abs() - (w - SEAL_RC * r)
+    outside = g.vmath("LENGTH", g.combine(qa.max(0.0), qr.max(0.0), 0.0))
+    d = outside + qa.max(qr).min(0.0) - SEAL_RC * r
+    solid = (d * -1.0).smooth(-soft * 0.3, soft)
+    outline = band(g, d + groove / 2, groove / 2, soft * 0.6)
     is_ninth = g.math("LESS_THAN", idx, 0.5)
-    # Outline of a segment: solid minus its inset.
-    radial_in = band(g, rr - (r0 + r1) / 2, seg_w - groove, soft)
-    in_arc_in = (half_arc - arc - groove).smooth(0.0, soft)
-    outline = (solid - radial_in * in_arc_in).clamp()
     ninth_mask = outline if ninth == "outline" else g.const(0.0)
     segs = g.mixf(is_ninth, solid, ninth_mask)
-    # Rings: an outer rim groove and a small central boss outline.
-    rim = band(g, rr - 0.97 * r, groove * 0.9, soft)
-    boss = band(g, rr - 0.2 * r, groove * 0.7, soft)
-    dot = (0.06 * r - rr).smooth(0.0, soft)
-    return (segs + rim + boss + dot).clamp()
+    rim = band(g, rr - 0.96 * r, groove * 0.8, soft)
+    navel = (0.045 * r - rr).smooth(0.0, soft)
+    return (segs + rim + navel * 0.8).clamp()
 
 
 def glyph_band(g: Graph, u: S, v: S, cell: float = 0.24, seed: float = 0.0) -> S:

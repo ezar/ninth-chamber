@@ -5,8 +5,8 @@ from __future__ import annotations
 import math
 import random
 
+import bpy  # noqa: F401  (must precede bmesh when bpy runs as a module)
 import bmesh
-import bpy
 from mathutils import Vector
 
 from . import core, looks, motifs, shapes
@@ -293,41 +293,35 @@ def _door_touch(g: Graph, p: S) -> S:
 
 
 def _seal_amber(name: str) -> bpy.types.Object:
-    """Raised amber inlay tracing the ninth (top) segment's outline, on both faces."""
+    """Raised amber inlay tracing the ninth (top) segment's outline groove, on both faces."""
+    import numpy as np
+
     r = SEAL_R
-    r0, r1 = 0.36 * r, 0.86 * r
-    gap = 0.011 * r / 0.5
-    inset = 0.0065
+    groove = 0.013
+    level = -groove / 2  # centre line of the outline groove
+    c = np.array([0.0, (motifs.SEAL_R0 + motifs.SEAL_R1) / 2 * r])
     pts = []
-
-    def half_angle(rr):
-        return math.pi / 9 - (gap + inset) / rr
-
-    # Outer arc (left to right), inner arc (right to left), in the segment's local polar frame.
-    ra, rb = r1 - inset, r0 + inset
-    na, nb = 22, 10
-    for i in range(na + 1):
-        a = math.pi / 2 + half_angle(ra) - (2 * half_angle(ra)) * i / na
-        pts.append((ra * math.cos(a), ra * math.sin(a)))
-    for i in range(nb + 1):
-        a = math.pi / 2 - half_angle(rb) + (2 * half_angle(rb)) * i / nb
-        pts.append((rb * math.cos(a), rb * math.sin(a)))
-    pts.reverse()  # counter-clockwise, so (ty, -tx) is the outward normal
-    n = len(pts)
+    n = 64
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        d = np.array([math.cos(a), math.sin(a)])
+        lo, hi = 0.0, r
+        for _ in range(40):  # bisect along the ray for sd == level (region is star-shaped from c)
+            m = (lo + hi) / 2
+            q = c + d * m
+            if motifs.seal_sd_np(q[0], q[1], r) < level:
+                lo = m
+            else:
+                hi = m
+        q = c + d * lo
+        pts.append(Vector((q[0], q[1])))
     loops = {"out": [], "top_out": [], "top_in": [], "in": []}
     for i in range(n):
-        p0 = Vector(pts[i - 1])
-        p1 = Vector(pts[i])
-        p2 = Vector(pts[(i + 1) % n])
-        t0 = (p1 - p0).normalized()
-        t1 = (p2 - p1).normalized()
-        n0 = Vector((t0.y, -t0.x))
-        n1 = Vector((t1.y, -t1.x))
-        nm = (n0 + n1).normalized()
-        miter = 1.0 / max(nm.dot(n1), 0.35)
-        for key, off in (("out", 0.0055), ("top_out", 0.0035), ("top_in", -0.0035), ("in", -0.0055)):
-            q = p1 + nm * off * miter
-            loops[key].append(q)
+        p0, p1, p2 = pts[i - 1], pts[i], pts[(i + 1) % n]
+        t = (p2 - p0).normalized()
+        nm = Vector((t.y, -t.x))  # outward for a counter-clockwise loop
+        for key, off in (("out", 0.0055), ("top_out", 0.0032), ("top_in", -0.0032), ("in", -0.0055)):
+            loops[key].append(p1 + nm * off)
     bm = bmesh.new()
     for side in (1, -1):
         y0 = side * (DOOR_T / 2 - 0.002)

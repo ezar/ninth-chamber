@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import math
 
+import bpy  # noqa: F401  (must precede bmesh when bpy runs as a module)
 import bmesh
-import bpy
 from mathutils import Vector
 
 from . import core, looks, motifs, shapes
@@ -19,9 +19,9 @@ from .nodes import Graph, S
 
 RIM_Z = 1.15
 BOWL_OUTER = [(0.0, 0.9), (0.1, 0.9), (0.13, 0.905), (0.16, 0.925), (0.24, 0.945), (0.32, 0.975), (0.38, 1.01),
-              (0.42, 1.05), (0.44, 1.07), (0.437, 1.078), (0.44, 1.09), (0.448, 1.11), (0.466, 1.12),
-              (0.474, 1.132), (0.47, 1.145), (0.458, RIM_Z)]
-BOWL_INNER = [(0.43, RIM_Z), (0.422, 1.14), (0.41, 1.11), (0.38, 1.065), (0.31, 1.02), (0.2, 0.985),
+              (0.42, 1.05), (0.44, 1.07), (0.437, 1.078), (0.44, 1.09), (0.446, 1.11), (0.456, 1.12),
+              (0.462, 1.132), (0.459, 1.145), (0.45, RIM_Z)]
+BOWL_INNER = [(0.426, RIM_Z), (0.42, 1.14), (0.41, 1.11), (0.38, 1.065), (0.31, 1.02), (0.2, 0.985),
               (0.1, 0.97), (0.0, 0.967)]
 LEG_ANGLES = (90.0, 210.0, 330.0)
 BRACE_Z = 0.3
@@ -44,8 +44,8 @@ def _brace_radius() -> float:
 
 
 def _brazier_body(detail: bool) -> bpy.types.Object:
-    segs = 48 if detail else 30
-    sides = 12 if detail else 8
+    segs = 48 if detail else 24
+    sides = 12 if detail else 7
     bm = bmesh.new()
     shapes.lathe(bm, BOWL_OUTER + BOWL_INNER, segs)
     # Heavy foot ring under the bowl where the legs are fixed.
@@ -66,7 +66,7 @@ def _brazier_body(detail: bool) -> bpy.types.Object:
         foot = [(0.0, 0.0), (0.058, 0.0), (0.066, 0.014), (0.06, 0.032), (0.046, 0.05), (0.036, 0.066),
                 (0.0, 0.07)]
         before = set(bm.verts)
-        shapes.lathe(bm, foot, 14 if detail else 9, phase=math.radians(a))
+        shapes.lathe(bm, foot, 14 if detail else 8, phase=math.radians(a))
         new = [v for v in bm.verts if v not in before]
         bmesh.ops.translate(bm, verts=new, vec=fz)
         # Tab bolting the leg to the foot ring.
@@ -82,8 +82,8 @@ def _brazier_body(detail: bool) -> bpy.types.Object:
 
 
 def _coals_mesh(detail: bool) -> bpy.types.Object:
-    rings = 14 if detail else 5
-    segs = 64 if detail else 22
+    rings = 14 if detail else 4
+    segs = 64 if detail else 20
     prof = []
     for i in range(rings + 1):
         r = 0.408 * i / rings
@@ -174,6 +174,7 @@ HANDLE_LEN = 0.55
 
 
 def _lever_plate(detail: bool) -> bpy.types.Object:
+    """Wall plate. The game mesh (detail=False) drops the back face; the bake source stays closed."""
     bm = bmesh.new()
     shapes.box(bm, (-0.2, -0.03, 0.0), (0.2, 0.0, 0.5))
     shapes.box(bm, (-0.1, -0.08, 0.08), (0.1, -0.03, 0.42))
@@ -198,6 +199,8 @@ def _lever_plate(detail: bool) -> bpy.types.Object:
         return f.normal.y < -0.9 and abs(c.y + 0.08) < 1e-4 and abs(c.x) < 0.018 and 0.12 < c.z < 0.38
 
     _recess(obj, planes, pick, 0.045)
+    if detail:
+        return obj
     # The back face sits against the wall and is never seen.
     bm = shapes.to_bm(obj)
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.normal.y > 0.9 and abs(f.calc_center_median().y) < 1e-4],
@@ -273,10 +276,10 @@ def lever(ctx: Ctx) -> list:
     core.smooth_by_angle(low, 45)
     core.uv_smart(low, 55, 0.006, shape="CONCAVE")
     finish(ctx, [BakeSpec("lever", low, [hi_p, hi_h], size=1024, cage=0.006, ray=0.015)])
-    parts = core.split_parts(low, {0: "lever_plate", 1: "handle"})
+    parts = core.split_parts(low, {0: "lever", 1: "handle"})
     h = parts["handle"]
     core.set_origin(h, PIVOT)
-    return [parts["lever_plate"], h]
+    return [parts["lever"], h]
 
 
 # ---------------------------------------------------------------------------
@@ -366,7 +369,7 @@ def relic(ctx: Ctx) -> list:
     hi = high(csrc, "relic_high", looks.gold(seed=2.0, ao_dist=0.02, bump_dist=0.00015), subdiv=1, curv_blur=2,
               keep_base=False)
     gsrc = core.copy_obj(gem, "gem_src")
-    ghi = high(gsrc, "gem_high", looks.amber_gem(seed=4.0), curv_blur=0, keep_base=False)
+    ghi = high(gsrc, "gem_high", looks.amber_gem(seed=4.0), curv_blur=0, keep_base=False, smooth=False)
     core.smooth_by_angle(cage, 60)
     core.uv_smart(cage, 60, 0.006, shape="CONCAVE")
     core.uv_smart(gem, 30, 0.01)

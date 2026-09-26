@@ -5,8 +5,8 @@ from __future__ import annotations
 import math
 import random
 
+import bpy  # noqa: F401  (must precede bmesh when bpy runs as a module)
 import bmesh
-import bpy
 import numpy as np
 from mathutils import Euler, Matrix, Quaternion, Vector
 
@@ -148,7 +148,7 @@ FLAP_HW = 0.15
 
 
 def _flap_tip_z(x: float) -> float:
-    return 0.036 + 0.03 * (x / FLAP_HW) ** 2
+    return 0.066 + 0.022 * (x / FLAP_HW) ** 2
 
 
 def _medkit_body(detail: bool) -> bpy.types.Object:
@@ -212,7 +212,7 @@ def _medkit_flap(detail: bool) -> bpy.types.Object:
 
 def _medkit_strap(detail: bool) -> bpy.types.Object:
     bm = bmesh.new()
-    shapes.box(bm, (-0.017, BODY[1] - 0.002, 0.012), (0.017, BODY[1] + 0.0035, 0.052))
+    shapes.box(bm, (-0.016, BODY[1] - 0.002, 0.008), (0.016, BODY[1] + 0.0035, 0.072))
     # Loop of the strap under the body front edge.
     obj = core.obj_from_bmesh("medkit_strap", bm)
     core.bevel(obj, 0.0015, 2 if detail else 1, 30)
@@ -221,8 +221,8 @@ def _medkit_strap(detail: bool) -> bpy.types.Object:
 
 def _medkit_buckle(detail: bool) -> bpy.types.Object:
     bm = bmesh.new()
-    y = BODY[1] + 0.006
-    hw, z0, z1 = 0.024, 0.042, 0.07
+    y = BODY[1] + 0.0065
+    hw, z0, z1 = 0.023, 0.028, 0.054
     rect = [Vector((-hw, y, z0)), Vector((hw, y, z0)), Vector((hw, y, z1)), Vector((-hw, y, z1))]
     pts = []
     for i in range(4):
@@ -237,7 +237,7 @@ def _medkit_buckle(detail: bool) -> bpy.types.Object:
     return core.obj_from_bmesh("medkit_buckle", bm)
 
 
-def _leaf(g: Graph, u: S, v: S, L: float = 0.072, W: float = 0.036):
+def _leaf(g: Graph, u: S, v: S, L: float = 0.08, W: float = 0.04):
     """Vesica leaf (u across, v along), satin-stitched fill, midrib, stem. Returns (mask, height)."""
     rc = (L * L / 4 + W * W / 4) / W  # circle radius
     c = rc - W / 2
@@ -251,9 +251,11 @@ def _leaf(g: Graph, u: S, v: S, L: float = 0.072, W: float = 0.036):
     satin2 = g.math("SINE", (u * -0.8 + v * 0.6) * 2600.0) * 0.5 + 0.5
     side = g.math("GREATER_THAN", u, 0.0)
     fill = g.mixf(side, satin, satin2)
+    rim = ((rc - d1).smooth(0.0, 0.0012) * (rc - d2).smooth(0.0, 0.0012)
+           - (rc - d1).smooth(0.0022, 0.0034) * (rc - d2).smooth(0.0022, 0.0034)).clamp()
     mask = (inside + stem).clamp()
-    height = mask * (fill * 0.5 + 0.5) - mid * 0.6
-    return mask, height
+    height = mask * (fill * 0.5 + 0.5) - mid * 0.6 + rim * 0.3
+    return mask, height, rim
 
 
 def _flap_emblem(g: Graph, p: S):
@@ -261,16 +263,16 @@ def _flap_emblem(g: Graph, p: S):
     a = math.radians(-28)
     u = x * math.cos(a) - (y - 0.004) * math.sin(a)
     v = x * math.sin(a) + (y - 0.004) * math.cos(a)
-    m, h = _leaf(g, u, v)
-    top = z.smooth(0.119, 0.123)
-    return m * top, h * top
+    m, h, rim = _leaf(g, u, v)
+    top = z.smooth(0.1235, 0.125)
+    return m * top, h * top, rim * top
 
 
 def _flap_stitches(g: Graph, p: S) -> S:
     x, y, z = g.separate(p)
     dash = (g.math("SINE", (x + y + z) * 1150.0) * 0.5 + 0.5).smooth(0.35, 0.55)
     side = motifs.band(g, x.abs() - (FLAP_HW - 0.008), 0.0009, 0.0006)
-    tip = z - (x * x * (0.03 / FLAP_HW ** 2) + 0.036 + 0.008)
+    tip = z - (x * x * (0.022 / FLAP_HW ** 2) + 0.066 + 0.008)
     bottom = motifs.band(g, tip, 0.0009, 0.0006) * y.smooth(0.095, 0.1)
     return ((side + bottom) * dash).clamp()
 
@@ -304,8 +306,8 @@ def medkit(ctx: Ctx) -> list:
     buckle_hi = high(buckle, "medkit_buckle_high", looks.brass(seed=6.0), subdiv=1, curv_blur=1, keep_base=False)
     core.smooth_by_angle(low, 50)
     core.uv_smart(low, 55, 0.008, shape="CONCAVE")
-    finish(ctx, [BakeSpec("medkit", low, [body_hi, flap_hi, strap_hi, buckle_hi], size=512, cage=0.004,
-                          ray=0.01)])
+    finish(ctx, [BakeSpec("medkit", low, [body_hi, flap_hi, strap_hi, buckle_hi], size=512, cage=0.008,
+                          ray=0.02)])
     low.data.attributes.remove(low.data.attributes["part"])
     return [low]
 
@@ -401,13 +403,13 @@ PIECES = {
     "base": ([((0, 0, 0.36), (0.25, 0.1, 1)), ((0.0, -0.06, 0.3), (-0.3, -1.0, 0.8)),
               ((0.08, 0.05, 0.3), (1.0, 0.6, 0.9))], False, (0.02, 0.0, 20.0, 0.0, 88.0)),
     "neck": ([((0, 0, 0.47), (0.2, -0.15, -1)), ((0.0, 0.04, 0.44), (-0.1, 1.0, -0.6))], True,
-             (-0.34, 0.26, -60.0, 90.0, 0.0)),
+             (-0.3, 0.2, -60.0, 90.0, 0.0)),
     "shard1": ([((0, 0, 0.33), (0, 0, -1)), ((0, 0, 0.45), (0.1, 0, 1)), ((0, 0, 0), (1, -0.35, 0)),
-                ((0, 0, 0), (-0.55, -1, 0))], False, (0.3, 0.3, 40.0, 0.0, 0.0)),
+                ((0, 0, 0), (-0.55, -1, 0))], False, (0.26, 0.22, 40.0, 0.0, 0.0)),
     "shard2": ([((0, 0, 0.38), (0.2, 0, -1)), ((0, 0, 0.47), (0, 0, 1)), ((0, 0, 0), (-1, 0.5, 0)),
-                ((0, 0, 0), (0.7, 1, 0))], False, (0.38, -0.22, 100.0, 0.0, 0.0)),
+                ((0, 0, 0), (0.7, 1, 0))], False, (0.3, -0.16, 100.0, 0.0, 0.0)),
     "shard3": ([((0, 0, 0.24), (0, 0, -1)), ((0, 0, 0.36), (0.2, 0.1, 1)), ((0, 0, 0), (-0.8, -1, 0)),
-                ((0, 0, 0), (1, -0.3, 0))], False, (-0.12, -0.36, 200.0, 0.0, 0.0)),
+                ((0, 0, 0), (1, -0.3, 0))], False, (-0.1, -0.28, 200.0, 0.0, 0.0)),
 }
 
 

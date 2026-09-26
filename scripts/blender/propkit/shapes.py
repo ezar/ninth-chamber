@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from typing import Callable, Iterable, Optional, Sequence
 
+import bpy  # noqa: F401  (must precede bmesh when bpy runs as a module)
 import bmesh
 from mathutils import Matrix, Vector
 
