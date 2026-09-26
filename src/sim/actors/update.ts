@@ -5,7 +5,7 @@
 import { BLOCK } from '../grid/units';
 import { setSignal } from '../logic/rules';
 import { mechanics } from '../player/tuning';
-import { tileState, type World } from '../world';
+import { floorWith, tileState, type World } from '../world';
 
 export function updateActors(world: World, dt: number): void {
   const { state, events, level } = world;
@@ -19,11 +19,15 @@ export function updateActors(world: World, dt: number): void {
     switch (a.kind) {
       case 'door': {
         if (a.closeIn !== null && a.open >= 1) {
+          const before = Math.ceil(a.closeIn);
           a.closeIn -= dt;
           if (a.closeIn <= 0) {
             a.closeIn = null;
             a.target = 0;
             events.emit({ type: 'door.closing', tick, id: a.id });
+          } else if (Math.ceil(a.closeIn) < before) {
+            // An audible tick every second of a timed door (spec §8 "Temporizadores").
+            events.emit({ type: 'door.tick', tick, id: a.id, left: Math.ceil(a.closeIn) });
           }
         }
         // A closing door waits while the player stands in its doorway.
@@ -38,6 +42,14 @@ export function updateActors(world: World, dt: number): void {
         break;
       }
       case 'block': {
+        if (a.fallTo === null && a.from === null) {
+          // A block whose support went away (e.g. the block under it was moved) falls.
+          const floor = floorWith(world, a.cx, a.cz, a.id);
+          if (floor < a.y - 1e-3) {
+            a.fallTo = floor;
+            events.emit({ type: 'block.falling', tick, id: a.id });
+          }
+        }
         if (a.fallTo !== null) {
           a.y = Math.max(a.fallTo, a.y - mechanics.blockFallSpeed * dt);
           if (a.y === a.fallTo) {
