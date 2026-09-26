@@ -457,8 +457,8 @@ def _chunk(rng: random.Random, size, cuts: int, name: str):
     planes = []
     for _ in range(cuts):
         d = Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), rng.uniform(-0.2, 1))).normalized()
-        c = Vector((d.x * sx * rng.uniform(0.18, 0.38), d.y * sy * rng.uniform(0.18, 0.38),
-                    sz * 0.5 + d.z * sz * rng.uniform(0.15, 0.35)))
+        c = Vector((d.x * sx * rng.uniform(0.12, 0.34), d.y * sy * rng.uniform(0.12, 0.34),
+                    sz * 0.5 + d.z * sz * rng.uniform(0.1, 0.32)))
         geom = list(bm.verts) + list(bm.edges) + list(bm.faces)
         r = bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=c, plane_no=d, clear_outer=True)
         edges = [e for e in bm.edges if e.is_boundary]
@@ -507,15 +507,14 @@ def _rubble(ctx: Ctx, name: str, seed: int, chunks) -> list:
         def disp(g, s=s, amp=amp):
             p = g.pos()
             fr = g.attr("frac").smooth(0.0, 0.5)
-            dressed = looks.stone_disp(g, amp=0.004, chip=0.02, seed=s, chip_density=0.8, chip_scale=10.0)
-            # Conchoidal fracture: stepped facets (random height per Voronoi cell) over rough noise.
-            pw = g.warp(p, 0.04, 6.0, seed=s + 2.5)
-            cell = g.voronoi(pw, scale=9.0 / max(size[0], 0.3), feature="F1", out="Color", w=s + 3.5)
-            facet = (g.separate(cell)[0] - 0.5) * (amp * 0.5)
-            rough = (g.noise(p, scale=6.0, detail=6.0, rough=0.6, w=s + 0.5, kind="RIDGED_MULTIFRACTAL") * (amp * 0.12)
-                     + (g.noise(p, scale=2.5, detail=4.0, rough=0.55, w=s + 1.5) - 0.5) * (amp * 1.4)
-                     + facet)
-            return g.mixf(fr, dressed, rough)
+            dressed = looks.stone_disp(g, amp=0.004, chip=0.022, seed=s, chip_density=0.85, chip_scale=10.0)
+            # Fracture: multi-scale rough relief with a few sharp ridges (no cellular pattern).
+            rough = ((g.noise(p, scale=2.2, detail=5.0, rough=0.6, w=s + 1.5) - 0.5) * (amp * 1.7)
+                     + g.noise(p, scale=5.0, detail=5.0, rough=0.55, w=s + 0.5, kind="RIDGED_MULTIFRACTAL")
+                     * (amp * 0.1)
+                     + (g.noise(p, scale=14.0, detail=3.0, w=s + 2.5) - 0.5) * (amp * 0.35))
+            whole = (g.noise(p, scale=1.3, detail=3.0, w=s + 3.5) - 0.5) * (amp * 0.6)
+            return g.mixf(fr, dressed, rough) + whole
 
         core.curvature(src, "curv0", 3)
         core.displace(src, disp)
@@ -541,25 +540,25 @@ def chunks_budget(size) -> int:
 
 def rubble_a(ctx: Ctx) -> list:
     return _rubble(ctx, "rubble_a", 101, [
-        ((0.8, 0.55, 0.46), 4, (0.0, 0.0), 12.0, (0.0, 0.0)),
-        ((0.26, 0.22, 0.18), 3, (0.62, -0.28), 40.0, (8.0, -6.0)),
-        ((0.22, 0.2, 0.15), 3, (-0.55, 0.36), -25.0, (-5.0, 10.0)),
+        ((0.8, 0.55, 0.46), 6, (0.0, 0.0), 12.0, (0.0, 0.0)),
+        ((0.26, 0.22, 0.18), 4, (0.55, -0.3), 40.0, (8.0, -6.0)),
+        ((0.22, 0.2, 0.15), 4, (-0.5, 0.3), -25.0, (-5.0, 10.0)),
     ])
 
 
 def rubble_b(ctx: Ctx) -> list:
     return _rubble(ctx, "rubble_b", 202, [
-        ((0.5, 0.4, 0.3), 4, (0.0, 0.0), -8.0, (4.0, 0.0)),
-        ((0.42, 0.3, 0.26), 4, (0.46, 0.2), 55.0, (-10.0, 6.0)),
-        ((0.3, 0.26, 0.2), 3, (-0.36, -0.26), 20.0, (12.0, -8.0)),
+        ((0.5, 0.4, 0.3), 5, (0.0, 0.0), -8.0, (4.0, 0.0)),
+        ((0.42, 0.3, 0.26), 5, (0.44, 0.2), 55.0, (-10.0, 6.0)),
+        ((0.3, 0.26, 0.2), 4, (-0.34, -0.24), 20.0, (12.0, -8.0)),
     ])
 
 
 def rubble_c(ctx: Ctx) -> list:
     return _rubble(ctx, "rubble_c", 303, [
-        ((0.3, 0.24, 0.18), 3, (0.0, 0.0), 5.0, (6.0, 0.0)),
-        ((0.24, 0.2, 0.16), 3, (0.34, 0.12), 60.0, (-12.0, 8.0)),
-        ((0.22, 0.2, 0.14), 3, (-0.3, 0.2), -30.0, (10.0, 14.0)),
-        ((0.2, 0.18, 0.14), 3, (0.1, -0.32), 80.0, (-8.0, -10.0)),
-        ((0.2, 0.16, 0.12), 3, (-0.22, -0.24), 15.0, (14.0, 6.0)),
+        ((0.3, 0.24, 0.18), 4, (0.0, 0.0), 5.0, (6.0, 0.0)),
+        ((0.24, 0.2, 0.16), 4, (0.32, 0.12), 60.0, (-12.0, 8.0)),
+        ((0.22, 0.2, 0.14), 4, (-0.28, 0.18), -30.0, (10.0, 14.0)),
+        ((0.2, 0.18, 0.14), 4, (0.1, -0.3), 80.0, (-8.0, -10.0)),
+        ((0.2, 0.16, 0.12), 4, (-0.22, -0.22), 15.0, (14.0, 6.0)),
     ])

@@ -38,16 +38,19 @@ def edge_masks(g: Graph, lo: float = 4.0, hi: float = 25.0, clo: float = -3.0, c
 
 
 def stone_height(g: Graph, p: S, grain: float = 1.0, pits: float = 1.0, seed: float = 0.0) -> S:
-    """Fine surface relief for stone: sandy grain, bedding laminae and pits (unitless)."""
-    fine = g.noise(p, scale=140.0, detail=4.0, rough=0.7, w=seed) * (0.8 * grain)
-    mid = g.noise(p, scale=18.0, detail=5.0, rough=0.6, w=seed + 3.1) * 1.2
-    lam = g.noise(g.scale_vec(p, 0.7, 0.7, 10.0), scale=1.0, detail=4.0, w=seed + 8.3)
-    lam = lam.smooth(0.5, 0.72) * 0.45
+    """Fine surface relief for stone: sandy grain, faint chisel dressing and pits (unitless)."""
+    fine = g.noise(p, scale=140.0, detail=4.0, rough=0.7, w=seed) * (0.9 * grain)
+    mid = g.noise(p, scale=18.0, detail=5.0, rough=0.6, w=seed + 3.1) * 1.1
+    # Claw-chisel dressing: shallow parallel diagonal grooves, worn away in patches.
+    x, y, z = g.separate(p)
+    ch = g.math("SINE", (x * 0.62 + y * 0.62 + z * 0.48) * (2 * 3.14159 / 0.022)) * 0.5 + 0.5
+    ch_mask = g.noise(p, scale=1.5, detail=3.0, w=seed + 9.4).smooth(0.45, 0.62)
+    chisel = ch * ch_mask * 0.35
     v1 = g.voronoi(p, scale=30.0, feature="F1", w=seed + 1.7)
     v2 = g.voronoi(p, scale=75.0, feature="F1", w=seed + 2.9)
-    gate = g.noise(p, scale=5.0, w=seed + 5.5).smooth(0.45, 0.65)
-    pit = (v1.smooth(0.2, 0.12) * gate + v2.smooth(0.16, 0.08) * 0.6) * pits
-    return fine + mid - lam - pit * 1.6
+    gate = g.noise(p, scale=5.0, w=seed + 5.5).smooth(0.4, 0.6)
+    pit = (v1.smooth(0.24, 0.12) * gate + v2.smooth(0.2, 0.08) * 0.7) * pits
+    return fine + mid - chisel - pit * 1.8
 
 
 def stone_disp(
@@ -67,8 +70,8 @@ def stone_disp(
     edge = c0.smooth(edge_lo, edge_hi)
     und = (g.noise(p, scale=1.8, detail=4.0, rough=0.55, w=seed) - 0.5) * (2 * amp)
     fine = (g.noise(p, scale=9.0, detail=5.0, rough=0.6, w=seed + 2.0) - 0.5) * (1.2 * amp)
-    lam = g.noise(g.scale_vec(p, 0.6, 0.6, 9.0), scale=1.0, detail=3.0, w=seed + 7.0).smooth(0.5, 0.72)
-    st = lam * (-strata)
+    lam = g.noise(g.scale_vec(p, 0.5, 0.5, 5.0), scale=1.0, detail=3.0, w=seed + 7.0).smooth(0.55, 0.75)
+    st = lam * (-strata * 0.6)
     pw = g.warp(p, 0.08, 5.0, seed=seed + 9.0)
     v = g.voronoi(pw, scale=chip_scale, feature="F1", w=seed + 4.0)
     rad = g.noise(p, scale=12.0, w=seed + 6.0) * 0.25 + 0.2
@@ -117,17 +120,25 @@ def sandstone(
         convex, concave = edge_masks(g, edge_lo, edge_hi)
         big = g.noise(p, scale=0.55, detail=3.0, w=seed)
         patch = g.noise(p, scale=2.2, detail=4.0, rough=0.6, w=seed + 1.3)
-        base = g.ramp(big, [(0.32, "#9d744d"), (0.5, tone), (0.68, "#c6a077")])
-        base = g.mix(pale, base, "#cfb896")
+        base = g.ramp(big, [(0.3, "#94694a"), (0.5, tone), (0.7, "#c9a57b")])
+        mott = g.noise(p, scale=1.2, detail=5.0, rough=0.65, w=seed + 2.4)
+        base = g.mix(mott.smooth(0.56, 0.72) * 0.45, base, "#8b6446")
+        base = g.mix(mott.smooth(0.42, 0.28) * 0.4, base, "#d4b88f")
+        # Contour scaling: a darker weathered crust has flaked off in patches, showing paler stone.
+        spall_n = g.noise(g.warp(p, 0.08, 3.0, seed=seed + 19.0), scale=1.7, detail=6.0, rough=0.62,
+                          w=seed + 18.0)
+        spall = spall_n.smooth(0.53, 0.56)
+        crust = g.mix(0.35, base, "#6f5038", "MULTIPLY")
+        fresh_c = g.mix(0.5, base, "#d9bc92")
+        base = g.mix(spall, crust, fresh_c)
         # Desaturated, greyer patches and warmer iron-stained blotches.
         base = g.mix(patch.smooth(0.5, 0.68) * 0.55, base, "#a8927a")
         base = g.mix(patch.smooth(0.42, 0.28) * 0.4, base, "#d0b48a")
         iron = g.noise(p, scale=1.3, detail=6.0, rough=0.7, w=seed + 8.0).smooth(0.6, 0.76)
         base = g.mix(iron * 0.4, base, "#98603a")
         # Bedding laminae: irregular horizontal light/dark streaks.
-        lam = g.noise(g.scale_vec(p, 0.7, 0.7, 16.0), scale=1.0, detail=4.0, w=seed + 8.3)
-        base = g.mix(lam.smooth(0.55, 0.75) * 0.3, base, "#a57a50")
-        base = g.mix(lam.smooth(0.42, 0.25) * 0.25, base, "#caa67c")
+        lam = g.noise(g.scale_vec(p, 0.5, 0.5, 5.0), scale=1.0, detail=3.0, w=seed + 8.3)
+        base = g.mix(lam.smooth(0.58, 0.75) * 0.18, base, "#a57a50")
         # Grain: dark and light sand speckles.
         grain = g.noise(p, scale=180.0, detail=2.0, w=seed + 4.0)
         base = g.mix(grain.smooth(0.3, 0.7) * 0.22, "#8a6644", base)
@@ -138,19 +149,23 @@ def sandstone(
         # Worn convex edges: paler.
         base = g.mix(convex * 0.5, base, "#d4ba92")
         rough = 0.88 + (grain - 0.5) * 0.1 - convex * 0.06
+        fr = None
         if fresh:
             fr = g.attr(fresh).smooth(0.05, 0.6)
-            fcol = g.mix(grain.smooth(0.3, 0.7) * 0.3, "#c08d5c", "#d3a877")
-            base = g.mix(fr * 0.75, base, fcol)
+            fcol = g.mix(grain.smooth(0.3, 0.7) * 0.3, "#b98655", "#cfa372")
+            fcol = g.mix(g.noise(p, scale=4.0, detail=4.0, w=seed + 22.0).smooth(0.4, 0.7) * 0.4, fcol, "#a8774c")
+            base = g.mix(fr * 0.8, base, fcol)
             rough = g.mixf(fr, rough, 0.93)
         # Sand settled in joints, hollows, pits and on upward faces.
         sand_n = g.noise(p, scale=22.0, detail=3.0, w=seed + 12.0)
         sand = (concave * 1.3 - 0.1 + (sand_n - 0.5) * 0.7).clamp() * sand_amount
         top = nz.smooth(0.55, 0.95) * g.noise(p, scale=3.0, detail=4.0, w=seed + 14.0).smooth(0.35, 0.75) * 0.55
         sand = (sand + top * sand_amount).clamp()
-        height = stone_height(g, p, seed=seed)
-        pits = (-height).smooth(0.2, 1.2)
-        base = g.mix(pits * 0.35, base, "#7c5a3c")
+        if fr is not None:
+            sand = sand * fr.lin(0, 1, 1.0, 0.35)
+        height = stone_height(g, p, seed=seed) - spall * 1.2
+        pits = (-height).smooth(0.3, 1.4)
+        base = g.mix(pits * 0.5, base, "#6a4a31")
         occl = 1.0
         if carve is not None:
             cv = carve(g, p)  # 0 surface .. 1 bottom of the carving
@@ -161,6 +176,8 @@ def sandstone(
             occl = cv.smooth(0.3, 1.0) * -0.35 + 1.0
         base = g.mix(sand, base, g.mix(sand_n, SAND, "#d8bf96"))
         rough = g.mixf(sand, rough, 0.96)
+        if pale:
+            base = g.hsv(base, 0.5, 1.0 - 0.35 * pale, 1.0 + 0.3 * pale)
         if touch is not None:
             t = touch(g, p)
             base = g.mix(t * 0.3, base, "#c9a476")
@@ -319,16 +336,16 @@ def amber_gem(seed: float = 0.0) -> Callable[[Graph], Look]:
         p = g.pos()
         flow = g.noise(g.scale_vec(p, 20.0, 20.0, 60.0), scale=1.0, detail=4.0, distortion=1.5, w=seed)
         cloud = g.noise(p, scale=30.0, detail=5.0, w=seed + 1.0)
-        base = g.ramp(flow, [(0.3, "#b8561a"), (0.55, "#e08e2c"), (0.8, "#f2a93b")])
-        base = g.mix(cloud.smooth(0.6, 0.8) * 0.4, base, "#f7c060")
+        base = g.ramp(flow, [(0.25, "#8a3a0c"), (0.55, "#c86e1c"), (0.85, "#f2a93b")])
+        base = g.mix(cloud.smooth(0.6, 0.8) * 0.35, base, "#f0b050")
         speck = g.voronoi(p, scale=140.0, feature="F1", w=seed + 2.0).smooth(0.1, 0.02)
         gate = g.noise(p, scale=8.0, w=seed + 3.0).smooth(0.5, 0.65)
         base = g.mix(speck * gate * 0.8, base, "#3a1a08")
         bub = g.voronoi(p, scale=80.0, feature="F1", w=seed + 4.0).smooth(0.08, 0.03)
         base = g.mix(bub * 0.5, base, "#ffd98a")
-        glow = (flow.lin(0.2, 0.9, 0.55, 1.0) - speck * gate * 0.6).clamp()
-        emit = g.mix(glow, "#6b2a06", "#f2a93b")
-        rough = 0.08 + cloud * 0.05
+        glow = (flow.lin(0.2, 0.9, 0.35, 1.0) - speck * gate * 0.6).clamp()
+        emit = g.mix(glow, "#2e0f02", "#a8561a")  # baked at about half strength; the game scales it
+        rough = 0.06 + cloud * 0.05
         return Look(base=base, rough=rough, metal=0.0, ao=1.0, height=None, emit=emit)
 
     return recipe
@@ -347,14 +364,16 @@ def jade(carve: Mask = None, seed: float = 0.0) -> Callable[[Graph], Look]:
         convex, concave = edge_masks(g, 30.0, 150.0, -20.0, -120.0)
         n1 = g.noise(p, scale=9.0, detail=6.0, rough=0.6, distortion=1.5, w=seed)
         vein = g.noise(g.scale_vec(p, 14.0, 30.0, 10.0), scale=1.0, detail=5.0, distortion=2.0, w=seed + 1.0)
-        base = g.ramp(n1, [(0.28, "#223524"), (0.48, "#3e5f3c"), (0.66, "#587a4c"), (0.82, "#7d9565")])
-        cloud = g.noise(p, scale=4.0, detail=5.0, w=seed + 8.0)
-        base = g.mix(cloud.smooth(0.55, 0.75) * 0.35, base, "#8f9c80")  # grey-white cloudy patches
+        base = g.ramp(n1, [(0.25, "#1d2e1e"), (0.45, "#3a5a38"), (0.62, "#56784a"), (0.8, "#7f9866")])
+        cloud = g.noise(p, scale=4.0, detail=6.0, rough=0.65, distortion=1.0, w=seed + 8.0)
+        base = g.mix(cloud.smooth(0.5, 0.72) * 0.5, base, "#98a487")  # grey-white cloudy patches
+        dark = g.noise(p, scale=2.5, detail=4.0, w=seed + 10.0).smooth(0.55, 0.72)
+        base = g.mix(dark * 0.55, base, "#1f3322")
         base = g.mix(vein.smooth(0.58, 0.66) * 0.35, base, "#a9b98f")
         spots = g.voronoi(p, scale=60.0, feature="F1", w=seed + 2.0).smooth(0.14, 0.04)
         base = g.mix(spots * g.noise(p, scale=6.0, w=seed + 3.0).smooth(0.5, 0.6) * 0.7, base, "#17261a")
         base = g.mix(convex * 0.25, base, "#9dbb7d")
-        rough = 0.17 + (n1 - 0.5) * 0.08 + g.noise(p, scale=40.0, w=seed + 9.0).smooth(0.5, 0.8) * 0.1
+        rough = 0.22 + (n1 - 0.5) * 0.1 + g.noise(p, scale=40.0, w=seed + 9.0).smooth(0.5, 0.8) * 0.12
         dust = (concave * 1.3 - 0.15).clamp()
         occl = 1.0
         height = g.noise(p, scale=200.0, detail=2.0, w=seed + 4.0) * 0.05
