@@ -1349,3 +1349,25 @@ body.touch #hud-stats {
 #fatal[hidden] {
   display: none;
 }
+
+/* ───────────── Combat (weapons): state styling only; the slots are positioned above. ───────────── */
+
+/* The draw / holster button glows while the pistols are out. */
+.tbtn-slot-b.armed:not(.on) {
+  border-color: var(--ui-amber);
+  color: var(--ui-amber);
+}
+
+/* Red edges when Nora is hurt (spec §7 "Salud"). */
+#hurt-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: inset 0 0 140px 40px rgba(200, 84, 43, 0.55);
+  transition: opacity 0.5s ease-out;
+}
+#hurt-flash.show {
+  opacity: 1;
+  transition: none;
+}

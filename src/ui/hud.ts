@@ -25,6 +25,10 @@ export class Hud {
   private readonly title = $('hud-title');
   private readonly fade = $('fade');
   private readonly end = $('end');
+  /** Red edges when Nora takes damage (spec §7 "Salud"); created here so the page markup stays as is. */
+  private readonly hurtFlash = document.createElement('div');
+  private readonly weaponsButton = document.querySelector<HTMLElement>('#touch [data-button="weapons"]');
+  private weaponsDrawn = false;
   private healthShownFor = 0;
   private noticeTimer = 0;
   private hintTimer = 0;
@@ -33,6 +37,9 @@ export class Hud {
 
   constructor(private readonly onRestart: () => void) {
     $('end-restart').addEventListener('click', () => this.onRestart());
+    this.hurtFlash.id = 'hurt-flash';
+    this.hurtFlash.setAttribute('aria-hidden', 'true');
+    $('hud').append(this.hurtFlash);
   }
 
   showTitle(key: StringKey): void {
@@ -55,6 +62,12 @@ export class Hud {
         break;
       case 'hint':
         this.showHint(t(String(e.key) as StringKey));
+        break;
+      case 'player.hurt':
+        this.hurtFlash.classList.remove('show');
+        void this.hurtFlash.offsetWidth;
+        this.hurtFlash.classList.add('show');
+        requestAnimationFrame(() => this.hurtFlash.classList.remove('show'));
         break;
       case 'player.died':
         this.showNotice(t('notice.died'), 'ember');
@@ -97,6 +110,13 @@ export class Hud {
       ['end.deaths', String(s.deaths)],
       ['end.distance', `${Math.round(s.distance)} m`],
     ];
+    const enemies = world.state.enemies;
+    if (enemies.length > 0) {
+      const dead = enemies.filter((e) => e.mode === 'dead').length;
+      rows.push(['end.enemies', `${dead} / ${enemies.length}`]);
+    }
+    if (s.shots > 0) rows.push(['end.accuracy', `${Math.round((100 * s.hits) / s.shots)} %`]);
+    rows.push(['end.medkits', String(s.medkitsUsed)]);
     $('end-title').textContent = t('end.title');
     $('end-stats').innerHTML = rows
       .map(([k, v]) => `<div class="row"><span>${t(k)}</span><b>${v}</b></div>`)
@@ -140,6 +160,14 @@ export class Hud {
     this.health.classList.toggle('show', showHealth);
     this.health.classList.toggle('low', p.health < 25);
     this.healthFill.style.width = `${p.health}%`;
+
+    // The touch draw / holster button says what it will do and glows while armed.
+    if (this.weaponsButton && p.weapon.drawn !== this.weaponsDrawn) {
+      this.weaponsDrawn = p.weapon.drawn;
+      this.weaponsButton.classList.toggle('armed', this.weaponsDrawn);
+      const label = this.weaponsButton.querySelector('span');
+      if (label) label.textContent = t(this.weaponsDrawn ? 'touch.holster' : 'touch.draw');
+    }
 
     this.noticeTimer -= dt;
     if (this.noticeTimer <= 0) this.notice.classList.remove('show');

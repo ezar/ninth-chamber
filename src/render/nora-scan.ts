@@ -183,6 +183,11 @@ class ScannedSkin {
     }
   }
 
+  /** The scan's bone for a retargeted joint. */
+  bone(name: RetargetJoint): THREE.Bone | null {
+    return this.targets.get(name)?.bone ?? null;
+  }
+
   setOpacity(a: number): void {
     for (const m of this.materials) {
       const transparent = a < 1;
@@ -235,5 +240,22 @@ export class NoraRig {
   setOpacity(a: number): void {
     if (this.skin) this.skin.setOpacity(a);
     else this.driver.setOpacity(a);
+  }
+
+  /**
+   * World frame of a hand (0 = left, 1 = right) for things held in it: the
+   * position of the visible wrist and the procedural hand's orientation
+   * (fingers along -Y, palm facing -Z). Call after update().
+   */
+  handFrame(side: 0 | 1, pos: THREE.Vector3, quat: THREE.Quaternion): void {
+    const hand = this.driver.hand(side);
+    hand.getWorldQuaternion(quat);
+    const bone = this.skin?.bone(side === 0 ? 'hand_L' : 'hand_R');
+    if (bone) {
+      bone.updateWorldMatrix(true, false);
+      pos.setFromMatrixPosition(bone.matrixWorld);
+    } else {
+      hand.getWorldPosition(pos);
+    }
   }
 }

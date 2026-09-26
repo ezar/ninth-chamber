@@ -385,6 +385,7 @@ async function main(): Promise<void> {
     const p = world.state.player.pos;
     audio.onEvent(e, p);
     hud.onEvent(e, world);
+    renderer.combat.onEvent(e, world);
     if (e.type === 'camera.focus') {
       const at = renderer.entityPosition(String(e.target));
       if (at) camera.focusOn(at, Number(e.duration) || 2);
@@ -464,6 +465,7 @@ async function main(): Promise<void> {
       y: prev.pos.y + (curr.pos.y - prev.pos.y) * alpha,
       z: prev.pos.z + (curr.pos.z - prev.pos.z) * alpha,
     };
+    camera.aiming = p.weapon.drawn && (p.mode === 'ground' || p.mode === 'air');
     camera.update(at, p.mode === 'hang' || p.mode === 'climb', world.grid, cameraDt, {
       vx: p.mode === 'ground' || p.mode === 'air' ? p.vel.x : 0,
       vz: p.mode === 'ground' || p.mode === 'air' ? p.vel.z : 0,
@@ -491,6 +493,7 @@ async function main(): Promise<void> {
         vy: p.vel.y,
         climbT: p.move ? Math.min(1, p.modeTime / p.move.duration) : 0,
         health: p.health,
+        ...renderer.combat.aimPose(world),
       },
       camera.eye,
       camera.lookAt,

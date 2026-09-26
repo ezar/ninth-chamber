@@ -10,6 +10,7 @@ import { length, smoothstep, uniform, uv } from 'three/tsl';
 import { BLOCK } from '../sim/grid/units';
 import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
+import { CombatView } from './combat';
 import { buildLevelMeshes } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
 import type { NoraPose } from './nora';
@@ -47,6 +48,8 @@ export class GameRenderer {
   private readonly fireLights: THREE.PointLight[] = [];
   private readonly characterFill = new THREE.PointLight('#ffe2c4', 1.6, 4.5, 2);
   private readonly nora = new NoraRig();
+  /** Jackals, pistols, muzzle flashes and the target marker. */
+  readonly combat = new CombatView(`${import.meta.env.BASE_URL}models/jackal.glb`);
   private props: Props | null = null;
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
@@ -91,7 +94,7 @@ export class GameRenderer {
       this.fireLights.push(l);
       this.scene.add(l);
     }
-    this.scene.add(this.nora.root);
+    this.scene.add(this.nora.root, this.combat.group);
     // A soft fill that follows Nora so she reads against backlight (a common
     // character-lighting cheat); short range, so it barely touches the set.
     this.characterFill.position.set(0.6, 2.2, 1.6);
@@ -458,6 +461,7 @@ export class GameRenderer {
     if (dy < -Math.PI) dy += 2 * Math.PI;
     this.nora.root.rotation.y = prev.yaw + dy * alpha;
     this.nora.update(pose, dt);
+    this.combat.update(world, this.nora, alpha, dt);
     this.nora.setOpacity(Math.min(1, Math.max(0.15, (cameraDistance - 0.6) / 0.8)));
 
     // Room look.

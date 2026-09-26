@@ -2,10 +2,11 @@
  * Per-tick update of level mechanisms: doors, falling blocks, plates,
  * collapsing tiles, zones and auto-pickups.
  */
-import { BLOCK } from '../grid/units';
+import { BLOCK, cellCenter } from '../grid/units';
 import { setSignal } from '../logic/rules';
-import { mechanics } from '../player/tuning';
+import { mechanics, noise } from '../player/tuning';
 import { floorWith, tileState, type World } from '../world';
+import { makeNoise } from './enemies';
 
 export function updateActors(world: World, dt: number): void {
   const { state, events, level } = world;
@@ -100,6 +101,7 @@ export function updateActors(world: World, dt: number): void {
     if (t.cracked === null && !t.fallen) {
       t.cracked = 0;
       events.emit({ type: 'tile.cracked', tick, cx: pcx, cz: pcz });
+      makeNoise(world, { x: cellCenter(pcx), z: cellCenter(pcz) }, noise.tile);
     }
   }
   for (const [key, t] of Object.entries(state.tiles)) {

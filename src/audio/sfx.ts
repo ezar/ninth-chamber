@@ -331,3 +331,147 @@ export function drip(s: Strip, t: number, pan: number, gain: number): void {
   s.tone(t, { f, f2: f * rnd(1.8, 2.4), glide: 0.028, gain, a: 0.002, d: 0.07, pan });
   s.noiseHit(t, { type: 'bandpass', f: 3000, q: 2, gain: gain * 0.3, a: 0.0008, d: 0.01, pan });
 }
+
+// ─────────────────────────────── Combat ───────────────────────────────
+
+/** A pistol shot: a dry crack and thump, then a tail that blooms in the room reverb. */
+export function gunshot(s: Strip, t: number, pan: number): void {
+  s.noiseHit(t, { type: 'highpass', f: 2200, gain: 0.55, a: 0.0004, d: 0.016, pan });
+  s.noiseHit(t, { type: 'bandpass', f: 950 * rnd(0.92, 1.08), q: 0.8, gain: 0.42, a: 0.0008, d: 0.055, pan });
+  s.tone(t, { f: 160, f2: 52, gain: 0.5, a: 0.0008, d: 0.1 });
+  s.noiseHit(t + 0.004, { buf: 'brown', type: 'lowpass', f: 700, gain: 0.35, a: 0.001, d: 0.08 });
+  // Slide cycling.
+  s.noiseHit(t + rnd(0.045, 0.055), {
+    type: 'bandpass',
+    f: 3600,
+    q: 4,
+    gain: 0.05,
+    a: 0.0006,
+    d: 0.012,
+    pan,
+  });
+  // Tail: the shot rolling through the chamber (and into the room reverb send).
+  s.noiseHit(t + 0.01, { buf: 'pink', type: 'lowpass', f: 1600, f2: 320, gain: 0.13, a: 0.012, d: 0.55 });
+}
+
+/** A bullet whining off stone near the target. */
+export function ricochet(s: Strip, t: number): void {
+  const f = rnd(2300, 3200);
+  s.noiseHit(t, { type: 'bandpass', f: 4200, q: 3, gain: 0.08, a: 0.0005, d: 0.012 });
+  s.tone(t + 0.005, { f, f2: f * rnd(0.35, 0.5), glide: 0.28, gain: 0.035, a: 0.004, d: 0.3 });
+  s.debris(t + 0.01, t + 0.2, 4, 0.05, 1800, 4500);
+}
+
+/** A bullet striking the jackal: a dull, short thump. */
+export function bulletHit(s: Strip, t: number): void {
+  s.noiseHit(t, { buf: 'brown', type: 'lowpass', f: 520, gain: 0.3, a: 0.001, d: 0.06 });
+  s.tone(t, { f: 120, f2: 70, gain: 0.16, a: 0.001, d: 0.05 });
+}
+
+/** A jackal's pained yelp; `dying` stretches it into a falling whimper. */
+export function yelp(s: Strip, t: number, dying: boolean): void {
+  const f = rnd(820, 980);
+  const lp = 3200;
+  s.tone(t, {
+    wave: 'sawtooth',
+    f,
+    f2: f * 1.55,
+    glide: 0.045,
+    lp,
+    gain: 0.085,
+    a: 0.004,
+    hold: 0.03,
+    d: 0.05,
+  });
+  s.tone(t + 0.06, {
+    wave: 'sawtooth',
+    f: f * 1.5,
+    f2: f * (dying ? 0.45 : 0.8),
+    glide: dying ? 0.5 : 0.1,
+    lp,
+    gain: 0.075,
+    a: 0.005,
+    hold: dying ? 0.2 : 0.02,
+    d: dying ? 0.4 : 0.08,
+  });
+  s.noiseHit(t, { type: 'bandpass', f: 1700, q: 1.2, gain: 0.03, a: 0.005, d: 0.12 });
+  // A last, weak whimper.
+  if (dying) s.tone(t + 0.75, { wave: 'triangle', f: 640, f2: 420, lp: 2000, gain: 0.025, a: 0.03, d: 0.35 });
+}
+
+/** A low, rough growl: grains of a buzzing voice over a breathy rumble. */
+export function growl(s: Strip, t: number, dur = 0.9): void {
+  const grains = Math.round(dur * 28);
+  for (let i = 0; i < grains; i++) {
+    const u = i / grains;
+    const env = Math.sin(Math.PI * Math.min(1, u * 1.3)) * (0.7 + 0.3 * Math.random());
+    s.tone(t + u * dur + rnd(0, 0.01), {
+      wave: 'sawtooth',
+      f: rnd(88, 104) * (1 + 0.12 * u),
+      lp: 650,
+      gain: 0.11 * env,
+      a: 0.006,
+      d: 0.03,
+    });
+  }
+  s.noiseHit(t, {
+    buf: 'brown',
+    type: 'bandpass',
+    f: 320,
+    q: 0.8,
+    gain: 0.2,
+    a: 0.12,
+    hold: dur * 0.4,
+    d: 0.3,
+  });
+  s.noiseHit(t + 0.05, { type: 'bandpass', f: 1900, q: 1.5, gain: 0.02, a: 0.1, hold: dur * 0.3, d: 0.25 });
+}
+
+/** Jaws snapping shut; a hit adds tearing and a thud. */
+export function bite(s: Strip, t: number, hit: boolean): void {
+  s.noiseHit(t, { type: 'highpass', f: 2600, gain: 0.32, a: 0.0005, d: 0.014 });
+  s.tone(t, { f: 360, f2: 150, gain: 0.1, a: 0.001, d: 0.03 });
+  // A snarl through clenched teeth.
+  s.tone(t + 0.02, { wave: 'sawtooth', f: 140, f2: 105, lp: 700, gain: 0.05, a: 0.02, d: 0.14 });
+  if (hit) {
+    s.noiseHit(t + 0.01, { type: 'bandpass', f: 1300, q: 1, gain: 0.18, a: 0.004, d: 0.12 });
+    s.noiseHit(t + 0.005, { buf: 'brown', type: 'lowpass', f: 400, gain: 0.2, a: 0.002, d: 0.08 });
+  }
+}
+
+/** A short huff as a jackal gives up and turns away. */
+export function huff(s: Strip, t: number): void {
+  s.noiseHit(t, { buf: 'pink', type: 'bandpass', f: 700, f2: 380, q: 1, gain: 0.06, a: 0.02, d: 0.2 });
+  s.tone(t, { wave: 'sawtooth', f: 130, f2: 95, lp: 500, gain: 0.03, a: 0.02, d: 0.15 });
+}
+
+/** Pistols out of (or back into) their holsters: leather, then a metal click. */
+export function holster(s: Strip, t: number, drawing: boolean): void {
+  s.noiseHit(t, { type: 'bandpass', f: drawing ? 1900 : 1500, q: 0.9, gain: 0.05, a: 0.03, d: 0.12 });
+  const c = t + (drawing ? 0.14 : 0.2);
+  s.noiseHit(c, { type: 'bandpass', f: 4300, q: 5, gain: 0.07, a: 0.0005, d: 0.01 });
+  s.tone(c, { f: 2350, gain: 0.012, a: 0.0005, d: 0.03 });
+  if (drawing) s.noiseHit(c + 0.06, { type: 'bandpass', f: 3900, q: 5, gain: 0.05, a: 0.0005, d: 0.01 });
+}
+
+/** A medkit: zip, bandage rustle and a pressed dressing. */
+export function medkit(s: Strip, t: number, large: boolean): void {
+  for (let i = 0; i < 7; i++) {
+    s.noiseHit(t + i * 0.018, { type: 'bandpass', f: 2600 + i * 250, q: 2, gain: 0.03, a: 0.002, d: 0.014 });
+  }
+  s.noiseHit(t + 0.16, {
+    buf: 'pink',
+    type: 'bandpass',
+    f: 1400,
+    q: 0.7,
+    gain: 0.05,
+    a: 0.05,
+    d: large ? 0.5 : 0.3,
+  });
+  s.noiseHit(t + 0.35, { buf: 'brown', type: 'lowpass', f: 600, gain: 0.08, a: 0.02, d: 0.12 });
+}
+
+/** Nothing to use: a soft, dull click. */
+export function denied(s: Strip, t: number): void {
+  s.tone(t, { wave: 'triangle', f: 220, f2: 180, gain: 0.04, a: 0.002, d: 0.08 });
+}

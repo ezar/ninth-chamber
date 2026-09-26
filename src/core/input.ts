@@ -28,7 +28,8 @@ const KEY_BUTTONS: Record<string, Button> = {
   KeyH: 'medkit',
   KeyG: 'flare',
   KeyI: 'inventory',
-  Tab: 'inventory',
+  // Spec §6 "Apuntado": Tab switches target (the inventory keeps I).
+  Tab: 'target',
   Escape: 'pause',
   KeyC: 'recenter',
 };
@@ -168,12 +169,14 @@ const PAD_BUTTONS: [number, Button][] = [
   [1, 'roll'], // B
   [7, 'fire'], // RT
   [6, 'walk'], // LT
-  [5, 'weapons'], // RB
-  [4, 'flare'], // LB
+  [5, 'weapons'], // RB (spec §13)
+  [4, 'weapons'], // LB: draw / holster on either bumper (owner's request); Y stays the medkit
+  [12, 'flare'], // d-pad up (flares arrive in phase 2)
   [3, 'medkit'], // Y
   [8, 'inventory'], // Select
   [9, 'pause'], // Start
   [11, 'recenter'], // right stick click
+  [15, 'target'], // d-pad right
 ];
 
 const DEADZONE = 0.18;

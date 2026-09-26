@@ -11,6 +11,7 @@ import type { GridQuery } from './grid/collision';
 import { Level, sectorTop } from './grid/level';
 import { BLOCK, DIR_YAW, cellCenter } from './grid/units';
 import { compileRules, runLogic, type CompiledRule } from './logic/rules';
+import { createEnemies, resetEnemies, updateEnemies } from './actors/enemies';
 import { updateActors } from './actors/update';
 import { stepPlayer } from './player/controller';
 import { mechanics, tuning } from './player/tuning';
@@ -75,6 +76,7 @@ function createActors(level: Level): Actor[] {
         actors.push({ kind: 'zone', id: e.id, cx, cz, w: e.size[0], h: e.size[1], inside: false });
         break;
       case 'brazier':
+      case 'enemy':
         break;
     }
   }
@@ -103,6 +105,7 @@ function createPlayer(level: Level): PlayerState {
     move: null,
     target: null,
     dir: null,
+    weapon: { drawn: false, busy: 0, cooldown: 0, target: null, hand: 1 },
   };
 }
 
@@ -110,6 +113,7 @@ export function createWorld(level: Level, seed = 1): World {
   const state: DynamicState = {
     player: createPlayer(level),
     actors: createActors(level),
+    enemies: createEnemies(level),
     tiles: {},
     signals: {},
     flags: [],
@@ -125,7 +129,17 @@ export function createWorld(level: Level, seed = 1): World {
     state,
     checkpoint: clone(state),
     rules: compileRules(level.logic),
-    stats: { time: 0, distance: 0, deaths: 0, secrets: 0, medkits: 0 },
+    stats: {
+      time: 0,
+      distance: 0,
+      deaths: 0,
+      secrets: 0,
+      medkits: 0,
+      medkitsUsed: 0,
+      shots: 0,
+      hits: 0,
+      kills: 0,
+    },
     ended: false,
     grid: null as unknown as GridQuery,
   };
@@ -230,7 +244,10 @@ export function saveCheckpoint(world: World): void {
   world.events.emit({ type: 'checkpoint', tick: world.tick });
 }
 
-/** Restores the last checkpoint after a death. */
+/**
+ * Restores the last checkpoint after a death. Enemies alive then go back to
+ * their start and forget Nora (spec §7).
+ */
 export function respawn(world: World): void {
   world.state = clone(world.checkpoint);
   const p = world.state.player;
@@ -238,6 +255,10 @@ export function respawn(world: World): void {
   p.modeTime = 0;
   p.vel = { x: 0, y: 0, z: 0 };
   p.health = Math.max(p.health, tuning.maxHealth / 2);
+  p.weapon.target = null;
+  p.weapon.cooldown = 0;
+  p.weapon.busy = 0;
+  resetEnemies(world);
   world.events.emit({ type: 'player.respawned', tick: world.tick });
 }
 
@@ -247,6 +268,7 @@ export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
     const before = { ...world.state.player.pos };
     stepPlayer(world, input, dt);
     updateActors(world, dt);
+    updateEnemies(world, dt);
     runLogic(world, dt);
     const p = world.state.player.pos;
     world.stats.distance += Math.hypot(p.x - before.x, p.z - before.z);

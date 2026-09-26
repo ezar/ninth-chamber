@@ -5,6 +5,7 @@
  * and diff-friendly. Exceptions (slopes, flags, materials) go in `overrides`.
  */
 import { z } from 'zod';
+import { ENEMY_TYPES } from '../player/tuning';
 
 export const MATERIALS = ['sand', 'stone', 'metal', 'wood', 'water'] as const;
 export const SECTOR_FLAGS = ['climbN', 'climbE', 'climbS', 'climbW', 'death', 'crumble', 'noGrab'] as const;
@@ -89,6 +90,17 @@ const entity = z.discriminatedUnion('type', [
   z.object({ ...entityBase, type: z.literal('relic') }).strict(),
   z.object({ ...entityBase, type: z.literal('medkit'), size: z.enum(['small', 'large']) }).strict(),
   z.object({ ...entityBase, type: z.literal('brazier') }).strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('enemy'),
+      /** Enemy type: its stats and behaviour live in enemyTypes (sim/player/tuning.ts). */
+      enemy: z.enum(ENEMY_TYPES),
+      face: z.enum(FACINGS).default('S'),
+      /** Enemies sharing a pack id alert each other and hunt together. */
+      pack: z.string().min(1).optional(),
+    })
+    .strict(),
   z
     .object({
       ...entityBase,

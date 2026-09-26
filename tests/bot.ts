@@ -45,6 +45,17 @@ export class Bot {
     expect(this.p.mode, `waiting for ${mode} at ${this.where()}`).toBe(mode);
   }
 
+  /** Holds Fire (auto-aim) until every enemy of `pack` is dead, then holsters. */
+  fight(pack: string, max = 900): void {
+    const alive = (): number =>
+      this.w.state.enemies.filter((e) => e.pack === pack && e.mode !== 'dead').length;
+    this.tick(frame({ held: ['fire'], pressed: ['fire'] }));
+    for (let i = 0; i < max && alive() > 0; i++) this.tick(frame({ held: ['fire'] }));
+    expect(alive(), `enemies of ${pack} left at ${this.where()}`).toBe(0);
+    this.tick(frame({ pressed: ['weapons'] }));
+    expect(this.p.weapon.drawn).toBe(false);
+  }
+
   /** Steers to the centre of a world cell on the ground. */
   goTo(cx: number, cz: number, opts: { walk?: boolean; slow?: boolean; max?: number } = {}): void {
     const tx = cx * 2 + 1;

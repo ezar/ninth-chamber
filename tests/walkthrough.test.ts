@@ -29,7 +29,12 @@ function playAntechamber(): Bot {
   bot.goTo(4, 1);
   bot.goTo(4, -1);
 
-  // Brazier hall: gold idol in the north-east niche.
+  // Brazier hall: a pair of jackals rests in the middle. Shoot them from the entrance side.
+  bot.goTo(4, -4);
+  bot.fight('hall');
+  expect(w.stats.kills).toBe(2);
+
+  // Gold idol in the north-east niche.
   bot.goTo(8, -11);
   bot.goTo(8, -13);
   bot.climb('E');
