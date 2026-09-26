@@ -722,6 +722,7 @@ def reencode(level: int) -> None:
 def final_material(name, base_img, orm_img, nrm_img, emit_img=None, emit_strength=1.0) -> bpy.types.Material:
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
+    mat.use_backface_culling = True  # exported as doubleSided: false
     nt = mat.node_tree
     nt.nodes.clear()
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")

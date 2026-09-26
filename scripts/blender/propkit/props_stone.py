@@ -369,6 +369,7 @@ def amber_inlay_material() -> bpy.types.Material:
 
     m = bpy.data.materials.new("seal_amber")
     m.use_nodes = True
+    m.use_backface_culling = True
     b = m.node_tree.nodes["Principled BSDF"]
     c = hex_rgb("#f2a93b")
     b.inputs["Base Color"].default_value = (c[0], c[1], c[2], 1)
