@@ -23,6 +23,7 @@ import { GameRenderer, type PlayerPose } from './render/scene';
 import { Level } from './sim/grid/level';
 import type { NoteStyle } from './sim/grid/schema';
 import { BLOCK } from './sim/grid/units';
+import { tuning } from './sim/player/tuning';
 import { createWorld, respawn, stepWorld, type World } from './sim/world';
 import { chamberOf } from './ui/campaign';
 import { EndScreen } from './ui/end-screen';
@@ -94,6 +95,7 @@ async function main(): Promise<void> {
   renderer.setWorld(world);
 
   const audio = new AudioEngine();
+  audio.setLevel(level.id);
   audio.setEmitters(
     level.entities
       .filter((e) => e.type === 'brazier' || e.type === 'relic')
@@ -131,6 +133,8 @@ async function main(): Promise<void> {
     phase = p;
     document.body.dataset.phase = p;
     document.body.classList.toggle('playing', p === 'play');
+    // The music director follows the phase: title theme, intro, the tomb's silences, the end.
+    audio.setMusicPhase(p);
   };
   setPhase('title');
   let paused = false;
@@ -261,7 +265,7 @@ async function main(): Promise<void> {
   const titleMusic = (): void => {
     if (phase !== 'title') return;
     void audio.unlock();
-    audio.playTrack('title', 3);
+    audio.setMusicPhase('title');
   };
   window.addEventListener('pointerdown', titleMusic, { capture: true });
   window.addEventListener('keydown', titleMusic, { capture: true });
@@ -275,9 +279,6 @@ async function main(): Promise<void> {
     // Audio and fullscreen must be requested inside the gesture itself.
     void audio.unlock();
     audio.ui('confirm');
-    // The theme opens the level (it starts now if the title screen was silent), then leaves the tomb to its ambience.
-    audio.playTrack('title', 3);
-    audio.stopMusic(8, 6);
     if (document.body.classList.contains('touch')) {
       // Phones: reclaim the browser chrome for the game.
       void document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
@@ -687,6 +688,7 @@ async function main(): Promise<void> {
     draw(dt);
     redraw = false;
     if (phase === 'play') hud.update(world, dt);
+    audio.setHealth(world.state.player.health / tuning.maxHealth);
 
     const p = world.state.player.pos;
     const r = level.roomAt(Math.floor(p.x / BLOCK), Math.floor(p.z / BLOCK));

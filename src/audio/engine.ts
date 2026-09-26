@@ -3,7 +3,7 @@
  *
  * The simulation never calls this: main wires simulation events and the
  * camera pose into it. Sounds are recorded samples (public/audio, see
- * samples.ts and soundtrack.ts) with the procedural synthesis as fallback
+ * samples.ts; music: director.ts, score.ts and score-player.ts) with the procedural synthesis as fallback
  * while files load or where Opus/WebM cannot be decoded. Silence is part of
  * the design: a discreet ambience bed, effects that announce mechanisms
  * before they act, and music only at marked moments.
@@ -53,6 +53,8 @@ export class AudioEngine {
   private emitters: Emitter[] = [];
   private readonly volumes = new Map<BusName, number>();
   private muted = false;
+  private level = 'antechamber';
+  private phase: 'title' | 'intro' | 'play' | 'end' | null = null;
 
   /** Must be called from a user gesture (browsers block audio until then). Safe to call repeatedly. */
   unlock(): Promise<void> {
@@ -77,6 +79,8 @@ export class AudioEngine {
       graph.setRoom(this.room);
       graph.setEmitters(this.emitters);
       graph.start();
+      graph.setLevel(this.level);
+      if (this.phase) graph.setMusicPhase(this.phase);
       void graph.loadSamples();
       return graph;
     });
@@ -103,23 +107,24 @@ export class AudioEngine {
     this.graph.update(listener);
   }
 
-  /** Starts a recorded music cue that no simulation event plays (the title theme). No-op before unlock. */
-  playTrack(name: 'title', fadeIn = 2): void {
-    // The graph is built a moment after the unlock gesture: queue behind it.
-    if (!this.graph && this.unlocking) {
-      void this.unlocking.then(() => this.graph?.playTrack(name, fadeIn));
-      return;
-    }
-    this.graph?.playTrack(name, fadeIn);
+  /** The level whose music palette plays (score.ts). Safe before unlock. */
+  setLevel(id: string): void {
+    this.level = id;
+    this.graph?.setLevel(id);
   }
 
-  /** Fades the music out over `fade` s after `delay` s. */
-  stopMusic(fade = 3, delay = 0): void {
-    if (!this.graph && this.unlocking) {
-      void this.unlocking.then(() => this.graph?.stopMusic(fade, delay));
-      return;
-    }
-    this.graph?.stopMusic(fade, delay);
+  /**
+   * Game phase for the music director: the title theme, the intro, play, the end screen.
+   * Before the graph exists (it is built a moment after the unlock gesture) the phase is remembered.
+   */
+  setMusicPhase(phase: 'title' | 'intro' | 'play' | 'end'): void {
+    this.phase = phase;
+    this.graph?.setMusicPhase(phase);
+  }
+
+  /** Player health 0..1, every frame: low health brings tension, a heartbeat and muffled music. */
+  setHealth(h: number): void {
+    this.graph?.setHealth(h);
   }
 
   /** Menu feedback: a press, a hover, a confirmation. No-op before unlock. */
@@ -158,6 +163,7 @@ export class AudioEngine {
   setPaused(paused: boolean): void {
     const ctx = this.ctx;
     if (!ctx) return;
+    this.graph?.setPaused(paused);
     if (paused) void ctx.suspend().catch(() => undefined);
     else void ctx.resume().catch(() => undefined);
   }

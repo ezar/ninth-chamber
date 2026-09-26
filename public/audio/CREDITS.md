@@ -7,10 +7,35 @@ they are credited anyway.
 
 ## Music (CC-BY 4.0: attribution required)
 
-- `music/title-tempting-secrets.webm` (title screen and the opening of the level): "Tempting Secrets" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300038>
-- `music/explore-lost-frontier.webm` (entering the great hall; plays once, then silence): "Lost Frontier" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300039>
-- `music/relic-arcadia.webm` (the relic chamber): "Arcadia" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100326>
-- `music/fanfare-hero-theme.webm` (the Heart is taken, end of level): "Hero Theme" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100491>
+- `music/title.webm` (title: title screen (loops)): "Age of Wonder" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/age-of-wonder/>
+- `music/antechamber-intro.webm` (antechamber.intro: Antechamber intro cards): "Memories Of Stone" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/memories-of-stone/>
+- `music/cisterns-intro.webm` (cisterns.intro: Cisterns intro cards): "Permafrost" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/permafrost/>
+- `music/sun_temple-intro.webm` (sun_temple.intro: Temple of the Sun intro cards): "Hymn to the Dawn" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/hymn-to-the-dawn/>
+- `music/antechamber-explore-1.webm` (antechamber.explore.1: Antechamber exploration): "Passage of Time" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/passage-of-time/>
+- `music/antechamber-explore-2.webm` (antechamber.explore.2: Antechamber exploration): "Lost Frontier" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300039>
+- `music/cisterns-explore-1.webm` (cisterns.explore.1: Cisterns exploration): "Mirage" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100877>
+- `music/cisterns-explore-2.webm` (cisterns.explore.2: Cisterns exploration): "Decoherence" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/decoherence/>
+- `music/sun_temple-explore-1.webm` (sun_temple.explore.1: Temple of the Sun exploration): "Hymn to the Dawn" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/hymn-to-the-dawn/>
+- `music/sun_temple-explore-2.webm` (sun_temple.explore.2: Temple of the Sun exploration): "Passage of Time" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/passage-of-time/>
+- `music/antechamber-relic.webm` (antechamber.relic: Antechamber relic reveal): "Arcadia" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100326>
+- `music/cisterns-relic.webm` (cisterns.relic: Cisterns relic reveal): "The Great Sea" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/the-great-sea/>
+- `music/sun_temple-relic.webm` (sun_temple.relic: Temple of the Sun relic reveal): "Victor Lux" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/victor-lux/>
+- `music/fanfare.webm` (fanfare: end of level fanfare): "Hero Theme" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100491>
+- `music/sun_temple-fanfare.webm` (sun_temple.fanfare: Temple of the Sun fanfare): "The Curtain Rises" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1500011>
+- `music/antechamber-tension.webm` (antechamber.tension: Antechamber tension bed): "Oppressive Gloom" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100885>
+- `music/antechamber-combat.webm` (antechamber.combat: Antechamber combat): "Curse of the Scarab" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600014>
+- `music/cisterns-tension.webm` (cisterns.tension: Cisterns tension drone): "Long Note Three" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100424>
+- `music/cisterns-combat.webm` (cisterns.combat: Cisterns combat): "Constance" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100850>
+- `music/sun_temple-tension.webm` (sun_temple.tension: Temple of the Sun tension): "Enter the Maze" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100782>
+- `music/sun_temple-combat.webm` (sun_temple.combat: Temple of the Sun combat): "Juggernaut" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/juggernaut/>
+- `music/chase.webm` (chase: chase (the rolling boulder)): "Mistake the Getaway" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100699>
+- `music/boss.webm` (boss: boss (the stone guardian)): "Goliath" by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au (<https://creativecommons.org/licenses/by/4.0/>). Source: <https://www.scottbuckley.com.au/library/goliath/>
+- `music/sting-vista.webm` (sting.vista: a new vista revealed): "Discovery Hit" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300023>
+- `music/sting-journal.webm` (sting.journal: a journal note read): "Greta Sting" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100530>
+- `music/sting-secret.webm` (sting.secret: a secret found (under the secret chord)): "Mystery Sting" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100430>
+- `music/sting-solved.webm` (sting.solved: a door opened by a plate or lever): "Danse Macabre - Big Hit 1" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100558>
+- `music/sting-solved-2.webm` (sting.solved.2: a door opened (Cisterns)): "Danse Macabre - Big Hit 2" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100557>
+- `music/sting-death.webm` (sting.death: death): "Darkness Speaks" Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, <https://creativecommons.org/licenses/by/4.0/>. Source: <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100364>
 
 ## Sound effects (CC0)
 
@@ -64,9 +89,22 @@ One line per bank; `01-10` is a range of numbered variants.
 - Interface Sounds by Kenney (kenney.nl): <https://kenney.nl/assets/interface-sounds> (CC0 1.0)
 - RPG Audio by Kenney (kenney.nl): <https://kenney.nl/assets/rpg-audio> (CC0 1.0)
 - "Arcadia" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100326> (CC-BY 4.0)
+- "Constance" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100850> (CC-BY 4.0)
+- "Curse of the Scarab" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600014> (CC-BY 4.0)
+- "Danse Macabre - Big Hit 1" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100558> (CC-BY 4.0)
+- "Danse Macabre - Big Hit 2" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100557> (CC-BY 4.0)
+- "Darkness Speaks" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100364> (CC-BY 4.0)
+- "Discovery Hit" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300023> (CC-BY 4.0)
+- "Enter the Maze" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100782> (CC-BY 4.0)
+- "Greta Sting" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100530> (CC-BY 4.0)
 - "Hero Theme" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100491> (CC-BY 4.0)
+- "Long Note Three" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100424> (CC-BY 4.0)
 - "Lost Frontier" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300039> (CC-BY 4.0)
-- "Tempting Secrets" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1300038> (CC-BY 4.0)
+- "Mirage" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100877> (CC-BY 4.0)
+- "Mistake the Getaway" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100699> (CC-BY 4.0)
+- "Mystery Sting" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100430> (CC-BY 4.0)
+- "Oppressive Gloom" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100885> (CC-BY 4.0)
+- "The Curtain Rises" by Kevin MacLeod (incompetech.com): <https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1500011> (CC-BY 4.0)
 - mystic wind howling by launemax: <https://freesound.org/people/launemax/sounds/250036/> (CC0 1.0)
 - Shirt Clothing Movement by leonelmail: <https://freesound.org/people/leonelmail/sounds/429080/> (CC0 1.0)
 - EARTHQUAKE OR DISTANT SPACE SHUTTLE RUMBLE.WAV by metrostock99: <https://freesound.org/people/metrostock99/sounds/203281/> (CC0 1.0)
@@ -86,6 +124,16 @@ One line per bank; `01-10` is a range of numbered variants.
 - Rock_Movement_Friction_02.wav by Nox_Sound: <https://freesound.org/people/Nox_Sound/sounds/473582/> (CC0 1.0)
 - Heavy stone door opens by PostProdDog: <https://freesound.org/people/PostProdDog/sounds/578490/> (CC0 1.0)
 - Water Dripping in Cave.wav by Sclolex: <https://freesound.org/people/Sclolex/sounds/177958/> (CC0 1.0)
+- "Age of Wonder" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/age-of-wonder/> (CC-BY 4.0)
+- "Decoherence" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/decoherence/> (CC-BY 4.0)
+- "Goliath" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/goliath/> (CC-BY 4.0)
+- "Hymn to the Dawn" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/hymn-to-the-dawn/> (CC-BY 4.0)
+- "Juggernaut" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/juggernaut/> (CC-BY 4.0)
+- "Memories Of Stone" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/memories-of-stone/> (CC-BY 4.0)
+- "Passage of Time" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/passage-of-time/> (CC-BY 4.0)
+- "Permafrost" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/permafrost/> (CC-BY 4.0)
+- "The Great Sea" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/the-great-sea/> (CC-BY 4.0)
+- "Victor Lux" by Scott Buckley (www.scottbuckley.com.au): <https://www.scottbuckley.com.au/library/victor-lux/> (CC-BY 4.0)
 - Dripping Water.wav by spookymodem: <https://freesound.org/people/spookymodem/sounds/249806/> (CC0 1.0)
 - NEPTUN-Solo-07 Tibetan Singing Bowl by the_very_Real_Horst: <https://freesound.org/people/the_very_Real_Horst/sounds/240934/> (CC0 1.0)
 - Cracking Earthquake (cracking soil, cracking stone) by uagadugu: <https://freesound.org/people/uagadugu/sounds/222521/> (CC0 1.0)

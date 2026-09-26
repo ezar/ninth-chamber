@@ -348,24 +348,203 @@
   },
   "music": {
     "title": {
-      "file": "music/title-tempting-secrets.webm",
-      "loop": true,
-      "duration": 178.72
+      "file": "music/title.webm",
+      "kind": "stream",
+      "duration": 210.0
     },
-    "explore": {
-      "file": "music/explore-lost-frontier.webm",
-      "loop": false,
-      "duration": 263.91
+    "antechamber.intro": {
+      "file": "music/antechamber-intro.webm",
+      "kind": "stream",
+      "duration": 94.439
     },
-    "relic": {
-      "file": "music/relic-arcadia.webm",
-      "loop": false,
-      "duration": 97.5
+    "cisterns.intro": {
+      "file": "music/cisterns-intro.webm",
+      "kind": "stream",
+      "duration": 94.863
+    },
+    "sun_temple.intro": {
+      "file": "music/sun_temple-intro.webm",
+      "kind": "stream",
+      "duration": 98.405
+    },
+    "antechamber.explore.1": {
+      "file": "music/antechamber-explore-1.webm",
+      "kind": "stream",
+      "duration": 173.713
+    },
+    "antechamber.explore.2": {
+      "file": "music/antechamber-explore-2.webm",
+      "kind": "stream",
+      "duration": 184.023
+    },
+    "cisterns.explore.1": {
+      "file": "music/cisterns-explore-1.webm",
+      "kind": "stream",
+      "duration": 179.101
+    },
+    "cisterns.explore.2": {
+      "file": "music/cisterns-explore-2.webm",
+      "kind": "stream",
+      "duration": 180.0
+    },
+    "sun_temple.explore.1": {
+      "file": "music/sun_temple-explore-1.webm",
+      "kind": "stream",
+      "duration": 180.0
+    },
+    "sun_temple.explore.2": {
+      "file": "music/sun_temple-explore-2.webm",
+      "kind": "stream",
+      "duration": 118.0
+    },
+    "antechamber.relic": {
+      "file": "music/antechamber-relic.webm",
+      "kind": "stream",
+      "duration": 97.501
+    },
+    "cisterns.relic": {
+      "file": "music/cisterns-relic.webm",
+      "kind": "stream",
+      "duration": 128.0
+    },
+    "sun_temple.relic": {
+      "file": "music/sun_temple-relic.webm",
+      "kind": "stream",
+      "duration": 132.309
     },
     "fanfare": {
-      "file": "music/fanfare-hero-theme.webm",
-      "loop": false,
-      "duration": 15.01
+      "file": "music/fanfare.webm",
+      "kind": "stream",
+      "duration": 14.813
+    },
+    "sun_temple.fanfare": {
+      "file": "music/sun_temple-fanfare.webm",
+      "kind": "stream",
+      "duration": 26.916
+    },
+    "antechamber.tension": {
+      "file": "music/antechamber-tension.webm",
+      "kind": "loop",
+      "bpm": 58.0,
+      "bars": 8,
+      "length": 33.1034,
+      "rate": 24000,
+      "loop": true,
+      "from": 42.15,
+      "duration": 33.103
+    },
+    "antechamber.combat": {
+      "file": "music/antechamber-combat.webm",
+      "kind": "loop",
+      "bpm": 189.81,
+      "bars": 24,
+      "length": 30.3461,
+      "rate": 32000,
+      "loop": true,
+      "from": 81.65,
+      "duration": 30.346
+    },
+    "cisterns.tension": {
+      "file": "music/cisterns-tension.webm",
+      "kind": "loop",
+      "bpm": 0,
+      "bars": 0,
+      "length": 30.09,
+      "rate": 24000,
+      "loop": true,
+      "from": 25.0,
+      "duration": 30.09
+    },
+    "cisterns.combat": {
+      "file": "music/cisterns-combat.webm",
+      "kind": "loop",
+      "bpm": 83.0,
+      "bars": 12,
+      "length": 34.6988,
+      "rate": 32000,
+      "loop": true,
+      "from": 47.5,
+      "duration": 34.699
+    },
+    "sun_temple.tension": {
+      "file": "music/sun_temple-tension.webm",
+      "kind": "loop",
+      "bpm": 93.093,
+      "bars": 12,
+      "length": 30.9368,
+      "rate": 24000,
+      "loop": true,
+      "from": 43.55,
+      "duration": 30.937
+    },
+    "sun_temple.combat": {
+      "file": "music/sun_temple-combat.webm",
+      "kind": "loop",
+      "bpm": 125.0,
+      "bars": 12,
+      "length": 23.04,
+      "rate": 32000,
+      "loop": true,
+      "from": 155.5,
+      "duration": 23.04
+    },
+    "chase": {
+      "file": "music/chase.webm",
+      "kind": "loop",
+      "bpm": 141.566,
+      "bars": 16,
+      "length": 27.1251,
+      "rate": 32000,
+      "loop": true,
+      "from": 90.0,
+      "duration": 27.125
+    },
+    "boss": {
+      "file": "music/boss.webm",
+      "kind": "loop",
+      "bpm": 102.794,
+      "bars": 16,
+      "length": 37.3561,
+      "rate": 32000,
+      "loop": true,
+      "from": 122.85,
+      "duration": 37.356
+    },
+    "sting.vista": {
+      "file": "music/sting-vista.webm",
+      "kind": "sting",
+      "rate": 48000,
+      "duration": 13.412
+    },
+    "sting.journal": {
+      "file": "music/sting-journal.webm",
+      "kind": "sting",
+      "rate": 32000,
+      "duration": 11.975
+    },
+    "sting.secret": {
+      "file": "music/sting-secret.webm",
+      "kind": "sting",
+      "rate": 32000,
+      "duration": 8.656
+    },
+    "sting.solved": {
+      "file": "music/sting-solved.webm",
+      "kind": "sting",
+      "rate": 48000,
+      "duration": 4.404
+    },
+    "sting.solved.2": {
+      "file": "music/sting-solved-2.webm",
+      "kind": "sting",
+      "rate": 48000,
+      "duration": 4.045
+    },
+    "sting.death": {
+      "file": "music/sting-death.webm",
+      "kind": "sting",
+      "rate": 32000,
+      "duration": 7.737
     }
   }
 }
