@@ -27,7 +27,7 @@ const MOVE_TAU_STOP = 0.16;
 const RUN_TAU_UP = 0.18;
 const RUN_TAU_DOWN = 0.08;
 /** How high the walk clip's swinging foot is lifted (its heel kick is a little theatrical). */
-const WALK_SWING_LIFT = 0.5;
+const WALK_SWING_LIFT = 1;
 /** Gait phase to start from when setting off from standing: left foot planted ahead, right about to swing. */
 const START_PHASE = 0.04;
 /** Contact ramps, in phase units, so foot locks engage and release smoothly. */
@@ -59,9 +59,20 @@ export class Locomotion {
     private readonly idle: Clip,
     private readonly walk: Clip,
     private readonly runClip: Clip,
+    private readonly back: Clip | null = null,
   ) {}
 
-  update(speed: number, dt: number): void {
+  /** 0 = forwards, 1 = backing up (walking backwards). */
+  backing = 0;
+  private readonly backPose = new AnimPose();
+
+  /**
+   * @param speed horizontal speed (m/s)
+   * @param backwards 0..1, how much of the motion is backwards relative to the facing
+   */
+  update(speed: number, dt: number, backwards = 0): void {
+    const bTarget = this.back ? smoothstep(0.3, 0.7, backwards) : 0;
+    this.backing += (bTarget - this.backing) * (1 - Math.exp(-dt / MOVE_TAU));
     const moveTarget = smoothstep(MOVE_FROM, MOVE_TO, speed);
     if (this.move < 0.02 && moveTarget > 0) this.phase = START_PHASE;
     // Stopping settles a little slower than starting: the last step finishes.
@@ -74,8 +85,14 @@ export class Locomotion {
 
     // Blended clip pace, then split the speed ratio between cadence and stride.
     const r = this.run;
-    const clipSpeed = this.walk.speed + (this.runClip.speed - this.walk.speed) * r;
-    const cycle = this.walk.duration + (this.runClip.duration - this.walk.duration) * r;
+    const b = this.backing;
+    const back = this.back;
+    let clipSpeed = this.walk.speed + (this.runClip.speed - this.walk.speed) * r;
+    let cycle = this.walk.duration + (this.runClip.duration - this.walk.duration) * r;
+    if (back) {
+      clipSpeed += (Math.abs(back.speed) - clipSpeed) * b;
+      cycle += (back.duration - cycle) * b;
+    }
     const ratio = Math.max(speed, 0.3) / clipSpeed;
     this.stride = Math.min(STRIDE_MAX, Math.max(STRIDE_MIN, Math.pow(ratio, STRIDE_SHARE)));
     const rate = ratio / this.stride;
@@ -92,6 +109,10 @@ export class Locomotion {
     this.walk.samplePhase(this.phase, this.walkPose.rot, this.walkPose.hips);
     this.runClip.samplePhase(this.phase, this.runPose.rot, this.runPose.hips);
     this.gait.blend(this.walkPose, this.runPose, this.run);
+    if (this.back && this.backing > 0.001) {
+      this.back.samplePhase(this.phase, this.backPose.rot, this.backPose.hips);
+      this.gait.blend(this.gait, this.backPose, this.backing);
+    }
     out.blend(this.idlePose, this.gait, this.move);
   }
 
@@ -102,7 +123,9 @@ export class Locomotion {
       const side = sides[s] ?? 'L';
       const w = contactWeight(this.walk.contacts[side], this.phase, CONTACT_RAMP);
       const r = contactWeight(this.runClip.contacts[side], this.phase, CONTACT_RAMP);
-      const gait = w + (r - w) * this.run;
+      let gait = w + (r - w) * this.run;
+      if (this.back)
+        gait += (contactWeight(this.back.contacts[side], this.phase, CONTACT_RAMP) - gait) * this.backing;
       out[s] = 1 + (gait - 1) * this.move;
     }
     return out;

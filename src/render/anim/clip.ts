@@ -26,6 +26,10 @@ export interface ClipFile {
   rotations: string;
   /** Int16 hips positions in millimetres, frames × 3. */
   hips: string;
+  /** Where the root ends up, for clips that keep their travel (m, model space). */
+  rootEnd?: [number, number, number];
+  /** Take-off and touch-down times of one-shot clips (s). */
+  events?: { takeoff?: number; touchdown?: number };
 }
 
 export const ROT_SCALE = 32767;
@@ -90,6 +94,8 @@ export class Clip {
   readonly speed: number;
   readonly duration: number;
   readonly contacts: { L: Contacts; R: Contacts };
+  readonly rootEnd: THREE.Vector3 | null;
+  readonly events: { takeoff?: number; touchdown?: number };
   private readonly rot: Float32Array;
   private readonly hips: Float32Array;
   /** Maps clip joint order to skeleton joint order. */
@@ -103,6 +109,8 @@ export class Clip {
     this.loop = file.loop;
     this.speed = file.speed;
     this.contacts = file.contacts;
+    this.rootEnd = file.rootEnd ? new THREE.Vector3(...file.rootEnd) : null;
+    this.events = file.events ?? {};
     // A loop's last frame wraps to the first, so it lasts `frames` frames.
     this.duration = (file.loop ? file.frames : file.frames - 1) / file.fps;
     this.rot = decodeInt16(file.rotations, ROT_SCALE);

@@ -31,6 +31,7 @@ import {
   type ScanSkeleton,
 } from '../../src/render/anim/skeleton';
 import type { RetargetJoint } from '../../src/render/nora';
+import { Fbx, type SourceFile } from './fbx';
 import { Gltf, worldMatrices, type Trs } from './gltf';
 import { loadSkeleton, REPO } from './nora-skeleton';
 import { RIGS, type SourceRig } from './rigs';
@@ -51,7 +52,22 @@ interface ClipSpec {
   speed?: number;
   /** ... or measured from a root-motion copy of the same animation. */
   speedFrom?: { file: string; anim?: string; node: string };
+  /** Keep only this part of the animation (s). */
+  from?: number;
+  to?: number;
+  /**
+   * Travel baked into the clip: "remove" (default) takes out the steady
+   * horizontal travel (and measures the clip's speed from it); "keep" leaves
+   * it and records where the root ends up (rootEnd), for moves the runtime
+   * lines up with the simulation (climb, death).
+   */
+  rootMotion?: 'remove' | 'keep';
+  /** "hands": place the clip so its hands start where the hanging Nora grips the ledge. */
+  anchor?: 'hands';
 }
+
+/** Where the procedural rig grips a ledge while hanging (wrist, model space; nora.ts evalHang). */
+const HANG_WRIST = new THREE.Vector3(0, 1.925, -0.285);
 
 interface Manifest {
   rig: string;
@@ -70,17 +86,18 @@ if (!rigProfile) throw new Error(`unknown rig '${manifest.rig}' (known: ${Object
 const rig: SourceRig = rigProfile;
 const outDir = outArg ?? join(REPO, 'public', 'anim');
 
-const files = new Map<string, Gltf>();
-function gltf(file: string): Gltf {
+const files = new Map<string, SourceFile>();
+function gltf(file: string): SourceFile {
   let g = files.get(file);
   if (!g) {
-    g = new Gltf(join(srcDir ?? '.', file));
+    const path = join(srcDir ?? '.', file);
+    g = /\.fbx$/i.test(file) ? new Fbx(path) : new Gltf(path);
     files.set(file, g);
   }
   return g;
 }
 
-function animName(g: Gltf, anim: string | undefined): string {
+function animName(g: SourceFile, anim: string | undefined): string {
   const name = anim ?? g.animationNames()[0];
   if (name === undefined) throw new Error('source file has no animation');
   return name;
@@ -96,24 +113,24 @@ interface SourceFrame {
 /** Turns the source to face -Z with its left at -X, like Nora; set from the reference pose. */
 const facing = new THREE.Quaternion();
 
-function frameFromPose(g: Gltf, pose: Trs[]): SourceFrame {
+function frameFromPose(g: SourceFile, pose: Trs[]): SourceFrame {
   const ms = worldMatrices(g, pose);
   const rot = new Map<string, THREE.Quaternion>();
   const pos = new Map<string, THREE.Vector3>();
-  g.json.nodes.forEach((n, i) => {
+  g.names.forEach((n, i) => {
     const m = ms[i];
-    if (!m || !n.name) return;
+    if (!m || !n) return;
     const p = new THREE.Vector3();
     const q = new THREE.Quaternion();
     m.decompose(p, q, new THREE.Vector3());
-    const name = rig.name(n.name);
+    const name = rig.name(n);
     rot.set(name, facing.clone().multiply(q));
     pos.set(name, p.applyQuaternion(facing));
   });
   return { rot, pos };
 }
 
-function sourceFrame(g: Gltf, anim: string, t: number): SourceFrame {
+function sourceFrame(g: SourceFile, anim: string, t: number): SourceFrame {
   return frameFromPose(g, g.animation(anim).sample(t));
 }
 
@@ -298,6 +315,44 @@ function contacts(frames: [Sole, Sole][], side: 0 | 1, speed: number): Contacts 
   return out;
 }
 
+/** Speed of the ground under a foot-planted in-place gait: the median backward speed of the lowest sole. */
+function stanceSpeed(frames: [Sole, Sole][]): number {
+  const n = frames.length;
+  const v: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = frames[(i - 1 + n) % n];
+    const b = frames[(i + 1) % n];
+    const c = frames[i];
+    if (!a || !b || !c) continue;
+    for (let s = 0; s < 2; s++) {
+      const low = (f: [Sole, Sole]): THREE.Vector3 => {
+        const x = f[s as 0 | 1];
+        return x.heel.y < x.ball.y ? x.heel : x.ball;
+      };
+      if (low(c).y > 0.02) continue;
+      v.push(((low(b).z - low(a).z) / 2) * FPS);
+    }
+  }
+  v.sort((x, y) => x - y);
+  return Math.abs(v[Math.floor(v.length / 2)] ?? 0);
+}
+
+/** Take-off and touch-down times (s) of a one-shot clip: when both feet leave the floor, and when one lands again. */
+function airEvents(
+  frames: [Sole, Sole][],
+  loop: boolean,
+): { takeoff?: number; touchdown?: number } | undefined {
+  if (loop) return undefined;
+  const low = frames.map((f) => Math.min(f[0].heel.y, f[0].ball.y, f[1].heel.y, f[1].ball.y));
+  const off = low.findIndex((y) => y > 0.05);
+  const out: { takeoff?: number; touchdown?: number } = {};
+  if (off > 0) out.takeoff = Math.round((off / FPS) * 1000) / 1000;
+  const start = Math.max(0, off);
+  const down = low.findIndex((y, i) => i > start && off >= 0 && y < 0.02);
+  if (down > 0) out.touchdown = Math.round((down / FPS) * 1000) / 1000;
+  return out.takeoff !== undefined || out.touchdown !== undefined ? out : undefined;
+}
+
 function rotateFrames<T>(frames: T[], start: number): T[] {
   return frames.slice(start).concat(frames.slice(0, start));
 }
@@ -309,7 +364,7 @@ function recordedSpeed(spec: ClipSpec): number {
   if (!from) return 0;
   const g = gltf(from.file);
   const anim = g.animation(animName(g, from.anim ?? spec.anim));
-  const node = g.json.nodes.findIndex((n) => n.name !== undefined && rig.name(n.name) === from.node);
+  const node = g.names.findIndex((n) => rig.name(n) === from.node);
   if (node < 0) throw new Error(`${from.file}: no node '${from.node}'`);
   const at = (t: number): THREE.Vector3 =>
     new THREE.Vector3().setFromMatrixPosition(worldMatrices(g, anim.sample(t))[node] ?? new THREE.Matrix4());
@@ -329,30 +384,75 @@ for (const spec of manifest.clips) {
   const g = gltf(spec.file);
   const name = animName(g, spec.anim);
   const anim = g.animation(name);
-  const count = Math.round(anim.duration * FPS);
+  const t0 = spec.from ?? 0;
+  const t1 = Math.min(anim.duration, spec.to ?? anim.duration);
+  const count = Math.round((t1 - t0) * FPS);
   let frames: Frame[] = [];
-  for (let i = 0; i <= count; i++) frames.push(retarget.frame(sourceFrame(g, name, i / FPS)));
+  for (let i = 0; i <= count; i++) frames.push(retarget.frame(sourceFrame(g, name, t0 + i / FPS)));
+
+  // Travel baked into the clip (Nora scale).
+  const first = frames[0]?.hips.clone() ?? new THREE.Vector3();
+  const travel = (frames[frames.length - 1]?.hips.clone() ?? first).sub(first);
+  let rootEnd: [number, number, number] | undefined;
+  if ((spec.rootMotion ?? 'remove') === 'remove') {
+    frames.forEach((f, i) => {
+      const u = i / Math.max(1, frames.length - 1);
+      f.hips.x -= travel.x * u;
+      f.hips.z -= travel.z * u;
+    });
+  }
+  if (spec.anchor === 'hands') {
+    const pos: THREE.Vector3[] = [];
+    const f0 = frames[0];
+    if (f0) {
+      nora.positions(f0.rot, f0.hips, pos);
+      const hands = (pos[JOINT_INDEX.hand_L] ?? new THREE.Vector3())
+        .clone()
+        .add(pos[JOINT_INDEX.hand_R] ?? new THREE.Vector3())
+        .multiplyScalar(0.5);
+      const shift = HANG_WRIST.clone().sub(hands);
+      for (const f of frames) f.hips.add(shift);
+    }
+  }
+  if (spec.rootMotion === 'keep') {
+    const last = frames[frames.length - 1];
+    if (last) {
+      const [l, r] = soles(nora, last);
+      const feet = l.heel.clone().add(l.ball).add(r.heel).add(r.ball).multiplyScalar(0.25);
+      const low = Math.min(l.heel.y, l.ball.y, r.heel.y, r.ball.y);
+      rootEnd = [feet.x, low, feet.z].map((v) => Math.round(v * 1000) / 1000) as [number, number, number];
+    }
+  }
   if (spec.loop) frames = closeLoop(frames);
 
-  // Ground speed scaled to Nora's legs.
-  const speed = recordedSpeed(spec) * retarget.k;
-
   let sole = frames.map((f) => soles(nora, f));
+  // Ground speed scaled to Nora's legs: given, measured from the baked travel, or from the planted feet.
+
+  let speed = recordedSpeed(spec) * retarget.k;
+  if (spec.speed === undefined && !spec.speedFrom && (spec.rootMotion ?? 'remove') === 'remove')
+    speed = Math.hypot(travel.x, travel.z) / Math.max(1e-3, t1 - t0);
+  if (speed < 0.05 && spec.gait) speed = stanceSpeed(sole);
+  // Backwards travel (towards +Z): planted feet move forwards under the body.
+  const signed = travel.z > 0.05 ? -speed : speed;
+
   if (spec.gait) {
-    const left = contacts(sole, 0, speed);
+    const left = contacts(sole, 0, signed);
     const start = Math.round((left[0]?.[0] ?? 0) * frames.length);
     frames = rotateFrames(frames, start);
     sole = rotateFrames(sole, start);
   }
+  const events = airEvents(sole, spec.loop);
   const file: ClipFile = {
+    ...(rootEnd ? { rootEnd } : {}),
+    ...(events ? { events } : {}),
     format: 'nora-clip@1',
     name: spec.name,
     source: `${manifest.source}: ${name}`,
     fps: FPS,
     frames: frames.length,
     loop: spec.loop,
-    speed: Math.round(speed * 1000) / 1000,
-    contacts: { L: contacts(sole, 0, speed), R: contacts(sole, 1, speed) },
+    speed: Math.round(signed * 1000) / 1000,
+    contacts: { L: contacts(sole, 0, signed), R: contacts(sole, 1, signed) },
     joints: [...JOINTS],
     rotations: encodeInt16(
       frames.flatMap((f) =>
@@ -375,7 +475,10 @@ for (const spec of manifest.clips) {
     `${spec.name.padEnd(5)} ${String(frames.length).padStart(3)} frames ${(frames.length / FPS).toFixed(3)} s` +
       ` speed ${file.speed.toFixed(2)} m/s hips ${Math.min(...hy).toFixed(3)}..${Math.max(...hy).toFixed(3)}` +
       ` lowest sole ${Math.min(...lows).toFixed(3)} contacts L ${fmt(file.contacts.L)} R ${fmt(file.contacts.R)}` +
-      ` -> ${path} (${JSON.stringify(file).length} bytes)`,
+      ` travel ${travel.x.toFixed(2)},${travel.y.toFixed(2)},${travel.z.toFixed(2)}` +
+      (file.events ? ` events ${JSON.stringify(file.events)}` : '') +
+      (file.rootEnd ? ` rootEnd ${file.rootEnd.join(',')}` : '') +
+      ` (${(JSON.stringify(file).length / 1024).toFixed(1)} kB)`,
   );
   if (JOINT_COUNT !== file.joints.length) throw new Error('joint count mismatch');
 }

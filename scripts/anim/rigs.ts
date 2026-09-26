@@ -52,7 +52,7 @@ const UAL: SourceRig = {
   name: (n) => n,
 };
 
-/** Mixamo (mixamorig bone names; any "mixamorig:", "mixamorig_" or "mixamorig1:" prefix is dropped). */
+/** Mixamo (mixamorig bone names, with or without a ":" or "_" after the prefix). */
 const MIXAMO: SourceRig = {
   joints: {
     hips: 'Hips',
@@ -78,16 +78,16 @@ const MIXAMO: SourceRig = {
   ends: {
     upperArm_L: 'LeftForeArm',
     lowerArm_L: 'LeftHand',
-    hand_L: 'LeftHandMiddle1',
+    hand_L: 'LeftHandIndex1',
     upperArm_R: 'RightForeArm',
     lowerArm_R: 'RightHand',
-    hand_R: 'RightHandMiddle1',
+    hand_R: 'RightHandIndex1',
     thigh_L: 'LeftLeg',
     shin_L: 'LeftFoot',
     thigh_R: 'RightLeg',
     shin_R: 'RightFoot',
   },
-  name: (n) => n.replace(/^mixamorig\d*[:_]/, ''),
+  name: (n) => n.replace(/^mixamorig\d*[:_]?/, ''),
 };
 
 export const RIGS: Record<string, SourceRig> = { ual: UAL, mixamo: MIXAMO };
