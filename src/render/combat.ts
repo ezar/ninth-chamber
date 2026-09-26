@@ -98,7 +98,7 @@ function holsterMesh(): THREE.Group {
   const g = new THREE.Group();
   const leather = new THREE.MeshStandardMaterial({ color: '#4a3020', roughness: 0.8, metalness: 0 });
   const strap = new THREE.MeshStandardMaterial({ color: '#2e2016', roughness: 0.85, metalness: 0 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.055, 0.17), leather);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.052, 0.17), leather);
   body.position.set(0, 0.012, -0.085);
   const flap = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.03, 0.03), leather);
   flap.position.set(0, -0.018, -0.005);
@@ -366,7 +366,7 @@ export class CombatView {
     out.addScaledVector(_hd, -out.dot(_hd)).normalize();
     const fwd = nora.facing(_hf);
     fwd.addScaledVector(_hd, -fwd.dot(_hd)).normalize();
-    h.position.copy(_hip).addScaledVector(_hd, 0.2).addScaledVector(out, 0.1);
+    h.position.copy(_hip).addScaledVector(_hd, 0.2).addScaledVector(out, 0.056);
     // Basis: -Z along the thigh (barrel down), +Y towards her front, X from their cross product.
     _hx.crossVectors(fwd, _c.copy(_hd).negate());
     _m.makeBasis(_hx, fwd, _c);
