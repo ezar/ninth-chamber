@@ -6,6 +6,8 @@
 - Scanned CC0 textures from Poly Haven replace the procedural ones (`public/textures`, sources in `sources.json`); the procedural textures remain the fallback.
 - Indirect light is baked with Blender Cycles (`scripts/bake`) into `public/levels/antechamber.lightmap.png` and applied on the second UV set; direct light stays dynamic.
 - Procedural Web Audio engine (`src/audio`): buses, generated reverbs, positional fire and relic loops, footsteps per material, mechanism sounds and short music cues.
+- Touch controls redesigned for phones: shown only while playing, icon buttons in a thumb arc with reserved weapon slots, ghost stick and look hints, dead zone and trailing stick base, gentle push walks, haptics, hints at the top, a glowing action button when something is usable, fullscreen on start and a minimum horizontal field of view in portrait.
+- Camera: over-the-shoulder pivot, lazy follow behind the direction of travel, look-ahead, speed-driven field of view and trauma shake on landings, hits, blocks, falling tiles and doors.
 
 ## Unreleased
 
