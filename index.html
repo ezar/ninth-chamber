@@ -72,6 +72,20 @@
         </svg>
         <span data-i18n="touch.walk"></span>
       </button>
+      <!-- Combat: hold to fire (locks onto the nearest jackal, draws the pistols if needed); draw or holster. -->
+      <button data-button="fire" class="tbtn tbtn-slot-a">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="6" />
+          <path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5" />
+        </svg>
+        <span data-i18n="touch.fire"></span>
+      </button>
+      <button data-button="weapons" class="tbtn tbtn-slot-b">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3.5 7.5h16v3.5h-16zM6.5 11l-1.8 7h3.6l1.6-7M11 11v1.6a1.6 1.6 0 001.6 1.6H14V11" />
+        </svg>
+        <span data-i18n="touch.draw"></span>
+      </button>
     </div>
 
     <div id="fatal" data-i18n="error.noWebGL" hidden></div>

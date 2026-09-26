@@ -130,7 +130,9 @@ function fire(c: Ctx, target: EnemyState | null): void {
   world.stats.shots++;
   // Only shots at a target roll the RNG: the hit chance needs line of sight, which canTarget ensured.
   const hit = target !== null && world.rng.next() < weapons.pistols.hitChance;
-  emit(c, 'weapon.fired', { hand, target: target?.id ?? null, hit });
+  // Listeners get where the shot went (for impacts and ricochets).
+  const at = target ? { tx: target.pos.x, ty: target.pos.y, tz: target.pos.z } : {};
+  emit(c, 'weapon.fired', { hand, target: target?.id ?? null, hit, ...at });
   makeNoise(world, p.pos, noise.shot);
   if (!target) return;
   if (!target.aware) alertEnemy(world, target, 'noise');

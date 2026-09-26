@@ -22,10 +22,18 @@ export interface ListenerPose extends Vec3 {
 /** Cap on simultaneous one-shot sounds; beyond it, new ones are dropped. */
 const MAX_STRIPS = 48;
 /** Minimum spacing between two sounds of the same event type (s). */
-const MIN_GAP: Record<string, number> = { footstep: 0.07, 'player.landed': 0.1, 'player.hurt': 0.15 };
+const MIN_GAP: Record<string, number> = {
+  footstep: 0.07,
+  'player.landed': 0.1,
+  'player.hurt': 0.15,
+  'weapon.fired': 0.05,
+  'enemy.alerted': 0.35,
+};
 const DEFAULT_GAP = 0.03;
 /** Scheduling lead, so every node starts on a clean sample in the future. */
 const LEAD = 0.01;
+/** Growls vary in length (s). */
+const growlLength = (): number => 0.7 + Math.random() * 0.5;
 
 const str = (e: SimEvent, key: string): string => {
   const v = e[key];
@@ -34,6 +42,13 @@ const str = (e: SimEvent, key: string): string => {
 const num = (e: SimEvent, key: string, fallback = 0): number => {
   const v = e[key];
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+};
+/** Where an event happened, when it says so (enemies: x, y, z; a shot's target: tx, ty, tz). */
+const where = (e: SimEvent, prefix = ''): Vec3 | null => {
+  const x = num(e, `${prefix}x`, NaN);
+  const y = num(e, `${prefix}y`, NaN);
+  const z = num(e, `${prefix}z`, NaN);
+  return Number.isFinite(x + y + z) ? { x, y: y + 0.4, z } : null;
 };
 
 export interface GraphOptions {
@@ -153,7 +168,7 @@ export class AudioGraph {
 
   onEvent(e: SimEvent, atRaw: Vec3 | null): void {
     if (!this.allow(e.type)) return;
-    const at = atRaw && Number.isFinite(atRaw.x + atRaw.y + atRaw.z) ? atRaw : null;
+    const at = where(e) ?? (atRaw && Number.isFinite(atRaw.x + atRaw.y + atRaw.z) ? atRaw : null);
     const m = this.mixer;
     switch (e.type) {
       case 'footstep': {
@@ -289,6 +304,54 @@ export class AudioGraph {
       }
       case 'level.end':
         this.playMusic('fanfare');
+        break;
+      case 'weapon.fired': {
+        const pan = e.hand === 0 ? -0.12 : 0.12;
+        this.play('sfx', at, (s, t) => sfx.gunshot(s, t, pan));
+        const target = where(e, 't');
+        if (target && e.hit !== true) this.play('sfx', target, (s, t) => sfx.ricochet(s, t + 0.02));
+        break;
+      }
+      case 'weapons.drawn':
+      case 'weapons.holstered': {
+        const drawing = e.type === 'weapons.drawn';
+        this.play('sfx', at, (s, t) => sfx.holster(s, t, drawing));
+        break;
+      }
+      case 'enemy.alerted': {
+        const dur = growlLength();
+        this.play('sfx', at, (s, t) => sfx.growl(s, t, dur));
+        break;
+      }
+      case 'enemy.hit': {
+        const dying = num(e, 'health', 1) <= 0;
+        this.play('sfx', at, (s, t) => {
+          sfx.bulletHit(s, t);
+          if (!dying) sfx.yelp(s, t + 0.02, false);
+        });
+        break;
+      }
+      case 'enemy.died':
+        this.play('sfx', at, (s, t) => sfx.yelp(s, t + 0.03, true));
+        break;
+      case 'enemy.bite': {
+        const hit = e.hit === true;
+        this.play('sfx', at, (s, t) => sfx.bite(s, t, hit));
+        break;
+      }
+      case 'enemy.gaveUp':
+        this.play('sfx', at, (s, t) => sfx.huff(s, t));
+        break;
+      case 'medkit.used': {
+        const large = str(e, 'size') === 'large';
+        this.play('ui', null, (s, t) => {
+          sfx.medkit(s, t, large);
+          chime(s, t + 0.4, [69, 76], 0.035, 0.12);
+        });
+        break;
+      }
+      case 'medkit.none':
+        this.play('ui', null, (s, t) => sfx.denied(s, t));
         break;
       default:
         break;

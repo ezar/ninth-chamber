@@ -145,8 +145,9 @@ const PAD_BUTTONS: [number, Button][] = [
   [1, 'roll'], // B
   [7, 'fire'], // RT
   [6, 'walk'], // LT
-  [5, 'weapons'], // RB
-  [4, 'flare'], // LB
+  [5, 'weapons'], // RB (spec §13)
+  [4, 'weapons'], // LB: draw / holster on either bumper (owner's request); Y stays the medkit
+  [12, 'flare'], // d-pad up (flares arrive in phase 2)
   [3, 'medkit'], // Y
   [8, 'inventory'], // Select
   [9, 'pause'], // Start
