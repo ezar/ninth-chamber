@@ -474,6 +474,30 @@ body.touch.playing #pause-button {
   outline: 2px solid var(--ui-amber);
   outline-offset: 3px;
 }
+
+/* The stats readout keeps clear of the pause button on touch screens. */
+body.touch #hud-stats {
+  right: calc(max(12px, env(safe-area-inset-right)) + 68px);
+}
+
+/* Touch: every menu control is at least 44 px tall. */
+body.touch .panel button.ghost,
+body.touch .menu-item {
+  min-height: 48px;
+}
+
+body.touch .opt-arrow {
+  width: 44px;
+  height: 44px;
+}
+
+body.touch .opt-bar {
+  padding: 20px 0;
+}
+
+body.touch .opt-main {
+  min-height: 44px;
+}
 body.touch .panel .help {
   display: none;
 }

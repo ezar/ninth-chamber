@@ -407,8 +407,11 @@ export class Menu {
       row.step(step < 0 ? -1 : 1);
     });
     row.el.addEventListener('click', (e) => {
-      const arrow = (e.target as HTMLElement).closest<HTMLElement>('[data-step]');
+      const target = e.target as HTMLElement;
+      const arrow = target.closest<HTMLElement>('[data-step]');
       if (arrow) row.step(arrow.dataset.step === '-1' ? -1 : 1);
+      // A tap on a switch's value flips it, as on a phone's settings screen.
+      else if (row.el.getAttribute('role') === 'switch' && target.closest('.opt-value')) row.activate();
       row.el.focus({ preventScroll: true });
     });
   }

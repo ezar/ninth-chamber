@@ -104,6 +104,8 @@ export class Hud {
     $('end-restart').textContent = t('end.restart');
     this.end.hidden = false;
     requestAnimationFrame(() => this.end.classList.add('show'));
+    // Enter, Space or the pad's A replays straight away.
+    $('end-restart').focus({ preventScroll: true });
   }
 
   hideEnd(): void {
