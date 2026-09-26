@@ -67,7 +67,15 @@ const entityBase = {
 
 const entity = z.discriminatedUnion('type', [
   z.object({ ...entityBase, type: z.literal('block') }).strict(),
-  z.object({ ...entityBase, type: z.literal('lever'), wall: z.enum(FACINGS) }).strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('lever'),
+      wall: z.enum(FACINGS),
+      /** A spring lever returns to rest after each pull and can be pulled again (reset levers). */
+      spring: z.boolean().default(false),
+    })
+    .strict(),
   z
     .object({
       ...entityBase,

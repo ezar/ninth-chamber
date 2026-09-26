@@ -24,7 +24,7 @@ const SIGNALS: Record<string, string[]> = {
   enemy: ['dead'],
 };
 
-const ACTIONS_ON: Record<string, string[]> = { door: ['open', 'close', 'toggle'] };
+const ACTIONS_ON: Record<string, string[]> = { door: ['open', 'close', 'toggle'], block: ['reset'] };
 
 export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): ValidationResult {
   const errors: string[] = [];

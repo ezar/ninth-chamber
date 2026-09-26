@@ -256,6 +256,14 @@ export class AudioGraph {
         this.play('sfx', at, (s, t) => sfx.doorStop(s, t, slam));
         break;
       }
+      case 'door.tick': {
+        const urgent = num(e, 'left', 9) <= 3;
+        this.play('sfx', null, (s, t) => sfx.tick(s, t, urgent));
+        break;
+      }
+      case 'block.reset':
+        this.play('sfx', null, (s, t) => sfx.blockMoving(s, t, 0.6, 'push'));
+        break;
       case 'plate.pressed':
       case 'plate.released': {
         const pressed = e.type === 'plate.pressed';

@@ -110,6 +110,8 @@ export interface LeverActor {
   cz: number;
   wall: Dir;
   used: boolean;
+  /** Returns to rest after each pull, so it can be pulled again. */
+  spring: boolean;
 }
 
 export interface PlateActor {

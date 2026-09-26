@@ -1,0 +1,11 @@
+{
+  "id": "scales",
+  "background": "#090a08",
+  "exposure": 1.0,
+  "hemi": { "sky": "#4d5646", "ground": "#12130e", "intensity": 0.14 },
+  "fog": { "color": "#2f3528", "density": 0.03 },
+  "sun": null,
+  "fire": { "color": "#ff9448", "intensity": 44, "flicker": 0.25 },
+  "bloom": { "strength": 0.6, "radius": 0.5, "threshold": 0.78 },
+  "grade": { "tint": "#f0e4c8", "saturation": 0.95, "contrast": 1.14, "vignette": 0.45 }
+}

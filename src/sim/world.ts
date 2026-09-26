@@ -58,7 +58,7 @@ function createActors(level: Level): Actor[] {
         });
         break;
       case 'lever':
-        actors.push({ kind: 'lever', id: e.id, cx, cz, wall: e.wall, used: false });
+        actors.push({ kind: 'lever', id: e.id, cx, cz, wall: e.wall, used: false, spring: e.spring });
         break;
       case 'plate':
         actors.push({ kind: 'plate', id: e.id, cx, cz, pressed: false });
@@ -201,6 +201,32 @@ export function blockAt(world: World, cx: number, cz: number): BlockActor | unde
     (a): a is BlockActor =>
       a.kind === 'block' && a.cx === cx && a.cz === cz && a.from === null && a.fallTo === null,
   );
+}
+
+/**
+ * Puts a block back where the level placed it (spec §8: a reset lever keeps
+ * block puzzles from dead ends). Skipped while the player holds the block or
+ * stands in its start cell, or another block sits there.
+ */
+export function resetBlock(world: World, id: string): boolean {
+  const b = findActor(world, id, 'block');
+  const start = world.level.entities.find((e) => e.id === id && e.type === 'block');
+  if (!b || !start) return false;
+  const [cx, cz] = start.at;
+  const p = world.state.player;
+  if (p.target === id) return false;
+  if (Math.floor(p.pos.x / BLOCK) === cx && Math.floor(p.pos.z / BLOCK) === cz) return false;
+  const other = blockAt(world, cx, cz);
+  if (other && other.id !== id) return false;
+  const s = world.level.sector(cx, cz);
+  b.cx = cx;
+  b.cz = cz;
+  b.y = s ? sectorTop(s) : 0;
+  b.from = null;
+  b.fallTo = null;
+  b.t = 0;
+  world.events.emit({ type: 'block.reset', tick: world.tick, id });
+  return true;
 }
 
 export function doorAt(world: World, cx: number, cz: number): DoorActor | undefined {

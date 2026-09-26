@@ -120,7 +120,14 @@ export function lever(c: Ctx): void {
     setSignal(world, `${l.id}.used`, true);
     emit(c, 'lever.pulled', { id: l.id });
   }
-  if (p.modeTime >= tuning.leverTime) release(c);
+  if (p.modeTime >= tuning.leverTime) {
+    // A spring lever returns to rest, so its signal can rise again on the next pull.
+    if (l?.spring && l.used) {
+      l.used = false;
+      setSignal(world, `${l.id}.used`, false);
+    }
+    release(c);
+  }
 }
 
 /** Crouching to pick up a secret or the relic. */
