@@ -17,37 +17,49 @@ const LIGHTMAP_PAD = 2;
 
 /**
  * Shelf packer for the lightmap atlas (second UV set). Every face is an
- * axis-aligned rectangle, so a simple shelf packing is tight enough. Works in
- * texels; UVs are normalised once the final atlas height is known.
+ * axis-aligned rectangle, so shelf packing sorted by height is tight enough.
+ * Faces reserve a rectangle while the geometry is built; `pack()` places them
+ * all once the full set is known.
  */
 class Atlas {
-  private x = 0;
-  private y = 0;
-  private shelf = 0;
-  height = 0;
+  readonly rects: Rect[] = [];
+  private packed: { width: number; height: number } | null = null;
 
-  /** Reserves a rectangle for a face of w × h metres; returns its texel origin and size. */
-  allocate(w: number, h: number): { x: number; y: number; w: number; h: number } {
-    const tw = Math.max(1, Math.ceil(w * LIGHTMAP_DENSITY));
-    const th = Math.max(1, Math.ceil(h * LIGHTMAP_DENSITY));
-    const pw = tw + LIGHTMAP_PAD * 2;
-    const ph = th + LIGHTMAP_PAD * 2;
-    if (this.x + pw > LIGHTMAP_WIDTH) {
-      this.x = 0;
-      this.y += this.shelf;
-      this.shelf = 0;
-    }
-    const r = { x: this.x + LIGHTMAP_PAD, y: this.y + LIGHTMAP_PAD, w: tw, h: th };
-    this.x += pw;
-    this.shelf = Math.max(this.shelf, ph);
-    this.height = Math.max(this.height, this.y + this.shelf);
+  /** Reserves a rectangle for a face of w × h metres. */
+  allocate(w: number, h: number): Rect {
+    const r = {
+      x: 0,
+      y: 0,
+      w: Math.max(1, Math.ceil(w * LIGHTMAP_DENSITY)),
+      h: Math.max(1, Math.ceil(h * LIGHTMAP_DENSITY)),
+    };
+    this.rects.push(r);
     return r;
   }
 
-  get size(): { width: number; height: number } {
-    let h = 1;
-    while (h < this.height) h *= 2;
-    return { width: LIGHTMAP_WIDTH, height: h };
+  pack(): { width: number; height: number } {
+    if (this.packed) return this.packed;
+    const order = [...this.rects].sort((a, b) => b.h - a.h || b.w - a.w);
+    let x = 0;
+    let y = 0;
+    let shelf = 0;
+    for (const r of order) {
+      const pw = r.w + LIGHTMAP_PAD * 2;
+      const ph = r.h + LIGHTMAP_PAD * 2;
+      if (x + pw > LIGHTMAP_WIDTH) {
+        x = 0;
+        y += shelf;
+        shelf = 0;
+      }
+      r.x = x + LIGHTMAP_PAD;
+      r.y = y + LIGHTMAP_PAD;
+      x += pw;
+      shelf = Math.max(shelf, ph);
+    }
+    let height = 1;
+    while (height < y + shelf) height *= 2;
+    this.packed = { width: LIGHTMAP_WIDTH, height };
+    return this.packed;
   }
 }
 
@@ -57,8 +69,8 @@ class Builder {
   readonly pos: number[] = [];
   readonly nor: number[] = [];
   readonly uv: number[] = [];
-  /** Lightmap UVs, in texels until finish() normalises them. */
-  readonly uv1: number[] = [];
+  /** Lightmap placement per vertex: its face rectangle and position (s, t) inside it. */
+  private readonly lm: { rect: Rect | null; s: number; t: number }[] = [];
   readonly col: number[] = [];
   readonly idx: number[] = [];
 
@@ -76,7 +88,7 @@ class Builder {
     this.pos.push(p.x, p.y, p.z);
     this.nor.push(n.x, n.y, n.z);
     this.uv.push(u, v);
-    this.uv1.push(rect ? rect.x + s * rect.w : 0, rect ? rect.y + t * rect.h : 0);
+    this.lm.push({ rect: rect ?? null, s, t });
     this.col.push(ao, ao, ao);
     return this.pos.length / 3 - 1;
   }
@@ -86,7 +98,13 @@ class Builder {
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(this.nor, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
-    const uv1 = this.uv1.map((c, i) => (i % 2 === 0 ? c / size.width : 1 - c / size.height));
+    const uv1: number[] = [];
+    for (const { rect, s, t } of this.lm) {
+      uv1.push(
+        rect ? (rect.x + s * rect.w) / size.width : 0,
+        rect ? 1 - (rect.y + t * rect.h) / size.height : 0,
+      );
+    }
     g.setAttribute('uv1', new THREE.Float32BufferAttribute(uv1, 2));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
     g.setIndex(this.idx);
@@ -268,7 +286,7 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
     }
   }
 
-  const size = atlas.size;
+  const size = atlas.pack();
   return {
     surfaces: {
       wall: b.wall.geometry(size),

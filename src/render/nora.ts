@@ -491,11 +491,11 @@ function deform(g: THREE.BufferGeometry, f: (p: THREE.Vector3) => void): THREE.B
 function headShape(d: THREE.Vector3, out: THREE.Vector3, scale = 1): THREE.Vector3 {
   const { x, y, z } = d;
   let px = x * 0.074;
-  const py = y > 0 ? y * 0.106 : y * 0.118;
+  const py = y > 0 ? y * 0.106 : y * 0.106;
   let pz = z < 0 ? z * 0.094 : z * 0.1;
   if (y < 0) {
     const t = -y;
-    px *= 1 - 0.36 * Math.pow(t, 1.5);
+    px *= 1 - 0.46 * Math.pow(t, 1.4);
     if (z > 0) pz *= 1 - 0.5 * t;
     else pz *= 1 - 0.08 * t;
   }
@@ -516,11 +516,11 @@ function headShape(d: THREE.Vector3, out: THREE.Vector3, scale = 1): THREE.Vecto
 
 const JACKET: readonly Ring[] = (
   [
-    [0.74, 0.197, 0.137, 0.152, 0.42],
-    [0.8, 0.192, 0.132, 0.147, 0.4],
-    [0.88, 0.186, 0.126, 0.14, 0.37],
-    [0.96, 0.172, 0.119, 0.126, 0.34],
-    [1.04, 0.162, 0.113, 0.117, 0.31],
+    [0.74, 0.203, 0.14, 0.158, 0.3],
+    [0.8, 0.196, 0.134, 0.15, 0.28],
+    [0.88, 0.187, 0.127, 0.141, 0.26],
+    [0.96, 0.172, 0.119, 0.126, 0.26],
+    [1.04, 0.162, 0.113, 0.117, 0.27],
     [1.12, 0.166, 0.121, 0.117, 0.29],
     [1.2, 0.173, 0.136, 0.12, 0.28],
     [1.27, 0.179, 0.139, 0.12, 0.3],
@@ -541,17 +541,17 @@ const SHIRT: readonly Ring[] = (
     [1.27, 0.167, 0.128, 0.11],
     [1.33, 0.17, 0.116, 0.11],
     [1.38, 0.15, 0.094, 0.09],
-    [1.42, 0.1, 0.074, 0.075],
-    [1.445, 0.066, 0.06, 0.062],
+    [1.415, 0.1, 0.074, 0.075],
+    [1.432, 0.074, 0.066, 0.068],
   ] as const
 ).map(([y, rx, rzf, rzb]) => ({ y, rx, rzf, rzb, a0: -1.25, a1: 1.25 }));
 
 const SEAT: readonly Ring[] = (
   [
-    [0.775, 0.05, 0.045, 0.05],
-    [0.8, 0.13, 0.1, 0.112],
-    [0.84, 0.165, 0.113, 0.13],
-    [0.88, 0.174, 0.114, 0.134],
+    [0.79, 0.05, 0.04, 0.05],
+    [0.81, 0.13, 0.085, 0.11],
+    [0.845, 0.163, 0.1, 0.13],
+    [0.88, 0.174, 0.108, 0.134],
     [0.93, 0.166, 0.109, 0.124],
     [0.98, 0.154, 0.104, 0.114],
     [1.0, 0.151, 0.103, 0.111],
@@ -605,12 +605,12 @@ interface StrapPoint {
 type Weights = [number, number][];
 
 const PALETTE = {
-  skin: '#b98262',
+  skin: '#b07c62',
   lips: '#9a5c4c',
   hair: '#2b1b12',
   jacket: '#8a8458',
   jacketEdge: '#6f6a45',
-  shirt: '#e9e2d2',
+  shirt: '#e3dccb',
   trousers: '#6b4a2f',
   leather: '#7a4a2a',
   boot: '#4f3020',
@@ -845,7 +845,7 @@ export class NoraModel {
     const P = PALETTE;
     const canvas = detailTextures(
       128,
-      5,
+      9,
       (u, v) => {
         const twill = 0.5 + 0.5 * Math.sin(TAU * (u * 40 + v * 40));
         const n = fbm(u, v, 4, 3);
@@ -906,7 +906,7 @@ export class NoraModel {
           map: t.map,
           roughnessMap: t.rough,
           normalMap: t.normal,
-          normalScale: new THREE.Vector2(0.6, 0.6),
+          normalScale: new THREE.Vector2(0.3, 0.3),
           roughness,
           sheen: 0.6,
           sheenRoughness: 0.7,
@@ -920,7 +920,6 @@ export class NoraModel {
         color: P.skin,
         map: skinTex.map,
         roughnessMap: skinTex.rough,
-        normalMap: skinTex.normal,
         roughness: 0.58,
         sheen: 0.35,
         sheenRoughness: 0.5,
@@ -961,10 +960,10 @@ export class NoraModel {
         map: hairTex.map,
         roughnessMap: hairTex.rough,
         normalMap: hairTex.normal,
-        normalScale: new THREE.Vector2(1, 1),
-        roughness: 0.5,
-        sheen: 1,
-        sheenRoughness: 0.35,
+        normalScale: new THREE.Vector2(0.45, 0.45),
+        roughness: 0.62,
+        sheen: 0.5,
+        sheenRoughness: 0.45,
         sheenColor: new THREE.Color('#7a5236'),
       }),
     );
@@ -998,7 +997,7 @@ export class NoraModel {
       const ax = Math.abs(p.x);
       const sh = smooth(0.07, 0.17, ax) * smooth(1.25, 1.37, p.y);
       const del = smooth(0.13, 0.19, ax) * smooth(1.28, 1.37, p.y) * 0.5;
-      const th = smooth(0.93, 0.76, p.y) * smooth(0.03, 0.13, ax) * 0.55;
+      const th = smooth(0.95, 0.76, p.y) * smooth(0.02, 0.12, ax) * 0.85;
       return [
         [HIPS, wH * (1 - th)],
         [sd.hipH, wH * th],
@@ -1008,7 +1007,7 @@ export class NoraModel {
         [sd.shoulderH, wC * sh * del],
       ];
     };
-    this.skinned(ringSurface(SEAT, 32, true, true), trousers, torsoW, skeleton);
+    this.skinned(ringSurface(SEAT, 26, true, true), trousers, torsoW, skeleton);
     this.skinned(
       ringSurface(
         tubeRings(
@@ -1029,7 +1028,7 @@ export class NoraModel {
       skeleton,
     );
     this.skinned(ringSurface(SHIRT, 20), shirt, torsoW, skeleton);
-    this.skinned(ringSurface(JACKET, 44), jacket, torsoW, skeleton);
+    this.skinned(ringSurface(JACKET, 36), jacket, torsoW, skeleton);
     // Front edge and hem trims give the open jacket some thickness.
     for (const sgn of [-1, 1]) {
       const pts: THREE.Vector3[] = [];
@@ -1039,7 +1038,7 @@ export class NoraModel {
         pts.push(p);
       }
       this.skinned(
-        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.006, 5),
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.006, 4),
         jacketEdge,
         torsoW,
         skeleton,
@@ -1051,7 +1050,7 @@ export class NoraModel {
       for (let i = 0; i <= 24; i++)
         pts.push(ringPoint({ ...r, y: 0.742 }, lerp(r.a0 ?? 0, r.a1 ?? TAU, i / 24), new THREE.Vector3()));
       this.skinned(
-        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.006, 5),
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, 0.006, 4),
         jacketEdge,
         torsoW,
         skeleton,
@@ -1077,7 +1076,7 @@ export class NoraModel {
       surfaceFrame(JACKET, y, phi, p, n);
       const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, -1), n);
       const body = this.rigid(
-        roundedBox(w, h, 0.014, 0.25, 12, 8),
+        roundedBox(w, h, 0.014, 0.25, 8, 4),
         jacket,
         B(bone),
         p.clone().addScaledVector(n, 0.003).sub(at(BIND, bone)),
@@ -1085,7 +1084,7 @@ export class NoraModel {
       body.quaternion.copy(q);
       surfaceFrame(JACKET, y + h * 0.45, phi, p, n);
       const flap = this.rigid(
-        roundedBox(w * 1.08, h * 0.36, 0.012, 0.25, 12, 6),
+        roundedBox(w * 1.08, h * 0.36, 0.012, 0.25, 8, 4),
         jacketEdge,
         B(bone),
         p.clone().addScaledVector(n, 0.009).sub(at(BIND, bone)),
@@ -1111,7 +1110,7 @@ export class NoraModel {
 
     // --- Neck, neckerchief and head ------------------------------------------------------------
     const neck = this.rigid(
-      new THREE.CapsuleGeometry(0.046, 0.09, 4, 14),
+      new THREE.CapsuleGeometry(0.044, 0.09, 3, 12),
       skin,
       B(NECK),
       new THREE.Vector3(0, 0.05, -0.005),
@@ -1119,20 +1118,20 @@ export class NoraModel {
     neck.rotation.x = -0.12;
     const kerchief = ringSurface(
       [
-        { y: -0.012, rx: 0.058, rzf: 0.062 },
-        { y: 0.0, rx: 0.068, rzf: 0.07 },
-        { y: 0.02, rx: 0.069, rzf: 0.07 },
-        { y: 0.038, rx: 0.062, rzf: 0.064 },
-        { y: 0.046, rx: 0.052, rzf: 0.054 },
+        { y: -0.022, rx: 0.068, rzf: 0.072 },
+        { y: -0.01, rx: 0.074, rzf: 0.079 },
+        { y: 0.012, rx: 0.072, rzf: 0.076 },
+        { y: 0.03, rx: 0.061, rzf: 0.063 },
+        { y: 0.038, rx: 0.049, rzf: 0.05 },
       ],
-      24,
+      20,
     );
     this.rigid(kerchief, neckerchief, B(NECK), new THREE.Vector3(0, 0, -0.004));
     const knot = this.rigid(
-      roundedBox(0.032, 0.026, 0.022, 0.5, 10, 8),
+      roundedBox(0.034, 0.028, 0.024, 0.5, 8, 6),
       neckerchief,
       B(NECK),
-      new THREE.Vector3(-0.028, 0.004, -0.062),
+      new THREE.Vector3(-0.026, -0.006, -0.074),
     );
     knot.rotation.set(0.1, 0.4, 0.2);
     for (const [x, rz] of [
@@ -1140,75 +1139,69 @@ export class NoraModel {
       [-0.02, -0.15],
     ] as const) {
       const tail = this.rigid(
-        roundedBox(0.024, 0.06, 0.006, 0.4, 8, 8),
+        roundedBox(0.026, 0.06, 0.006, 0.4, 6, 6),
         neckerchief,
         B(NECK),
-        new THREE.Vector3(x, -0.03, -0.072),
+        new THREE.Vector3(x, -0.036, -0.082),
       );
       tail.rotation.set(-0.35, 0.3, rz);
     }
 
     const head = B(HEAD);
     const hc = new THREE.Vector3(0, 0.075, -0.015);
-    const skull = deform(new THREE.SphereGeometry(1, 40, 30), (p) => {
+    const skull = deform(new THREE.SphereGeometry(1, 26, 20), (p) => {
       headShape(p.clone().normalize(), p);
     });
     this.rigid(skull, skin, head, hc);
     const face = (x: number, y: number, z: number): THREE.Vector3 =>
       hc.clone().add(new THREE.Vector3(x, y, z));
-    // Nose.
-    const nose = this.rigid(
-      deform(new THREE.SphereGeometry(1, 12, 10), (p) => {
-        const t = (p.y + 1) / 2;
-        p.set(p.x * lerp(0.013, 0.007, t), p.y * 0.026, p.z * lerp(0.016, 0.007, t) - 0.006 * (1 - t));
+    // Nose: narrow bridge, rounded tip.
+    this.rigid(
+      deform(new THREE.SphereGeometry(1, 10, 8), (p) => {
+        const t = (1 - p.y) / 2; // 0 at the bridge, 1 at the tip
+        p.set(p.x * lerp(0.0055, 0.0095, t), p.y * 0.021, p.z * lerp(0.006, 0.011, t) - 0.006 * t * t);
       }),
       skin,
       head,
-      face(0, -0.022, -0.089),
+      face(0, -0.017, -0.0885),
     );
-    nose.rotation.x = 0.18;
     // Lips.
-    const lip = this.rigid(
-      new THREE.CapsuleGeometry(0.0065, 0.022, 3, 8),
-      lips,
-      head,
-      face(0, -0.054, -0.083),
-    );
-    lip.rotation.z = Math.PI / 2;
-    lip.scale.set(1, 1, 0.55);
+    for (const [y, r, zs] of [
+      [-0.047, 0.0042, 0.5],
+      [-0.0535, 0.0048, 0.55],
+    ] as const) {
+      const lip = this.rigid(new THREE.CapsuleGeometry(r, 0.016, 2, 6), lips, head, face(0, y, -0.0835));
+      lip.rotation.z = Math.PI / 2;
+      lip.scale.set(1, 1, zs);
+    }
     for (const s of [-1, 1]) {
-      this.rigid(new THREE.SphereGeometry(0.0118, 12, 8), eyeWhite, head, face(s * 0.032, 0.006, -0.071));
+      this.rigid(new THREE.SphereGeometry(0.011, 10, 8), eyeWhite, head, face(s * 0.031, 0.008, -0.0685));
       const ir = this.rigid(
-        new THREE.SphereGeometry(0.0068, 10, 6),
+        new THREE.SphereGeometry(0.0062, 8, 6),
         iris,
         head,
-        face(s * 0.031, 0.006, -0.0815),
+        face(s * 0.0305, 0.008, -0.0785),
       );
-      ir.scale.set(1, 1, 0.4);
-      const lid = this.rigid(
-        new THREE.SphereGeometry(0.0132, 12, 6, 0, TAU, 0, Math.PI * 0.45),
-        skin,
-        head,
-        face(s * 0.032, 0.006, -0.0705),
-      );
-      lid.rotation.x = -0.35;
+      ir.scale.set(1, 1, 0.35);
       const brow = this.rigid(
-        new THREE.CapsuleGeometry(0.0035, 0.026, 3, 6),
+        new THREE.CapsuleGeometry(0.0026, 0.024, 2, 5),
         hair,
         head,
-        face(s * 0.034, 0.028, -0.085),
+        face(s * 0.033, 0.027, -0.083),
       );
-      brow.rotation.set(0, 0, Math.PI / 2 - s * 0.12);
-      brow.scale.set(1, 1, 0.6);
-      const ear = this.rigid(new THREE.SphereGeometry(1, 10, 8), skin, head, face(s * 0.073, -0.004, 0.006));
-      ear.scale.set(0.011, 0.026, 0.016);
+      brow.rotation.set(0, s * 0.25, Math.PI / 2 - s * 0.1);
+      brow.scale.set(1, 1, 0.55);
+      const ear = this.rigid(new THREE.SphereGeometry(1, 8, 6), skin, head, face(s * 0.072, 0.0, 0.008));
+      ear.scale.set(0.01, 0.025, 0.015);
     }
 
     // Hair: a shell whose strands converge on the low knot, the knot, a pencil and loose strands.
     const bunLocal = new THREE.Vector3(0, 0.02, 0.1);
-    const bunDir = bunLocal.clone().sub(hc).normalize();
-    const shellRot = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), bunDir);
-    const shell = new THREE.SphereGeometry(1, 40, 24, 0, TAU, 0, (Math.PI * 124) / 180);
+    const shellRot = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(0, 0.62, 0.78).normalize(),
+    );
+    const shell = new THREE.SphereGeometry(1, 30, 18, 0, TAU, 0, (Math.PI * 118) / 180);
     const sp = shell.getAttribute('position');
     const d = new THREE.Vector3();
     for (let i = 0; i < sp.count; i++) {
@@ -1223,14 +1216,14 @@ export class NoraModel {
     knotG.position.copy(bunLocal);
     knotG.rotation.x = -0.35;
     head.add(knotG);
-    this.rigid(new THREE.TorusGeometry(0.03, 0.02, 10, 18), hair, knotG);
-    this.rigid(new THREE.SphereGeometry(0.03, 14, 10), hair, knotG, new THREE.Vector3(0, 0, 0.008)).scale.set(
+    this.rigid(new THREE.TorusGeometry(0.03, 0.02, 8, 14), hair, knotG);
+    this.rigid(new THREE.SphereGeometry(0.03, 12, 8), hair, knotG, new THREE.Vector3(0, 0, 0.008)).scale.set(
       1,
       0.95,
       0.8,
     );
     const twist = this.rigid(
-      new THREE.TorusGeometry(0.02, 0.012, 8, 14, Math.PI * 1.3),
+      new THREE.TorusGeometry(0.02, 0.012, 6, 10, Math.PI * 1.3),
       hair,
       knotG,
       new THREE.Vector3(0.006, 0.006, 0.02),
@@ -1266,37 +1259,6 @@ export class NoraModel {
       pen,
       new THREE.Vector3(0, -0.097, 0),
     ).rotation.x = Math.PI;
-    // Loose strands framing the face.
-    const strand = (pts: [number, number, number][], r: number): void => {
-      const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => face(x, y, z)));
-      this.rigid(new THREE.TubeGeometry(curve, 12, r, 4), hair, head);
-    };
-    strand(
-      [
-        [0.05, 0.075, -0.07],
-        [0.074, 0.03, -0.066],
-        [0.079, -0.02, -0.052],
-        [0.074, -0.06, -0.04],
-      ],
-      0.0035,
-    );
-    strand(
-      [
-        [0.045, 0.08, -0.075],
-        [0.068, 0.04, -0.075],
-        [0.075, -0.01, -0.062],
-      ],
-      0.0028,
-    );
-    strand(
-      [
-        [-0.05, 0.078, -0.07],
-        [-0.073, 0.035, -0.066],
-        [-0.078, -0.01, -0.05],
-      ],
-      0.003,
-    );
-
     // --- Arms ----------------------------------------------------------------------------------
     for (const sd of SIDES) {
       const ux = at(BIND, sd.upper).x;
@@ -1330,7 +1292,7 @@ export class NoraModel {
         uz,
         0.95,
       );
-      this.skinned(ringSurface(sleeve, 20, true, false), jacket, armW, skeleton);
+      this.skinned(ringSurface(sleeve, 16, true, false), jacket, armW, skeleton);
       // Shirt sleeve peeking out under the roll.
       this.skinned(
         ringSurface(
@@ -1380,10 +1342,10 @@ export class NoraModel {
       };
       const leg: Ring[] = (
         [
-          [0.148, 0.055, 0],
-          [0.152, 0.062, 0],
-          [0.172, 0.061, 0],
-          [0.2, 0.058, 0],
+          [0.186, 0.056, 0],
+          [0.19, 0.064, 0],
+          [0.21, 0.063, 0],
+          [0.25, 0.06, 0.001],
           [0.3, 0.062, 0.002],
           [0.38, 0.063, 0.002],
           [0.46, 0.061, 0],
@@ -1395,19 +1357,20 @@ export class NoraModel {
           [0.92, 0.09, 0.012],
         ] as const
       ).map(([y, r, dx]) => ({ y, rx: r, rzf: r * 1.04, rzb: r * 1.06, cx: tx + s * dx, cz: 0 }));
-      this.skinned(ringSurface(leg, 22, true, false), trousers, legW, skeleton);
+      this.skinned(ringSurface(leg, 18, true, false), trousers, legW, skeleton);
       // Ankle-high boot shaft.
       const shaft: Ring[] = (
         [
           [0.03, 0.044, 0.05, 0.058],
           [0.07, 0.047, 0.05, 0.056],
           [0.11, 0.046, 0.049, 0.053],
-          [0.15, 0.048, 0.051, 0.054],
-          [0.163, 0.051, 0.054, 0.057],
-          [0.167, 0.042, 0.045, 0.047],
+          [0.15, 0.047, 0.05, 0.053],
+          [0.19, 0.049, 0.051, 0.054],
+          [0.2, 0.052, 0.054, 0.057],
+          [0.204, 0.043, 0.045, 0.047],
         ] as const
       ).map(([y, rx, rzf, rzb]) => ({ y, rx, rzf, rzb, cx: tx, cz: 0.004 }));
-      this.skinned(ringSurface(shaft, 20, true, false), bootLeather, legW, skeleton);
+      this.skinned(ringSurface(shaft, 16, true, false), bootLeather, legW, skeleton);
       this.buildBoot(sd, bootLeather, sole, lace);
     }
 
@@ -1418,12 +1381,12 @@ export class NoraModel {
     bag.position.set(0, -0.125, 0);
     bag.rotation.y = 1.2;
     this.bagPivot.add(bag);
-    const bagBody = deform(roundedBox(0.25, 0.19, 0.068, 0.22, 20, 14), (p) => {
+    const bagBody = deform(roundedBox(0.25, 0.19, 0.068, 0.22, 16, 12), (p) => {
       p.z *= 1 - 0.25 * smooth(0.0, 0.095, p.y);
       p.x *= 1 + 0.03 * smooth(-0.095, 0.0, -p.y);
     });
     this.rigid(bagBody, bagLeather, bag);
-    const flap = deform(roundedBox(0.258, 0.15, 0.012, 0.25, 20, 10), (p) => {
+    const flap = deform(roundedBox(0.258, 0.15, 0.012, 0.25, 14, 8), (p) => {
       p.z -= 0.012 * (1 - Math.pow((p.y + 0.075) / 0.15, 2));
     });
     const flapM = this.rigid(flap, bagLeather, bag, new THREE.Vector3(0, 0.022, -0.036));
@@ -1466,7 +1429,7 @@ export class NoraModel {
   private buildHand(sd: Side, skin: THREE.Material): void {
     const s = sd.s;
     const hand = this.bone(sd.hand);
-    const palm = deform(roundedBox(0.074, 0.088, 0.028, 0.35, 14, 10), (p) => {
+    const palm = deform(roundedBox(0.074, 0.088, 0.028, 0.35, 12, 8), (p) => {
       const t = (0.044 - p.y) / 0.088; // 0 at wrist, 1 at knuckles
       p.x *= lerp(0.84, 1, t);
       p.z *= lerp(1.05, 0.8, t);
@@ -1486,12 +1449,12 @@ export class NoraModel {
       base.position.set(x * s, ky, 0);
       base.rotation.z = s * (i - 1.5) * -0.05;
       hand.add(base);
-      this.rigid(new THREE.CapsuleGeometry(r, l1 - r, 3, 7), skin, base, new THREE.Vector3(0, -l1 / 2, 0));
+      this.rigid(new THREE.CapsuleGeometry(r, l1 - r, 2, 5), skin, base, new THREE.Vector3(0, -l1 / 2, 0));
       const mid = new THREE.Group();
       mid.position.set(0, -l1, 0);
       base.add(mid);
       this.rigid(
-        new THREE.CapsuleGeometry(r * 0.92, l2 - r, 3, 7),
+        new THREE.CapsuleGeometry(r * 0.92, l2 - r, 2, 5),
         skin,
         mid,
         new THREE.Vector3(0, -l2 / 2, 0),
@@ -1504,11 +1467,11 @@ export class NoraModel {
     tbRoot.rotation.set(0, 0, s * 0.55);
     hand.add(tbRoot);
     tbRoot.add(tb);
-    this.rigid(new THREE.CapsuleGeometry(0.0105, 0.03, 3, 7), skin, tb, new THREE.Vector3(0, -0.02, 0));
+    this.rigid(new THREE.CapsuleGeometry(0.0105, 0.03, 2, 5), skin, tb, new THREE.Vector3(0, -0.02, 0));
     const tm = new THREE.Group();
     tm.position.set(0, -0.04, 0);
     tb.add(tm);
-    this.rigid(new THREE.CapsuleGeometry(0.0092, 0.022, 3, 7), skin, tm, new THREE.Vector3(0, -0.016, 0));
+    this.rigid(new THREE.CapsuleGeometry(0.0092, 0.022, 2, 5), skin, tm, new THREE.Vector3(0, -0.016, 0));
     fingers.push({ base: tb, mid: tm, thumb: true });
   }
 
@@ -1519,7 +1482,7 @@ export class NoraModel {
     laceMat: THREE.Material,
   ): void {
     const foot = this.bone(sd.foot);
-    const top = (z: number): number => lerp(-0.022, 0.035, smooth(-0.19, -0.03, z));
+    const top = (z: number): number => lerp(-0.014, 0.035, smooth(-0.2, -0.03, z));
     const width = (z: number): number =>
       z < -0.08 ? lerp(0.05, 0.036, smooth(-0.1, -0.2, z)) : lerp(0.05, 0.043, smooth(-0.06, 0.06, z));
     const shape = (p: THREE.Vector3, bottom: number, extraW: number, flatTop: number | null): void => {
@@ -1530,13 +1493,13 @@ export class NoraModel {
       if (flatTop === null) p.y += 0.008 * smooth(-0.15, -0.2, z) * y01;
       else p.y += 0.01 * smooth(-0.16, -0.205, z) * (1 - y01 * 0.5);
     };
-    const upper = deform(new THREE.SphereGeometry(1, 18, 12), (p) => {
+    const upper = deform(new THREE.SphereGeometry(1, 16, 10), (p) => {
       const n = p.clone();
       p.set(sgnPow(n.x, 0.55), sgnPow(n.y, 0.5), sgnPow(n.z, 0.45));
       shape(p, -0.063, 0, null);
     });
     this.rigid(upper, leather, foot);
-    const soleG = deform(new THREE.SphereGeometry(1, 18, 6), (p) => {
+    const soleG = deform(new THREE.SphereGeometry(1, 16, 5), (p) => {
       const n = p.clone();
       p.set(sgnPow(n.x, 0.35), sgnPow(n.y, 0.3), sgnPow(n.z, 0.4));
       shape(p, -0.075, 0.004, -0.058);
@@ -1560,7 +1523,7 @@ export class NoraModel {
       roundedBox(0.018, 0.028, 0.006, 0.3, 6, 6),
       leather,
       shin,
-      new THREE.Vector3(0, 0.168 - at(BIND, sd.shin).y, 0.058),
+      new THREE.Vector3(0, 0.2 - at(BIND, sd.shin).y, 0.058),
     );
   }
 

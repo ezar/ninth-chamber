@@ -91,14 +91,14 @@ export function landing(s: Strip, t: number, fall: number, hard: boolean): void 
 }
 
 export function jump(s: Strip, t: number, kind: string): void {
-  s.noiseHit(t, { type: 'bandpass', f: 1500, q: 1, gain: 0.07, a: 0.003, d: 0.05 });
+  s.noiseHit(t, { type: 'bandpass', f: 1500, q: 1, gain: 0.14, a: 0.003, d: 0.05 });
   s.noiseHit(t + 0.02, {
     buf: 'pink',
     type: 'bandpass',
     f: 350,
     f2: 1100,
     q: 1.2,
-    gain: kind === 'running' ? 0.08 : 0.055,
+    gain: kind === 'running' ? 0.16 : 0.11,
     a: 0.06,
     d: 0.18,
   });
@@ -118,7 +118,7 @@ export function climbing(s: Strip, t: number, climbTime: number): void {
 }
 
 export function letGo(s: Strip, t: number): void {
-  s.noiseHit(t, { buf: 'pink', type: 'bandpass', f: 900, f2: 400, q: 1, gain: 0.045, a: 0.02, d: 0.15 });
+  s.noiseHit(t, { buf: 'pink', type: 'bandpass', f: 900, f2: 400, q: 1, gain: 0.13, a: 0.02, d: 0.15 });
 }
 
 export function hurt(s: Strip, t: number, amount: number): void {

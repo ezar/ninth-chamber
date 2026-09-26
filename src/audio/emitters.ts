@@ -140,7 +140,7 @@ export class EmitterSet {
     setPannerPosition(panner, def, t);
     const gain = new GainNode(ctx, { gain: 0 });
     gain.connect(panner).connect(this.dest);
-    const level = brazier ? 0.32 : 0.22;
+    const level = brazier ? 0.32 : 0.12;
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(level, t + FADE * 2);
     const live: Live = { def, panner, gain, sources: [], nodes: [] };
