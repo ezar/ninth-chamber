@@ -1,3 +1,5 @@
 dist
 pnpm-lock.yaml
 docs/spec.md
+.claude
+public/models/*.glb
