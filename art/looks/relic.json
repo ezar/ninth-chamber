@@ -1,0 +1,11 @@
+{
+  "id": "relic",
+  "background": "#050404",
+  "exposure": 0.95,
+  "hemi": { "sky": "#1c1714", "ground": "#080605", "intensity": 0.06 },
+  "fog": { "color": "#1a120c", "density": 0.03 },
+  "sun": null,
+  "fire": { "color": "#ffab3d", "intensity": 28, "flicker": 0.08 },
+  "bloom": { "strength": 1.0, "radius": 0.6, "threshold": 0.7 },
+  "grade": { "tint": "#ffe2b8", "saturation": 1.0, "contrast": 1.2, "vignette": 0.55 }
+}

@@ -6,15 +6,48 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
     />
-    <meta name="theme-color" content="#1a130d" />
+    <meta name="theme-color" content="#0f0d0b" />
     <title>The Ninth Chamber</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <canvas id="game" tabindex="0"></canvas>
+    <div id="vignette" aria-hidden="true"></div>
+    <div id="grain" aria-hidden="true"></div>
 
     <div id="hud">
-      <div id="hud-stats" data-i18n="loading"></div>
-      <div id="hud-help" data-i18n="help"></div>
+      <div id="hud-health" role="meter" aria-label="Health"><div id="hud-health-fill"></div></div>
+      <div id="hud-stats"></div>
+      <div id="hud-title"></div>
+      <div id="hud-notice" role="status"></div>
+      <div id="hud-hint" role="status"></div>
+      <div id="hud-prompt"></div>
+    </div>
+
+    <div id="fade" aria-hidden="true"></div>
+
+    <div id="end" hidden>
+      <div class="panel">
+        <div class="seal" aria-hidden="true"></div>
+        <h1 id="end-title"></h1>
+        <div id="end-stats"></div>
+        <button id="end-restart"></button>
+      </div>
+    </div>
+
+    <div id="start">
+      <div class="panel">
+        <p class="kicker" data-i18n="start.kicker"></p>
+        <h1 data-i18n="title"></h1>
+        <p class="sub" data-i18n="level.antechamber"></p>
+        <button id="start-button" data-i18n="start.play"></button>
+        <p class="help" data-i18n="help"></p>
+      </div>
     </div>
 
     <div id="touch" aria-hidden="true">

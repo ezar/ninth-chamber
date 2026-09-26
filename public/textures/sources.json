@@ -1,0 +1,37 @@
+{
+  "wall": {
+    "source": "large_sandstone_blocks_01",
+    "url": "https://polyhaven.com/a/large_sandstone_blocks_01",
+    "license": "CC0",
+    "dimensions_mm": [3000, 3000],
+    "authors": ["Rob Tuytel"]
+  },
+  "floor": {
+    "source": "sandstone_blocks_08",
+    "url": "https://polyhaven.com/a/sandstone_blocks_08",
+    "license": "CC0",
+    "dimensions_mm": [3000, 3000],
+    "authors": ["Rob Tuytel"]
+  },
+  "block": {
+    "source": "sandstone_cracks",
+    "url": "https://polyhaven.com/a/sandstone_cracks",
+    "license": "CC0",
+    "dimensions_mm": [2000, 2000],
+    "authors": ["Rob Tuytel"]
+  },
+  "sand": {
+    "source": "sand_01",
+    "url": "https://polyhaven.com/a/sand_01",
+    "license": "CC0",
+    "dimensions_mm": [1500, 1500],
+    "authors": ["Rob Tuytel"]
+  },
+  "ceiling": {
+    "source": "rock_face_03",
+    "url": "https://polyhaven.com/a/rock_face_03",
+    "license": "CC0",
+    "dimensions_mm": [2699.9995708465576, 2699.9995708465576],
+    "authors": ["Dario Barresi", "Rico Cilliers"]
+  }
+}

@@ -1,0 +1,497 @@
+/**
+ * Visuals for level entities and mechanisms. They read the simulation state
+ * every frame and never write to it.
+ */
+import * as THREE from 'three/webgpu';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import type { Level } from '../sim/grid/level';
+import { BLOCK, DIR_VEC, DIR_YAW } from '../sim/grid/units';
+import { mechanics } from '../sim/player/tuning';
+import type { Actor } from '../sim/state';
+import type { World } from '../sim/world';
+import { surfaceParams, type SurfaceSet } from './materials';
+import { cracked } from './textures';
+
+const center = (c: number): number => c * BLOCK + BLOCK / 2;
+
+export interface FireSource {
+  pos: THREE.Vector3;
+  phase: number;
+}
+
+export interface PropMaterials {
+  stone: SurfaceSet;
+  floor: SurfaceSet;
+  block: SurfaceSet;
+  bronze: THREE.MeshStandardMaterial;
+  darkMetal: THREE.MeshStandardMaterial;
+  gold: THREE.MeshStandardMaterial;
+}
+
+export class Props {
+  readonly group = new THREE.Group();
+  readonly fires: FireSource[] = [];
+  readonly relicLight: THREE.PointLight;
+  private readonly actorViews = new Map<string, THREE.Object3D>();
+  private readonly tileViews = new Map<string, THREE.Mesh>();
+  private readonly flames: { sprite: THREE.Sprite; base: THREE.Vector3; phase: number; scale: number }[] = [];
+  private readonly embers: THREE.Points;
+  private readonly emberData: { origin: THREE.Vector3; t: number; speed: number; drift: THREE.Vector2 }[] =
+    [];
+  private relicMesh: THREE.Mesh | null = null;
+  private relicBase = new THREE.Vector3();
+
+  constructor(
+    private readonly level: Level,
+    private readonly mats: PropMaterials,
+  ) {
+    this.relicLight = new THREE.PointLight('#ffab3d', 0, 14, 2);
+    this.group.add(this.relicLight);
+
+    const flameTex = flameTexture();
+    for (const e of level.entities) {
+      if (e.type !== 'brazier') continue;
+      const [cx, cz] = e.at;
+      const y = level.floorAt(center(cx), center(cz));
+      const b = brazier(mats);
+      b.position.set(center(cx), y, center(cz));
+      this.group.add(b);
+      const firePos = new THREE.Vector3(center(cx), y + 1.25, center(cz));
+      this.fires.push({ pos: firePos, phase: this.fires.length * 1.7 });
+      for (let k = 0; k < 4; k++) {
+        const m = new THREE.SpriteMaterial({
+          map: flameTex,
+          color: k === 0 ? '#ffd9a0' : '#ff8a3a',
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          transparent: true,
+          fog: false,
+        });
+        const s = new THREE.Sprite(m);
+        const scale = k === 0 ? 0.55 : 0.8 - k * 0.1;
+        s.scale.set(scale * 0.7, scale, 1);
+        const base = firePos
+          .clone()
+          .add(new THREE.Vector3((k - 1.5) * 0.08, 0.15 + k * 0.03, ((k * 7) % 3) * 0.05 - 0.05));
+        s.position.copy(base);
+        this.flames.push({ sprite: s, base, phase: k * 2.1 + this.fires.length, scale });
+        this.group.add(s);
+      }
+    }
+
+    // Embers rising from every fire.
+    const count = Math.max(1, this.fires.length) * 24;
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const f = this.fires[i % Math.max(1, this.fires.length)];
+      this.emberData.push({
+        origin: f ? f.pos.clone() : new THREE.Vector3(0, -100, 0),
+        t: (i * 0.37) % 1,
+        speed: 0.6 + ((i * 13) % 7) * 0.12,
+        drift: new THREE.Vector2(((i * 17) % 11) / 11 - 0.5, ((i * 29) % 13) / 13 - 0.5),
+      });
+    }
+    const eg = new THREE.BufferGeometry();
+    eg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    this.embers = new THREE.Points(
+      eg,
+      new THREE.PointsMaterial({
+        color: '#ffb060',
+        size: 0.035,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false,
+      }),
+    );
+    this.group.add(this.embers);
+
+    this.buildSpikes();
+    this.buildCrumbleTiles();
+  }
+
+  private buildSpikes(): void {
+    const spots: THREE.Vector3[] = [];
+    for (const s of this.level.allSectors()) {
+      if (!s.flags.has('death')) continue;
+      const y = Math.max(...s.floor);
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          spots.push(new THREE.Vector3(s.cx * BLOCK + 0.25 + i * 0.5, y, s.cz * BLOCK + 0.25 + j * 0.5));
+        }
+      }
+    }
+    if (!spots.length) return;
+    const geo = new THREE.ConeGeometry(0.07, 0.9, 6);
+    geo.translate(0, 0.45, 0);
+    const mesh = new THREE.InstancedMesh(geo, this.mats.darkMetal, spots.length);
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    spots.forEach((p, i) => {
+      const tilt = new THREE.Euler(((i * 7) % 5) * 0.03 - 0.06, 0, ((i * 11) % 5) * 0.03 - 0.06);
+      q.setFromEuler(tilt);
+      m.compose(p, q, new THREE.Vector3(1, 0.8 + ((i * 13) % 5) * 0.08, 1));
+      mesh.setMatrixAt(i, m);
+    });
+    mesh.castShadow = true;
+    this.group.add(mesh);
+  }
+
+  private buildCrumbleTiles(): void {
+    const crackedMap = cracked(this.mats.floor);
+    crackedMap.repeat.copy(this.mats.floor.map.repeat);
+    const mat = new THREE.MeshStandardMaterial({
+      ...surfaceParams(this.mats.floor),
+      map: crackedMap,
+      color: '#d9c6a8',
+    });
+    for (const s of this.level.allSectors()) {
+      if (!s.flags.has('crumble')) continue;
+      const geo = new RoundedBoxGeometry(BLOCK - 0.04, 0.35, BLOCK - 0.04, 2, 0.03);
+      geo.translate(0, -0.175 - 0.015, 0);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(center(s.cx), Math.max(...s.floor), center(s.cz));
+      mesh.castShadow = mesh.receiveShadow = true;
+      this.group.add(mesh);
+      this.tileViews.set(`${s.cx},${s.cz}`, mesh);
+    }
+  }
+
+  private viewFor(a: Actor): THREE.Object3D | null {
+    const existing = this.actorViews.get(a.id);
+    if (existing) return existing;
+    let obj: THREE.Object3D | null = null;
+    switch (a.kind) {
+      case 'block':
+        obj = pushBlock(this.mats);
+        break;
+      case 'door':
+        obj = door(this.mats, a.height);
+        obj.rotation.y = this.doorYaw(a.cx, a.cz);
+        break;
+      case 'lever':
+        obj = lever(this.mats);
+        break;
+      case 'plate':
+        obj = new THREE.Mesh(new RoundedBoxGeometry(1.4, 0.08, 1.4, 2, 0.02), this.mats.bronze);
+        break;
+      case 'secret':
+        obj = idol(a.variant, this.mats);
+        break;
+      case 'relic': {
+        const r = relic();
+        this.relicMesh = r;
+        obj = r;
+        break;
+      }
+      case 'medkit':
+        obj = medkit();
+        break;
+      case 'zone':
+        return null;
+    }
+    if (!obj) return null;
+    obj.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.castShadow = o.receiveShadow = true;
+    });
+    this.group.add(obj);
+    this.actorViews.set(a.id, obj);
+    return obj;
+  }
+
+  /** Doors face along the corridor they block. */
+  private doorYaw(cx: number, cz: number): number {
+    const open = (dx: number, dz: number): boolean => {
+      const s = this.level.sector(cx + dx, cz + dz);
+      return !!s && !s.wall;
+    };
+    return open(0, -1) || open(0, 1) ? 0 : Math.PI / 2;
+  }
+
+  update(world: World, time: number, dt: number): void {
+    for (const a of world.state.actors) {
+      const v = this.viewFor(a);
+      if (!v) continue;
+      const floorY = this.level.floorAt(center(a.cx), center(a.cz));
+      switch (a.kind) {
+        case 'block': {
+          let x = center(a.cx);
+          let z = center(a.cz);
+          if (a.from) {
+            x = center(a.from.cx) + (x - center(a.from.cx)) * a.t;
+            z = center(a.from.cz) + (z - center(a.from.cz)) * a.t;
+          }
+          v.position.set(x, a.y, z);
+          break;
+        }
+        case 'door':
+          v.position.set(center(a.cx), floorY - a.open * a.height * 0.98, center(a.cz));
+          break;
+        case 'lever': {
+          const d = DIR_VEC[a.wall];
+          v.position.set(
+            center(a.cx) + d.x * (BLOCK / 2 - 0.02),
+            floorY + 1.2,
+            center(a.cz) + d.z * (BLOCK / 2 - 0.02),
+          );
+          v.rotation.y = DIR_YAW[a.wall];
+          const handle = v.getObjectByName('handle');
+          if (handle) {
+            const target = a.used ? -0.9 : 0.9;
+            handle.rotation.x += (target - handle.rotation.x) * Math.min(1, dt * 6);
+          }
+          break;
+        }
+        case 'plate':
+          v.position.set(center(a.cx), floorY + (a.pressed ? 0.01 : 0.04), center(a.cz));
+          break;
+        case 'secret':
+        case 'medkit':
+          v.visible = !a.taken;
+          v.position.set(center(a.cx), floorY + (a.kind === 'secret' ? 0.05 : 0), center(a.cz));
+          if (a.kind === 'secret') v.rotation.y = time * 0.6;
+          break;
+        case 'relic':
+          v.visible = !a.taken;
+          this.relicBase.set(center(a.cx), floorY + 1.05 + Math.sin(time * 1.3) * 0.05, center(a.cz));
+          v.position.copy(this.relicBase);
+          v.rotation.y = time * 0.4;
+          this.relicLight.position.copy(this.relicBase);
+          this.relicLight.intensity = a.taken ? 0 : 26 + Math.sin(time * 2.1) * 4;
+          break;
+        default:
+          break;
+      }
+    }
+
+    // Collapsing tiles shake while cracked and drop once fallen.
+    for (const [key, mesh] of this.tileViews) {
+      const t = world.state.tiles[key];
+      const baseY = mesh.userData.baseY ?? (mesh.userData.baseY = mesh.position.y);
+      if (!t || t.cracked === null) {
+        mesh.position.y = baseY;
+        mesh.visible = true;
+        mesh.userData.fall = 0;
+        continue;
+      }
+      if (!t.fallen) {
+        const k = t.cracked / mechanics.crumbleDelay;
+        mesh.position.y = baseY - 0.02 * k + Math.sin(time * 70) * 0.012 * k;
+      } else {
+        mesh.userData.fall = (mesh.userData.fall ?? 0) + dt;
+        const f = mesh.userData.fall as number;
+        mesh.position.y = baseY - 0.5 * 18 * f * f;
+        mesh.rotation.z = f * 0.8;
+        mesh.visible = f < 1.5;
+      }
+    }
+
+    // Flames and embers.
+    for (const f of this.flames) {
+      const n = Math.sin(time * 9 + f.phase) * 0.5 + Math.sin(time * 15.3 + f.phase * 2) * 0.3;
+      f.sprite.position.set(f.base.x + Math.sin(time * 3 + f.phase) * 0.02, f.base.y + n * 0.04, f.base.z);
+      f.sprite.scale.set(f.scale * (0.62 + n * 0.08), f.scale * (1 + n * 0.18), 1);
+      (f.sprite.material as THREE.SpriteMaterial).opacity = 0.85 + n * 0.15;
+    }
+    const attr = this.embers.geometry.getAttribute('position') as THREE.BufferAttribute;
+    this.emberData.forEach((e, i) => {
+      e.t += dt * e.speed * 0.5;
+      if (e.t > 1) e.t -= 1;
+      attr.setXYZ(
+        i,
+        e.origin.x + e.drift.x * e.t * 0.8 + Math.sin(time * 2 + i) * 0.05 * e.t,
+        e.origin.y + 0.2 + e.t * 2.2,
+        e.origin.z + e.drift.y * e.t * 0.8,
+      );
+    });
+    attr.needsUpdate = true;
+    if (this.relicMesh) {
+      const m = this.relicMesh.material as THREE.MeshPhysicalMaterial;
+      m.emissiveIntensity = 2.2 + Math.sin(time * 2.1) * 0.5;
+    }
+  }
+}
+
+function flameTexture(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 128;
+  const g = c.getContext('2d');
+  if (g) {
+    const grad = g.createRadialGradient(32, 92, 2, 32, 80, 60);
+    grad.addColorStop(0, 'rgba(255,240,200,1)');
+    grad.addColorStop(0.25, 'rgba(255,170,70,0.9)');
+    grad.addColorStop(0.6, 'rgba(200,70,20,0.35)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(32, 2);
+    g.bezierCurveTo(58, 60, 60, 120, 32, 124);
+    g.bezierCurveTo(4, 120, 6, 60, 32, 2);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function brazier(m: PropMaterials): THREE.Group {
+  const g = new THREE.Group();
+  // Tripod legs.
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 1.05, 6), m.bronze);
+    leg.position.set(Math.cos(a) * 0.22, 0.5, Math.sin(a) * 0.22);
+    leg.rotation.z = Math.cos(a) * 0.2;
+    leg.rotation.x = -Math.sin(a) * 0.2;
+    g.add(leg);
+  }
+  // Bowl.
+  const pts = [
+    new THREE.Vector2(0.05, 0),
+    new THREE.Vector2(0.3, 0.05),
+    new THREE.Vector2(0.42, 0.2),
+    new THREE.Vector2(0.44, 0.24),
+    new THREE.Vector2(0.4, 0.24),
+  ];
+  const bowl = new THREE.Mesh(new THREE.LatheGeometry(pts, 20), m.bronze);
+  bowl.position.y = 0.95;
+  g.add(bowl);
+  // Glowing coals.
+  const coals = new THREE.Mesh(
+    new THREE.CircleGeometry(0.38, 16),
+    new THREE.MeshStandardMaterial({
+      color: '#2a0e05',
+      emissive: '#ff5a1a',
+      emissiveIntensity: 2.5,
+      roughness: 1,
+    }),
+  );
+  coals.rotation.x = -Math.PI / 2;
+  coals.position.y = 1.15;
+  g.add(coals);
+  return g;
+}
+
+function pushBlock(m: PropMaterials): THREE.Group {
+  const g = new THREE.Group();
+  // A single dressed monolith (floor slab texture), paler than the walls so it reads as movable.
+  const mat = new THREE.MeshStandardMaterial({ ...surfaceParams(m.block), color: '#f3e6cf' });
+  const box = new THREE.Mesh(
+    new RoundedBoxGeometry(BLOCK - 0.03, mechanics.blockHeight - 0.02, BLOCK - 0.03, 3, 0.06),
+    mat,
+  );
+  box.position.y = mechanics.blockHeight / 2;
+  g.add(box);
+  // Grip notches on each side (art bible: pushable blocks show grip notches).
+  const notchMat = new THREE.MeshStandardMaterial({ color: '#3b2c1f', roughness: 1 });
+  for (let i = 0; i < 4; i++) {
+    const n = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.04), notchMat);
+    const a = (i * Math.PI) / 2;
+    n.position.set(Math.sin(a) * (BLOCK / 2 - 0.005), 1.2, Math.cos(a) * (BLOCK / 2 - 0.005));
+    n.rotation.y = a;
+    g.add(n);
+  }
+  return g;
+}
+
+function door(m: PropMaterials, height: number): THREE.Group {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ ...surfaceParams(m.block), color: '#d6c4a6' });
+  const slab = new THREE.Mesh(new RoundedBoxGeometry(BLOCK, height, 0.45, 2, 0.04), mat);
+  slab.position.y = height / 2;
+  g.add(slab);
+  // A carved nine-segment seal (identity motif), the ninth segment in amber.
+  for (let i = 0; i < 9; i++) {
+    const a0 = (i / 9) * Math.PI * 2;
+    const seg = new THREE.Mesh(
+      new THREE.RingGeometry(0.28, 0.42, 6, 1, a0 + 0.04, (Math.PI * 2) / 9 - 0.08),
+      i === 8
+        ? new THREE.MeshStandardMaterial({ color: '#f2a93b', emissive: '#f2a93b', emissiveIntensity: 0.6 })
+        : new THREE.MeshStandardMaterial({ color: '#7a6048', roughness: 0.9 }),
+    );
+    seg.position.set(0, Math.min(height - 0.8, 2.6), 0.231);
+    g.add(seg);
+    const back = seg.clone();
+    back.position.z = -0.231;
+    back.rotation.y = Math.PI;
+    g.add(back);
+  }
+  return g;
+}
+
+function lever(m: PropMaterials): THREE.Group {
+  const g = new THREE.Group();
+  const plate = new THREE.Mesh(new RoundedBoxGeometry(0.4, 0.5, 0.08, 2, 0.02), m.bronze);
+  g.add(plate);
+  const handle = new THREE.Group();
+  handle.name = 'handle';
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.55, 8), m.bronze);
+  rod.position.y = 0.27;
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), m.gold);
+  knob.position.y = 0.55;
+  handle.add(rod, knob);
+  handle.position.z = 0.1;
+  handle.rotation.x = 0.9;
+  g.add(handle);
+  return g;
+}
+
+function idol(variant: string, m: PropMaterials): THREE.Group {
+  const g = new THREE.Group();
+  const mat =
+    variant === 'gold'
+      ? m.gold
+      : new THREE.MeshPhysicalMaterial({
+          color: variant === 'jade' ? '#3f7a52' : '#8c8175',
+          roughness: variant === 'jade' ? 0.25 : 0.7,
+          clearcoat: variant === 'jade' ? 0.6 : 0,
+          emissive: variant === 'jade' ? '#10301c' : '#000000',
+        });
+  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.08, 12), mat);
+  pedestal.position.y = 0.04;
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.16, 4, 10), mat);
+  body.position.y = 0.2;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 10), mat);
+  head.position.y = 0.36;
+  g.add(pedestal, body, head);
+  return g;
+}
+
+function relic(): THREE.Mesh {
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: '#f2a93b',
+    emissive: '#ff9a2a',
+    emissiveIntensity: 2.2,
+    roughness: 0.15,
+    transmission: 0.4,
+    thickness: 0.3,
+    ior: 1.55,
+    clearcoat: 1,
+  });
+  const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), mat);
+  mesh.scale.set(1, 1.3, 1);
+  return mesh;
+}
+
+function medkit(): THREE.Group {
+  const g = new THREE.Group();
+  const bag = new THREE.Mesh(
+    new RoundedBoxGeometry(0.34, 0.2, 0.22, 2, 0.05),
+    new THREE.MeshStandardMaterial({ color: '#6b5a3a', roughness: 0.9 }),
+  );
+  bag.position.y = 0.1;
+  const flap = new THREE.Mesh(
+    new RoundedBoxGeometry(0.34, 0.03, 0.16, 2, 0.01),
+    new THREE.MeshStandardMaterial({ color: '#7a4a2a', roughness: 0.7 }),
+  );
+  flap.position.set(0, 0.21, 0.02);
+  // A green leaf mark (a red cross is a protected emblem, so it is avoided).
+  const mark = new THREE.Mesh(
+    new THREE.CircleGeometry(0.035, 12),
+    new THREE.MeshStandardMaterial({ color: '#8fa872', emissive: '#3b4a2c' }),
+  );
+  mark.rotation.x = -Math.PI / 2;
+  mark.position.set(0, 0.227, 0.03);
+  g.add(bag, flap, mark);
+  return g;
+}

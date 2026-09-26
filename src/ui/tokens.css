@@ -1,0 +1,14 @@
+/* Design tokens from the Claude Design art direction (docs/art/README.md). */
+:root {
+  --ui-ink: #0f0d0b;
+  --ui-veil: rgba(12, 10, 8, 0.72);
+  --ui-bone: #ece3d0;
+  --ui-dust: #a89c88;
+  --ui-line: #3a3129;
+  --ui-amber: #e8a33d;
+  --ui-ember: #c8542b;
+  --ui-lichen: #8fa872;
+  --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-ui: 'Barlow', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
