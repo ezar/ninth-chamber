@@ -2,17 +2,19 @@
 
 Game-ready props for The Ninth Chamber, served from `public/` so the game loads them as `models/<name>.glb`.
 
-Every file here is **generated** by [`scripts/blender/build_props.py`](../../scripts/blender/build_props.py). Do not edit the GLBs by hand: change the script and rebuild.
+The prop GLBs listed below are **generated** by [`scripts/blender/build_props.py`](../../scripts/blender/build_props.py). Do not edit them by hand: change the script and rebuild. (Other models in this folder, such as the character, come from their own pipelines.)
 
 ## How they are made
 
 - Modelled and textured entirely procedurally in Blender 4.5 (run as the `bpy` Python module). No scans, photos, downloaded textures or third-party meshes are used, so the files are original work and can be treated as CC0 (public domain dedication, see the `asset.copyright` field in each GLB).
 - Each prop has a detailed bake source (bevels, voxel remesh, geometry-node displacement for erosion, chips and lumps) and a low-poly game mesh. The low-poly mesh is UV-unwrapped and Cycles bakes the textures from the source onto it:
-  - **base color**: sRGB JPEG (4:4:4).
-  - **normal**: tangent space, OpenGL convention (+Y), baked from the high-detail source. JPEG on large rough stone props (to stay under the size budget), PNG elsewhere.
-  - **ORM**: occlusion (R), roughness (G), metalness (B) in one PNG, referenced by both `occlusionTexture` and `metallicRoughnessTexture`.
+  - **base color**: sRGB JPEG (4:4:4 chroma).
+  - **normal**: tangent space, OpenGL convention (+Y), baked from the high-detail source.
+  - **ORM**: occlusion (R), roughness (G), metalness (B) in one image, referenced by both `occlusionTexture` and `metallicRoughnessTexture`.
   - **emissive**: JPEG, only on `coals` and `gem`.
-- Materials follow the palette and material library in [`docs/art/README.md`](../../docs/art/README.md): sandstone `#b8895a` (rough 0.88), oxidized bronze with verdigris `#5e7b68` worn back to `#a8773c` metal where hands go, gold `#e8b75a`, sand `#c8a77c`. Nothing teal or turquoise.
+  - Data maps are stored as PNG when that stays small, otherwise as high-quality 4:4:4 JPEG. If a GLB still exceeds 1.45 MB the build steps the quality down (and halves the ORM) until it fits.
+  - Texture sizes: 1024 for the large props, 512 for the small ones (idols, relic, medkit, coals, gem).
+- Materials follow the palette and material library in [`docs/art/README.md`](../../docs/art/README.md): sandstone `#b8895a` (rough 0.88), oxidized bronze with verdigris `#5e7b68` worn back to `#a8773c` metal where hands go, gold `#e8b75a`, sand `#c8a77c`. Nothing teal or turquoise. After baking, the stone and sand base colours are calibrated so their mean matches the palette (`#b8895a` for sandstone, a paler `#c2a481` for the pushable block, `#c8a77c` for sand) while keeping all the procedural variation, and non-metal albedo stays inside sRGB 40 to 235.
 - The build is deterministic: every noise is a pure function of position and every random choice uses a seeded `random.Random`.
 
 ## Conventions

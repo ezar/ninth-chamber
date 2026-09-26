@@ -35,12 +35,12 @@ def _delete_faces(obj, pred) -> None:
 # ---------------------------------------------------------------------------
 
 NOTCH_Z, NOTCH_H, NOTCH_W, NOTCH_D = 1.2, 0.15, 0.6, 0.07
+PALE_STONE = "#c2a481"  # pushable blocks read paler than the walls (sandstone towards limestone)
 
 
 def _block_base() -> bpy.types.Object:
     bm = bmesh.new()
     shapes.box(bm, (-1, -1, 0), (1, 1, 2))
-    side = [f for f in bm.faces if abs(f.normal.z) < 0.5]
     for z in (NOTCH_Z - NOTCH_H / 2, NOTCH_Z + NOTCH_H / 2):
         geom = list(bm.faces) + list(bm.edges) + list(bm.verts)
         bmesh.ops.bisect_plane(bm, geom=[g for g in geom if not isinstance(g, bmesh.types.BMFace)
@@ -129,7 +129,8 @@ def block(ctx: Ctx) -> list:
               keep_base=False)
     core.smooth_by_angle(low, 35)
     core.uv_smart(low, 45, 0.004)
-    finish(ctx, [BakeSpec("block", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("block", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True,
+                          albedo=PALE_STONE)])
     return [low]
 
 
@@ -216,7 +217,8 @@ def column_base(ctx: Ctx) -> list:
               curv0_blur=4, keep_base=False)
     core.smooth_by_angle(low, 35)
     core.uv_smart(low, 45, 0.004)
-    finish(ctx, [BakeSpec("column_base", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("column_base", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low]
 
 
@@ -245,7 +247,8 @@ def column_capital(ctx: Ctx) -> list:
               voxel=0.008, disp=disp, curv0_blur=4, keep_base=False)
     core.smooth_by_angle(low, 35)
     core.uv_smart(low, 45, 0.004)
-    finish(ctx, [BakeSpec("column_capital", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("column_capital", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low]
 
 
@@ -355,7 +358,8 @@ def door(ctx: Ctx) -> list:
     core.smooth_by_angle(amber, 50)
     core.uv_smart(amber, 60, 0.01)
     amber.data.materials.append(amber_inlay_material())
-    finish(ctx, [BakeSpec("door", low, [hi], size=1024, cage=0.05, ray=0.12, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("door", low, [hi], size=1024, cage=0.05, ray=0.12, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low, amber]
 
 
@@ -365,6 +369,7 @@ def amber_inlay_material() -> bpy.types.Material:
 
     m = bpy.data.materials.new("seal_amber")
     m.use_nodes = True
+    m.use_backface_culling = True
     b = m.node_tree.nodes["Principled BSDF"]
     c = hex_rgb("#f2a93b")
     b.inputs["Base Color"].default_value = (c[0], c[1], c[2], 1)
@@ -440,7 +445,8 @@ def altar(ctx: Ctx) -> list:
               disp=disp, curv0_blur=4, keep_base=False)
     core.smooth_by_angle(low, 35)
     core.uv_smart(low, 45, 0.003)
-    finish(ctx, [BakeSpec("altar", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True)])
+    finish(ctx, [BakeSpec("altar", low, [hi], size=1024, cage=0.04, ray=0.1, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low]
 
 
@@ -460,7 +466,7 @@ def _chunk(rng: random.Random, size, cuts: int, name: str):
         c = Vector((d.x * sx * rng.uniform(0.12, 0.34), d.y * sy * rng.uniform(0.12, 0.34),
                     sz * 0.5 + d.z * sz * rng.uniform(0.1, 0.32)))
         geom = list(bm.verts) + list(bm.edges) + list(bm.faces)
-        r = bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=c, plane_no=d, clear_outer=True)
+        bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=c, plane_no=d, clear_outer=True)
         edges = [e for e in bm.edges if e.is_boundary]
         if edges:
             bmesh.ops.holes_fill(bm, edges=edges, sides=0)
@@ -529,7 +535,8 @@ def _rubble(ctx: Ctx, name: str, seed: int, chunks) -> list:
     low = name_mesh(core.join(lows, name), name)
     core.smooth_by_angle(low, 55)
     core.uv_smart(low, 50, 0.004, shape="CONCAVE")
-    finish(ctx, [BakeSpec(name, low, [hi], size=1024, cage=0.02, ray=0.05, normal_jpeg=True)])
+    finish(ctx, [BakeSpec(name, low, [hi], size=1024, cage=0.02, ray=0.05, normal_jpeg=True,
+                          albedo=looks.SANDSTONE)])
     return [low]
 
 

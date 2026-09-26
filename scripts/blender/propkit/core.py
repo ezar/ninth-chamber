@@ -513,6 +513,7 @@ class BakeSpec:
     normal_jpeg: bool = False  # store the normal map as JPEG (size budget)
     orm_size: int | None = None  # ORM resolution when smaller than ``size``
     png_limit: int = 320_000  # data maps above this many bytes as PNG fall back to JPEG
+    albedo: str | None = None  # calibrate the mean base colour to this sRGB hex (palette target)
     extra: dict = field(default_factory=dict)
 
 
@@ -586,6 +587,22 @@ def _blur_r(orm: np.ndarray) -> np.ndarray:
     return out
 
 
+def calibrate_albedo(base: np.ndarray, target: str) -> np.ndarray:
+    """Scale each channel so the mean albedo of the baked texels matches ``target``.
+
+    Keeps all the procedural variation while pinning the overall colour to the
+    art-direction palette; non-metal albedo is kept inside sRGB 40..235.
+    """
+    rgb = base[..., :3]
+    covered = rgb.sum(-1) > 1e-4
+    mean = rgb[covered].mean(0)
+    t = np.array([int(target.lstrip("#")[i : i + 2], 16) / 255.0 for i in (0, 2, 4)])
+    out = base.copy()
+    out[..., :3] = np.where(covered[..., None], np.clip(rgb * (t / np.maximum(mean, 1e-4)), 40 / 255, 235 / 255),
+                            rgb)
+    return out
+
+
 def triangulate_ngons(obj: bpy.types.Object) -> None:
     """Tangents (bake and export) need tris/quads."""
     bm = bmesh.new()
@@ -651,6 +668,8 @@ def bake(spec: BakeSpec, tex_dir: str) -> bpy.types.Material:
         res["normal"] = _pixels(img)
         bpy.data.images.remove(img)
 
+    if spec.albedo:
+        res["base"] = calibrate_albedo(res["base"], spec.albedo)
     os.makedirs(tex_dir, exist_ok=True)
     stem = os.path.join(tex_dir, spec.name)
     base_img = _save(res["base"], stem + "_basecolor.jpg", "JPEG", False, spec.jpeg_quality)
@@ -703,6 +722,7 @@ def reencode(level: int) -> None:
 def final_material(name, base_img, orm_img, nrm_img, emit_img=None, emit_strength=1.0) -> bpy.types.Material:
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
+    mat.use_backface_culling = True  # exported as doubleSided: false
     nt = mat.node_tree
     nt.nodes.clear()
     bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")

@@ -3,6 +3,7 @@ import levelJson from '../levels/antechamber.level.json';
 import { AudioEngine, type ReverbPreset } from './audio/engine';
 import { OrbitCamera } from './camera/orbit';
 import { EventBus, type SimEvent } from './core/events';
+import { Haptics } from './core/haptics';
 import { GamepadDevice, KeyboardMouseDevice, TouchDevice, mergeDevices } from './core/input';
 import { InputFramer, emptyFrame, isPressed } from './core/input-frame';
 import { FixedStepLoop } from './core/loop';
@@ -59,6 +60,7 @@ async function main(): Promise<void> {
   const bus = new EventBus();
   const camera = new OrbitCamera();
   const fx = new GroundFx(renderer.scene);
+  const haptics = new Haptics();
   const hud = new Hud(() => restart());
   const keyboard = new KeyboardMouseDevice(canvas);
   const gamepad = new GamepadDevice();
@@ -67,7 +69,10 @@ async function main(): Promise<void> {
   const framer = new InputFramer();
   let playing = false;
 
-  if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
+  if (matchMedia('(pointer: coarse)').matches) {
+    document.body.classList.add('touch');
+    hud.device = 'touch';
+  }
   canvas.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'touch') {
       document.body.classList.add('touch');
@@ -119,6 +124,8 @@ async function main(): Promise<void> {
     if (e.type === 'player.grabbed') camera.swingBehind(world.state.player.yaw);
     camera.onEvent(e, p, (id) => renderer.entityPosition(id));
     groundFx(e);
+    haptics.device = hud.device;
+    haptics.onEvent(e, p, (id) => renderer.entityPosition(id));
     if (e.type === 'level.end') document.body.classList.remove('playing');
   };
   bus.on('*', onEvent);

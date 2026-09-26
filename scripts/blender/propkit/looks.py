@@ -208,8 +208,8 @@ def sandstone(
 # ---------------------------------------------------------------------------
 
 
-def bronze(touch: Mask = None, soot: Mask = None, carve: Mask = None, seed: float = 0.0,
-           edge_lo: float = 8.0, edge_hi: float = 45.0, ao_dist: float = 0.08, wear: float = 1.0) -> Callable[[Graph], Look]:
+def bronze(touch: Mask = None, soot: Mask = None, carve: Mask = None, seed: float = 0.0, edge_lo: float = 8.0,
+           edge_hi: float = 45.0, ao_dist: float = 0.08, wear: float = 1.0) -> Callable[[Graph], Look]:
     """Verdigris over bronze; worn back to bright metal on edges and where hands go.
 
     Patina hues stay yellow-green to grey-green (no teal).
@@ -221,9 +221,9 @@ def bronze(touch: Mask = None, soot: Mask = None, carve: Mask = None, seed: floa
         n1 = g.noise(p, scale=5.0, detail=6.0, rough=0.6, w=seed)
         n2 = g.noise(p, scale=22.0, detail=5.0, rough=0.65, w=seed + 1.0)
         crust = g.noise(p, scale=60.0, detail=4.0, rough=0.7, w=seed + 2.0)
-        patina = g.ramp(n1, [(0.25, "#34392b"), (0.42, "#4e5f45"), (0.58, VERDIGRIS), (0.74, "#6f7d58")])
-        patina = g.mix(crust.smooth(0.6, 0.78) * 0.35, patina, "#8a9270")  # pale powdery crust
-        cup = n2.smooth(0.55, 0.7) * 0.75
+        patina = g.ramp(n1, [(0.25, "#2f3326"), (0.42, "#48573f"), (0.58, VERDIGRIS), (0.74, "#6b774f")])
+        patina = g.mix(crust.smooth(0.62, 0.8) * 0.3, patina, "#838a66")  # pale powdery crust
+        cup = n2.smooth(0.52, 0.68) * 0.75
         patina = g.mix(cup, patina, "#553a26")  # brown cuprite showing through
         blk = g.noise(p, scale=9.0, detail=4.0, w=seed + 7.0).smooth(0.6, 0.74) * 0.6
         patina = g.mix(blk, patina, "#27261e")  # black oxide
@@ -281,8 +281,10 @@ def gold(carve: Mask = None, seed: float = 0.0, ao_dist: float = 0.03, edge_lo: 
         scratch = g.noise(g.scale_vec(p, 400.0, 30.0, 30.0), scale=1.0, detail=2.0, w=seed + 1.0)
         scratch2 = g.noise(g.scale_vec(p, 30.0, 30.0, 400.0), scale=1.0, detail=2.0, w=seed + 2.0)
         sc = (scratch.smooth(0.7, 0.8) + scratch2.smooth(0.72, 0.82)).clamp()
-        rough = 0.25 + (n1 - 0.5) * 0.08 + sc * 0.12 - convex * 0.08
-        dust = (concave * 1.2 - 0.1).clamp()
+        rough = 0.26 + (n1 - 0.5) * 0.1 + sc * 0.16 - convex * 0.1
+        dust = (concave * 1.3 - 0.05).clamp()
+        tarnish = g.noise(p, scale=7.0, detail=4.0, w=seed + 3.0).smooth(0.58, 0.75) * 0.3
+        base = g.mix(tarnish, base, "#b8873c")
         occl = 1.0
         height = n1 * 0.3 - sc * 0.4
         if carve is not None:
@@ -305,23 +307,26 @@ def gold(carve: Mask = None, seed: float = 0.0, ao_dist: float = 0.03, edge_lo: 
 
 
 def coals(seed: float = 0.0) -> Callable[[Graph], Look]:
-    """Charcoal lumps with ash; glowing cracks baked into an emissive map."""
+    """Charcoal lumps under ash; glow gathers in hot spots and the cracks around them (emissive map)."""
 
     def recipe(g: Graph) -> Look:
         p = g.pos()
         convex, concave = edge_masks(g, 20.0, 90.0, -15.0, -90.0)
-        f1 = g.voronoi(p, scale=16.0, feature="F1", w=seed)
-        f2 = g.voronoi(p, scale=16.0, feature="F2", w=seed)
-        crack = (f2 - f1).smooth(0.14, 0.0)
+        pw = g.warp(p, 0.025, 7.0, seed=seed + 5.0)
+        f1 = g.voronoi(pw, scale=12.0, feature="F1", w=seed)
+        f2 = g.voronoi(pw, scale=12.0, feature="F2", w=seed)
+        crack = (f2 - f1).smooth(0.1, 0.0)
         n = g.noise(p, scale=10.0, detail=5.0, w=seed + 1.0)
-        ash = (g.noise(p, scale=5.0, detail=4.0, w=seed + 2.0).smooth(0.5, 0.7) * convex.lin(0, 1, 0.5, 1.0)
-               + convex * 0.5).clamp()
-        base = g.mix(n, "#16110e", "#2e241d")
-        base = g.mix(ash * 0.85, base, g.mix(n, "#6d655c", "#9c9387"))
-        hot = (crack * 0.8 + concave * 0.8 + g.noise(p, scale=3.0, w=seed + 3.0).smooth(0.45, 0.7) * 0.4).clamp()
-        hot = hot * ash.lin(0, 1, 1.0, 0.25)
-        emit = g.ramp(hot, [(0.0, "#000000"), (0.35, "#5a1804"), (0.65, "#e0772e"), (0.9, "#ffb347")])
-        base = g.mix(hot.smooth(0.4, 0.9), base, "#7a2a0c")
+        hotspot = g.noise(p, scale=2.6, detail=3.0, w=seed + 3.0).smooth(0.4, 0.75)
+        ash = (g.noise(p, scale=4.0, detail=5.0, w=seed + 2.0).smooth(0.45, 0.62) * convex.lin(0, 1, 0.6, 1.0)
+               + convex * 0.35).clamp() * hotspot.lin(0, 1, 1.0, 0.35)
+        base = g.mix(n, "#120e0c", "#2a211b")
+        base = g.mix(ash * 0.9, base, g.mix(n, "#6d655c", "#a39a8e"))
+        hot = (crack * (hotspot * 0.75 + 0.15) + concave * 0.35 * hotspot + hotspot.smooth(0.75, 1.0) * 0.35).clamp()
+        hot = hot * ash.lin(0, 1, 1.0, 0.1)
+        emit = g.ramp(hot, [(0.0, "#000000"), (0.3, "#300b02"), (0.6, "#b8481a"), (0.85, "#ff8c34"),
+                            (1.0, "#ffbe5c")])
+        base = g.mix(hot.smooth(0.45, 0.9), base, "#6e240a")
         height = n * 1.0 - crack * 1.5
         ao = g.ao(0.06, 8)
         return Look(base=base, rough=0.92, metal=0.0, ao=ao, height=height, bump=1.0, bump_dist=0.002, emit=emit)
@@ -397,18 +402,21 @@ def grey_stone(carve: Mask = None, seed: float = 0.0) -> Callable[[Graph], Look]
         convex, concave = edge_masks(g, 30.0, 150.0, -20.0, -120.0)
         n1 = g.noise(p, scale=12.0, detail=6.0, rough=0.6, w=seed)
         n2 = g.noise(p, scale=45.0, detail=4.0, w=seed + 1.0)
-        base = g.ramp(n1, [(0.3, "#5e5a53"), (0.5, "#7d786f"), (0.7, "#9b958a")])
-        base = g.mix(n2.smooth(0.3, 0.7) * 0.2, "#6b665e", base)
+        base = g.ramp(n1, [(0.3, "#48453f"), (0.5, "#625e57"), (0.7, "#7d786e")])
+        base = g.mix(n2.smooth(0.3, 0.7) * 0.3, "#55514b", base)
+        blot = g.noise(p, scale=5.0, detail=5.0, w=seed + 8.0).smooth(0.55, 0.7)
+        base = g.mix(blot * 0.5, base, "#3a3834")
         speck = g.voronoi(p, scale=220.0, feature="F1", w=seed + 2.0).smooth(0.14, 0.03)
         base = g.mix(speck * 0.5, base, "#3a3733")
         wht = g.voronoi(p, scale=180.0, feature="F1", w=seed + 7.0).smooth(0.1, 0.02)
         base = g.mix(wht * 0.4, base, "#c9c3b5")
-        base = g.mix(convex * 0.4, base, "#aca69a")
+        base = g.mix(convex * 0.35, base, "#938d81")
         iron = g.noise(p, scale=7.0, detail=4.0, w=seed + 5.0).smooth(0.64, 0.76) * 0.35
         base = g.mix(iron, base, "#7a5c40")
         grime = (concave * 1.2 - 0.1).clamp()
-        pits = g.voronoi(p, scale=90.0, feature="F1", w=seed + 3.0).smooth(0.2, 0.08)
-        height = n2 * 0.6 - pits * 0.8 + n1 * 0.4
+        pits = g.voronoi(p, scale=90.0, feature="F1", w=seed + 3.0).smooth(0.26, 0.08)
+        grain = g.noise(p, scale=400.0, detail=2.0, w=seed + 6.0)
+        height = n2 * 0.8 - pits * 1.2 + n1 * 0.4 + grain * 0.3
         occl = 1.0
         if carve is not None:
             cv = carve(g, p)
@@ -416,9 +424,9 @@ def grey_stone(carve: Mask = None, seed: float = 0.0) -> Callable[[Graph], Look]
             height = height - cv * 3.0
             occl = cv.smooth(0.3, 1.0) * -0.3 + 1.0
         base = g.mix(grime * 0.7, base, "#3e3a34")
-        base = g.mix(pits * 0.4, base, "#4a463f")
-        rough = 0.88 + (n2 - 0.5) * 0.08 - convex * 0.1
-        return Look(base=base, rough=rough, metal=0.0, ao=g.ao(0.03, 8) * occl, height=height, bump_dist=0.0005)
+        base = g.mix(pits * 0.6, base, "#2f2c28")
+        rough = 0.9 + (n2 - 0.5) * 0.08 - convex * 0.12
+        return Look(base=base, rough=rough, metal=0.0, ao=g.ao(0.03, 8) * occl, height=height, bump_dist=0.0007)
 
     return recipe
 
