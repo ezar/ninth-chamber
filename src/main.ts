@@ -563,6 +563,7 @@ async function main(): Promise<void> {
       vy: p.vel.y,
     });
     renderer.setFocus(camera.focusPoint, camera.focusWeight);
+    camera.narrow = renderer.camera.aspect < 0.8;
     // Narrow (portrait) screens keep a playable horizontal field of view.
     const minHFov = (58 * Math.PI) / 180;
     const fov = Math.max(

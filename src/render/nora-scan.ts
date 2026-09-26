@@ -244,9 +244,11 @@ export class NoraRig {
     });
     this.procPose.hips.copy(skin.skeleton.hipsBind).add(this.procOffset);
     if (this.animator) {
-      // Pistols drawn: the procedural aiming layer (nora.ts) drives the torso and
-      // arms over the clips while the legs keep running from them.
-      const armed = pose.mode === 'ground' || pose.mode === 'air' ? pose.weapons : 0;
+      // Aiming (a locked target or a recent shot): the procedural aiming layer
+      // (nora.ts) drives the torso and arms over the clips while the legs keep
+      // running from them. Holding the pistols without a target, the clips keep
+      // the arms and the pistols ride along the forearms at her sides.
+      const armed = pose.mode === 'ground' || pose.mode === 'air' ? pose.weapons * pose.aiming : 0;
       this.aimW += (armed - this.aimW) * (1 - Math.exp(-Math.max(0, dt) * 14));
       if (this.aimW > 1e-3)
         this.animator.setProceduralOverride(Math.max(this.aimW, this.override.weight), AIM_JOINTS);
@@ -268,6 +270,23 @@ export class NoraRig {
    * position of the visible wrist and the procedural hand's orientation
    * (fingers along -Y, palm facing -Z). Call after update().
    */
+  /**
+   * Frame for something gripped in a visible hand (0 = left, 1 = right): the
+   * wrist position and the direction the forearm points (hands stay rigid
+   * with the forearm, so a held pistol's barrel follows it). False until the
+   * scanned model has loaded.
+   */
+  gripFrame(side: 0 | 1, pos: THREE.Vector3, dir: THREE.Vector3): boolean {
+    const hand = this.skin?.bone(side === 0 ? 'hand_L' : 'hand_R');
+    const fore = this.skin?.bone(side === 0 ? 'lowerArm_L' : 'lowerArm_R');
+    if (!hand || !fore) return false;
+    hand.updateWorldMatrix(true, false);
+    pos.setFromMatrixPosition(hand.matrixWorld);
+    dir.setFromMatrixPosition(fore.matrixWorld);
+    dir.subVectors(pos, dir).normalize();
+    return true;
+  }
+
   handFrame(side: 0 | 1, pos: THREE.Vector3, quat: THREE.Quaternion): void {
     const hand = this.driver.hand(side);
     hand.getWorldQuaternion(quat);

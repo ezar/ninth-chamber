@@ -31,35 +31,66 @@ function canvasTexture(size: number, draw: (g: CanvasRenderingContext2D) => void
   return t;
 }
 
-/** A compact service pistol: slide, frame, raked grip and trigger guard (~150 triangles). */
+/**
+ * A compact service pistol: a bevelled side profile (slide, dust cover, trigger
+ * guard, raked grip) extruded to its thickness, walnut grip panels, sights and
+ * a barrel crown. Origin: top of the grip, where the web of the hand sits;
+ * -Z is the muzzle, +Y up.
+ */
 function pistolMesh(): { group: THREE.Group; muzzle: THREE.Vector3 } {
   const g = new THREE.Group();
-  const metal = new THREE.MeshStandardMaterial({ color: '#34322f', roughness: 0.38, metalness: 0.85 });
-  const worn = new THREE.MeshStandardMaterial({ color: '#57534c', roughness: 0.3, metalness: 0.9 });
-  const wood = new THREE.MeshStandardMaterial({ color: '#5b3a24', roughness: 0.62, metalness: 0 });
-  const add = (
-    geo: THREE.BufferGeometry,
-    mat: THREE.Material,
-    x: number,
-    y: number,
-    z: number,
-    rx = 0,
-  ): void => {
+  const metal = new THREE.MeshStandardMaterial({ color: '#2e2c29', roughness: 0.42, metalness: 0.8 });
+  const worn = new THREE.MeshStandardMaterial({ color: '#6a655c', roughness: 0.35, metalness: 0.85 });
+  const wood = new THREE.MeshStandardMaterial({ color: '#5a3520', roughness: 0.6, metalness: 0 });
+  // Profile in (forward, up) metres; the grip's top rear sits at the origin.
+  const O = 0.03;
+  const P = (u: number, v: number): THREE.Vector2 => new THREE.Vector2(u + O, v);
+  const body = new THREE.Shape([
+    P(-0.035, 0.042),
+    P(0.155, 0.042),
+    P(0.155, 0.014),
+    P(0.13, 0.014),
+    P(0.13, -0.004),
+    P(0.064, -0.004),
+    P(0.06, -0.026),
+    P(0.048, -0.036),
+    P(0.018, -0.036),
+    P(0.009, -0.02),
+    P(-0.006, -0.1),
+    P(-0.05, -0.104),
+    P(-0.043, -0.03),
+    P(-0.05, 0.012),
+    P(-0.035, 0.014),
+  ]);
+  body.holes.push(new THREE.Path([P(0.05, -0.008), P(0.018, -0.008), P(0.022, -0.028), P(0.046, -0.028)]));
+  const grip = new THREE.Shape([P(-0.002, -0.022), P(-0.012, -0.094), P(-0.044, -0.097), P(-0.038, -0.03)]);
+  const extrude = (shape: THREE.Shape, depth: number, bevel: number): THREE.BufferGeometry =>
+    new THREE.ExtrudeGeometry(shape, {
+      depth,
+      bevelEnabled: true,
+      bevelThickness: bevel,
+      bevelSize: bevel,
+      bevelSegments: 2,
+      curveSegments: 4,
+    })
+      .translate(0, 0, -depth / 2)
+      .rotateY(Math.PI / 2);
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x = 0, y = 0, z = 0): void => {
     const m = new THREE.Mesh(geo, mat);
     m.position.set(x, y, z);
-    m.rotation.x = rx;
     m.castShadow = true;
     g.add(m);
   };
-  // Origin: top of the grip, where the web of the hand sits. -Z is the muzzle, +Y up.
-  add(new THREE.BoxGeometry(0.03, 0.03, 0.19), metal, 0, 0.03, -0.06);
-  add(new THREE.BoxGeometry(0.026, 0.006, 0.17), worn, 0, 0.046, -0.06);
-  add(new THREE.BoxGeometry(0.026, 0.02, 0.13), metal, 0, 0.006, -0.075);
-  add(new THREE.CylinderGeometry(0.007, 0.007, 0.02, 8), worn, 0, 0.028, -0.16, Math.PI / 2);
-  add(new THREE.BoxGeometry(0.029, 0.1, 0.044), wood, 0, -0.045, 0.012, 0.22);
-  const guard = new THREE.TorusGeometry(0.02, 0.0035, 4, 10, Math.PI);
-  add(guard, metal, 0, -0.004, -0.03, Math.PI);
-  return { group: g, muzzle: new THREE.Vector3(0, 0.028, -0.172) };
+  add(extrude(body, 0.022, 0.0018), metal);
+  add(extrude(grip, 0.03, 0.0015), wood);
+  // Slide top rib, sights and the barrel crown.
+  add(new THREE.BoxGeometry(0.006, 0.003, 0.17), worn, 0, 0.0445, -0.095);
+  add(new THREE.BoxGeometry(0.004, 0.006, 0.006), metal, 0, 0.047, -0.178);
+  add(new THREE.BoxGeometry(0.012, 0.005, 0.006), metal, 0, 0.047, -0.003);
+  add(new THREE.CylinderGeometry(0.0065, 0.0065, 0.006, 10).rotateX(Math.PI / 2), worn, 0, 0.028, -0.187);
+  // Trigger.
+  add(new THREE.BoxGeometry(0.005, 0.018, 0.004), worn, 0, -0.016, -0.062);
+  return { group: g, muzzle: new THREE.Vector3(0, 0.028, -0.19) };
 }
 
 interface Pistol {
@@ -284,13 +315,25 @@ export class CombatView {
       const g = pistol.group;
       g.visible = this.drawn > 0.35;
       if (g.visible) {
-        nora.handFrame(side, _pos, _q);
-        // The aim layer points the fingers 0.3 below the aim: the barrel lifts them back to it.
-        const fingers = _f.set(0, -1, 0).applyQuaternion(_q);
-        const f = _x.copy(fingers).addScaledVector(UP, 0.3).normalize();
-        const u = _u.copy(UP).addScaledVector(f, -UP.dot(f)).normalize();
-        // Grip in the palm, a hand's breadth past the wrist.
-        g.position.copy(_pos).addScaledVector(fingers, 0.075).addScaledVector(u, 0.005);
+        let f: THREE.Vector3;
+        let u: THREE.Vector3;
+        if (nora.gripFrame(side, _pos, _f)) {
+          // The visible hand: the barrel follows the forearm, the pistol stays upright around it.
+          f = _f;
+          u = _u.copy(UP).addScaledVector(f, -UP.dot(f));
+          if (u.lengthSq() < 1e-4) u.set(0, 0, -1);
+          u.normalize();
+          // Grip in the palm, just past the wrist and under the knuckles.
+          g.position.copy(_pos).addScaledVector(f, 0.05).addScaledVector(u, -0.012);
+        } else {
+          nora.handFrame(side, _pos, _q);
+          // The aim layer points the fingers 0.3 below the aim: the barrel lifts them back to it.
+          const fingers = _f.set(0, -1, 0).applyQuaternion(_q);
+          f = _x.copy(fingers).addScaledVector(UP, 0.3).normalize();
+          u = _u.copy(UP).addScaledVector(f, -UP.dot(f)).normalize();
+          // Grip in the palm, a hand's breadth past the wrist.
+          g.position.copy(_pos).addScaledVector(fingers, 0.075).addScaledVector(u, 0.005);
+        }
         _p.crossVectors(u, _c.copy(f).negate());
         _m.makeBasis(_p, u, _c);
         g.quaternion.setFromRotationMatrix(_m);
