@@ -204,11 +204,13 @@ def bronze(touch: Mask = None, soot: Mask = None, carve: Mask = None, seed: floa
         n1 = g.noise(p, scale=5.0, detail=6.0, rough=0.6, w=seed)
         n2 = g.noise(p, scale=22.0, detail=5.0, rough=0.65, w=seed + 1.0)
         crust = g.noise(p, scale=60.0, detail=4.0, rough=0.7, w=seed + 2.0)
-        patina = g.ramp(n1, [(0.28, "#3f4f40"), (0.45, "#56705c"), (0.6, VERDIGRIS), (0.75, "#7f9272")])
-        patina = g.mix(crust.smooth(0.55, 0.75) * 0.5, patina, "#9aa585")  # pale powdery crust
-        cup = n2.smooth(0.58, 0.72) * 0.7
-        patina = g.mix(cup, patina, "#5a3d29")  # brown cuprite showing through
-        patina = g.mix(concave * 0.7, patina, "#2c2b22")  # dark grime in recesses
+        patina = g.ramp(n1, [(0.25, "#34392b"), (0.42, "#4e5f45"), (0.58, VERDIGRIS), (0.74, "#6f7d58")])
+        patina = g.mix(crust.smooth(0.6, 0.78) * 0.35, patina, "#8a9270")  # pale powdery crust
+        cup = n2.smooth(0.55, 0.7) * 0.75
+        patina = g.mix(cup, patina, "#553a26")  # brown cuprite showing through
+        blk = g.noise(p, scale=9.0, detail=4.0, w=seed + 7.0).smooth(0.6, 0.74) * 0.6
+        patina = g.mix(blk, patina, "#27261e")  # black oxide
+        patina = g.mix(concave * 0.75, patina, "#24231c")  # dark grime in recesses
         # Bright metal: edges (broken by noise) and touch zones.
         edge_n = g.noise(p, scale=30.0, detail=3.0, w=seed + 3.0)
         worn = (convex * wear * 1.3 - 0.25 + (edge_n - 0.5) * 0.9).clamp()
@@ -328,5 +330,220 @@ def amber_gem(seed: float = 0.0) -> Callable[[Graph], Look]:
         emit = g.mix(glow, "#6b2a06", "#f2a93b")
         rough = 0.08 + cloud * 0.05
         return Look(base=base, rough=rough, metal=0.0, ao=1.0, height=None, emit=emit)
+
+    return recipe
+
+
+# ---------------------------------------------------------------------------
+# Idol materials
+# ---------------------------------------------------------------------------
+
+
+def jade(carve: Mask = None, seed: float = 0.0) -> Callable[[Graph], Look]:
+    """Polished nephrite: mottled warm greens, pale cloudy veins, dust in recesses."""
+
+    def recipe(g: Graph) -> Look:
+        p = g.pos()
+        convex, concave = edge_masks(g, 30.0, 150.0, -20.0, -120.0)
+        n1 = g.noise(p, scale=9.0, detail=6.0, rough=0.6, distortion=1.5, w=seed)
+        vein = g.noise(g.scale_vec(p, 14.0, 30.0, 10.0), scale=1.0, detail=5.0, distortion=2.0, w=seed + 1.0)
+        base = g.ramp(n1, [(0.3, "#1f3a22"), (0.5, "#3d6a3a"), (0.68, "#5f8a4c"), (0.8, "#86a863")])
+        base = g.mix(vein.smooth(0.56, 0.66) * 0.55, base, "#b5c79a")
+        spots = g.voronoi(p, scale=60.0, feature="F1", w=seed + 2.0).smooth(0.14, 0.04)
+        base = g.mix(spots * g.noise(p, scale=6.0, w=seed + 3.0).smooth(0.5, 0.6) * 0.7, base, "#17261a")
+        base = g.mix(convex * 0.25, base, "#9dbb7d")
+        rough = 0.11 + (n1 - 0.5) * 0.06
+        dust = (concave * 1.3 - 0.15).clamp()
+        occl = 1.0
+        height = g.noise(p, scale=200.0, detail=2.0, w=seed + 4.0) * 0.05
+        if carve is not None:
+            cv = carve(g, p)
+            dust = (dust + cv.smooth(0.3, 0.9) * 0.7).clamp()
+            height = height - cv * 3.0
+            occl = cv.smooth(0.3, 1.0) * -0.3 + 1.0
+        base = g.mix(dust * 0.75, base, "#8c8466")
+        rough = g.mixf(dust, rough, 0.6)
+        return Look(base=base, rough=rough, metal=0.0, ao=g.ao(0.03, 8) * occl, height=height, bump_dist=0.0004)
+
+    return recipe
+
+
+def grey_stone(carve: Mask = None, seed: float = 0.0) -> Callable[[Graph], Look]:
+    """Weathered grey stone: pitted, paler on raised areas, dark grime in recesses."""
+
+    def recipe(g: Graph) -> Look:
+        p = g.pos()
+        convex, concave = edge_masks(g, 30.0, 150.0, -20.0, -120.0)
+        n1 = g.noise(p, scale=12.0, detail=6.0, rough=0.6, w=seed)
+        n2 = g.noise(p, scale=45.0, detail=4.0, w=seed + 1.0)
+        base = g.ramp(n1, [(0.3, "#5e5a53"), (0.5, "#7d786f"), (0.7, "#9b958a")])
+        base = g.mix(n2.smooth(0.3, 0.7) * 0.2, "#6b665e", base)
+        speck = g.voronoi(p, scale=220.0, feature="F1", w=seed + 2.0).smooth(0.14, 0.03)
+        base = g.mix(speck * 0.5, base, "#3a3733")
+        wht = g.voronoi(p, scale=180.0, feature="F1", w=seed + 7.0).smooth(0.1, 0.02)
+        base = g.mix(wht * 0.4, base, "#c9c3b5")
+        base = g.mix(convex * 0.4, base, "#aca69a")
+        iron = g.noise(p, scale=7.0, detail=4.0, w=seed + 5.0).smooth(0.64, 0.76) * 0.35
+        base = g.mix(iron, base, "#7a5c40")
+        grime = (concave * 1.2 - 0.1).clamp()
+        pits = g.voronoi(p, scale=90.0, feature="F1", w=seed + 3.0).smooth(0.2, 0.08)
+        height = n2 * 0.6 - pits * 0.8 + n1 * 0.4
+        occl = 1.0
+        if carve is not None:
+            cv = carve(g, p)
+            grime = (grime + cv.smooth(0.3, 0.9) * 0.7).clamp()
+            height = height - cv * 3.0
+            occl = cv.smooth(0.3, 1.0) * -0.3 + 1.0
+        base = g.mix(grime * 0.7, base, "#3e3a34")
+        base = g.mix(pits * 0.4, base, "#4a463f")
+        rough = 0.88 + (n2 - 0.5) * 0.08 - convex * 0.1
+        return Look(base=base, rough=rough, metal=0.0, ao=g.ao(0.03, 8) * occl, height=height, bump_dist=0.0005)
+
+    return recipe
+
+
+# ---------------------------------------------------------------------------
+# Clay, leather, canvas, brass, sand
+# ---------------------------------------------------------------------------
+
+
+def clay(seed: float = 0.0, band: Mask = None) -> Callable[[Graph], Look]:
+    """Fired terracotta amphora: pale slip outside, darker inside, fresh breaks, dirt."""
+
+    def recipe(g: Graph) -> Look:
+        p = g.pos()
+        convex, concave = edge_masks(g, 60.0, 250.0, -30.0, -160.0)
+        inner = g.attr("inner").smooth(0.3, 0.7)
+        brk = g.attr("brk").smooth(0.2, 0.8)
+        n1 = g.noise(p, scale=8.0, detail=5.0, w=seed)
+        n2 = g.noise(p, scale=60.0, detail=3.0, w=seed + 1.0)
+        body = g.ramp(n1, [(0.3, "#8a4a2c"), (0.55, "#a55d36"), (0.75, "#b56d43")])
+        slip = g.ramp(n1, [(0.3, "#b0835e"), (0.55, "#c49a73"), (0.75, "#cfa885")])
+        worn = g.noise(p, scale=14.0, detail=4.0, w=seed + 2.0).smooth(0.55, 0.7)
+        outside = g.mix((worn + convex * 0.6).clamp() * 0.8, slip, body)
+        if band is not None:
+            outside = g.mix(band(g, p) * (worn.inv() * 0.7 + 0.3), outside, "#3b2418")
+        base = g.mix(inner, outside, g.mix(n2, "#6e3a22", "#7f4a2e"))
+        fresh = g.mix(n2, "#b8683c", "#c97d4f")
+        base = g.mix(brk, base, fresh)
+        grit = g.voronoi(p, scale=320.0, feature="F1", w=seed + 3.0).smooth(0.12, 0.02)
+        base = g.mix(grit * 0.5, base, "#e2d2b8")
+        dirt = (concave * 1.2 - 0.1).clamp()
+        _, _, z = g.separate(p)
+        low = z.smooth(0.08, 0.0) * 0.6
+        base = g.mix((dirt + low).clamp() * 0.6, base, g.mix(n2, SAND, "#8a7358"))
+        rough = 0.86 + (n2 - 0.5) * 0.1 - convex * 0.05
+        height = n2 * 0.4 + n1 * 0.3 + g.noise(g.scale_vec(p, 3.0, 3.0, 120.0), scale=1.0, w=seed + 4.0) * 0.25
+        height = g.mixf(brk, height, g.noise(p, scale=300.0, detail=2.0, w=seed + 5.0) * 0.8)
+        return Look(base=base, rough=rough, metal=0.0, ao=g.ao(0.05, 8), height=height, bump_dist=0.0004)
+
+    return recipe
+
+
+def leather(emblem: Mask = None, stitches: Mask = None, seed: float = 0.0) -> Callable[[Graph], Look]:
+    """Worn saddle leather; lighter, polished wear on edges; green-thread emblem."""
+
+    def recipe(g: Graph) -> Look:
+        p = g.pos()
+        convex, concave = edge_masks(g, 25.0, 110.0, -20.0, -120.0)
+        n1 = g.noise(p, scale=10.0, detail=5.0, w=seed)
+        pebble = g.voronoi(p, scale=380.0, feature="F1", w=seed + 1.0)
+        crease = g.noise(g.scale_vec(p, 40.0, 6.0, 40.0), scale=1.0, detail=4.0, distortion=2.0, w=seed + 2.0)
+        base = g.ramp(n1, [(0.3, "#3f2716"), (0.5, "#56361f"), (0.72, "#6d4829")])
+        wear = (convex * 1.2 + g.noise(p, scale=18.0, w=seed + 3.0).smooth(0.6, 0.75) * 0.5 - 0.2).clamp()
+        base = g.mix(wear * 0.7, base, "#8d6541")
+        base = g.mix(crease.smooth(0.6, 0.7) * 0.3, base, "#2e1c10")
+        base = g.mix((concave * 1.2).clamp() * 0.5, base, "#6f6049")  # dust in folds
+        rough = 0.68 - wear * 0.2 + (n1 - 0.5) * 0.1
+        height = pebble.smooth(0.0, 0.5) * 0.4 - crease.smooth(0.6, 0.72) * 0.6
+        if stitches is not None:
+            st = stitches(g, p)
+            base = g.mix(st, base, "#b8a582")
+            height = height + st * 1.2
+            rough = g.mixf(st, rough, 0.85)
+        if emblem is not None:
+            em, emh = emblem(g, p)
+            thread = g.mix(g.noise(p, scale=400.0, w=seed + 6.0), "#58733a", "#8aa25e")
+            base = g.mix(em, base, thread)
+            rough = g.mixf(em, rough, 0.8)
+            height = height + emh * 1.5
+        return Look(base=base, rough=rough, metal=0.0, ao=g.ao(0.03, 8), height=height, bump_dist=0.0006)
+
+    return recipe
+
+
+def canvas(seed: float = 0.0) -> Callable[[Graph], Look]:
+    """Sand-olive waxed canvas with a visible weave."""
+
+    def recipe(g: Graph) -> Look:
+        p = g.pos()
+        convex, concave = edge_masks(g, 25.0, 110.0, -20.0, -120.0)
+        x, y, z = g.separate(p)
+        w1 = g.math("SINE", (y + z) * 1400.0)
+        w2 = g.math("SINE", (y - z) * 1400.0)
+        weave = (w1 * w2) * 0.5 + 0.5
+        n1 = g.noise(p, scale=10.0, detail=4.0, w=seed)
+        base = g.mix(n1, "#6b6242", "#857a54")
+        base = g.mix(weave * 0.25, base, "#9a8e66")
+        base = g.mix((concave * 1.2).clamp() * 0.5, base, "#4c4530")
+        base = g.mix(convex * 0.4, base, "#a09472")
+        return Look(base=base, rough=0.9, metal=0.0, ao=g.ao(0.03, 8), height=weave * 0.4 + n1 * 0.2,
+                    bump_dist=0.0004)
+
+    return recipe
+
+
+def brass(seed: float = 0.0) -> Callable[[Graph], Look]:
+    """Small worn brass fittings: dull brown tarnish, bright on edges."""
+
+    def recipe(g: Graph) -> Look:
+        p = g.pos()
+        convex, concave = edge_masks(g, 150.0, 500.0, -80.0, -400.0)
+        n1 = g.noise(p, scale=80.0, detail=4.0, w=seed)
+        tarn = g.mix(n1, "#5e4a2a", "#7a6034")
+        bright = g.mix(n1, "#b8914a", "#d4ad62")
+        worn = (convex * 1.2 + (n1 - 0.5) * 0.6).clamp()
+        base = g.mix(worn, tarn, bright)
+        base = g.mix((concave * 1.3).clamp() * 0.7, base, "#2c2418")
+        rough = g.mixf(worn, 0.6, 0.3)
+        return Look(base=base, rough=rough, metal=g.mixf(worn, 0.7, 1.0), ao=g.ao(0.02, 8), height=n1 * 0.2,
+                    bump_dist=0.0002)
+
+    return recipe
+
+
+def sand(periodic: Callable[[Graph, S, float], tuple] | None = None, seed: float = 0.0) -> Callable[[Graph], Look]:
+    """Wind-rippled sand. ``periodic(g, p, scale)`` returns (vector, w) for tileable noise."""
+
+    def recipe(g: Graph) -> Look:
+        p = g.pos()
+        x, y, z = g.separate(p)
+
+        def nz(scale, detail=3.0, w=0.0, distortion=0.0):
+            if periodic is None:
+                return g.noise(p, scale=scale, detail=detail, w=w + seed, distortion=distortion)
+            v, ww = periodic(g, p, scale)
+            return g.noise(v, scale=1.0, detail=detail, w=ww + w + seed, distortion=distortion)
+
+        n1 = nz(1.2, 4.0, 1.0)
+        n2 = nz(6.0, 4.0, 2.0)
+        fine = nz(120.0, 2.0, 3.0)
+        # Ripples run along the wall (crests parallel to X), wavelength ~7 cm, distorted.
+        rip_phase = y * 90.0 + (n2 - 0.5) * 9.0 + (n1 - 0.5) * 6.0
+        rip = g.math("SINE", rip_phase) * 0.5 + 0.5
+        rip = rip ** 1.6
+        slope = z.smooth(0.0, 0.3)
+        rip_amt = slope.lin(0, 1, 1.0, 0.35)
+        base = g.ramp(n1, [(0.3, "#b8966a"), (0.5, "#c8a77c"), (0.7, "#d3b58c")])
+        base = g.mix(rip * 0.25 * rip_amt, base, "#dcc29b")
+        base = g.mix(rip.inv() * 0.15 * rip_amt, base, "#a98a60")
+        base = g.mix(fine.smooth(0.3, 0.7) * 0.15, "#a88a64", base)
+        dk = g.voronoi(p, scale=500.0, feature="F1", w=seed + 4.0).smooth(0.12, 0.02)
+        base = g.mix(dk * 0.35, base, "#5a4633")
+        edge = z.smooth(0.02, 0.0) * 0.25
+        base = g.mix(edge, base, "#9c7f5a")
+        height = rip * rip_amt * 1.0 + fine * 0.3 + (n2 - 0.5) * 0.8
+        rough = 0.95 - fine * 0.03
+        return Look(base=base, rough=rough, metal=0.0, ao=g.ao(0.1, 8), height=height, bump_dist=0.0025)
 
     return recipe
