@@ -77,11 +77,43 @@ KENNEY = {
                   'https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip'),
 }
 
+# Kevin MacLeod, incompetech.com (CC-BY 4.0): title, ISRC (the piece's page).
 INCOMPETECH = {
     'tempting-secrets': ('Tempting Secrets', 'USUAN1300038'),
     'lost-frontier': ('Lost Frontier', 'USUAN1300039'),
     'arcadia': ('Arcadia', 'USUAN1100326'),
     'hero-theme': ('Hero Theme', 'USUAN1100491'),
+    'curse-of-the-scarab': ('Curse of the Scarab', 'USUAN1600014'),
+    'oppressive-gloom': ('Oppressive Gloom', 'USUAN1100885'),
+    'mirage': ('Mirage', 'USUAN1100877'),
+    'constance': ('Constance', 'USUAN1100850'),
+    'long-note-three': ('Long Note Three', 'USUAN1100424'),
+    'mistake-the-getaway': ('Mistake the Getaway', 'USUAN1100699'),
+    'enter-the-maze': ('Enter the Maze', 'USUAN1100782'),
+    'final-battle': ('Final Battle of the Dark Wizards', 'USUAN1500085'),
+    'mystery-sting': ('Mystery Sting', 'USUAN1100430'),
+    'discovery-hit': ('Discovery Hit', 'USUAN1300023'),
+    'greta-sting': ('Greta Sting', 'USUAN1100530'),
+    'big-hit-1': ('Danse Macabre - Big Hit 1', 'USUAN1100558'),
+    'big-hit-2': ('Danse Macabre - Big Hit 2', 'USUAN1100557'),
+    'darkness-speaks': ('Darkness Speaks', 'USUAN1100364'),
+    'curtain-rises': ('The Curtain Rises', 'USUAN1500011'),
+}
+
+# Scott Buckley, scottbuckley.com.au/library (CC-BY 4.0; games are covered with credit): title, page, file.
+SB = 'https://www.scottbuckley.com.au/library/'
+SB_FILES = SB + 'wp-content/uploads/'
+SCOTT_BUCKLEY = {
+    'age-of-wonder': ('Age of Wonder', SB + 'age-of-wonder/', SB_FILES + '2022/03/AgeOfWonder.mp3'),
+    'memories-of-stone': ('Memories Of Stone', SB + 'memories-of-stone/', SB_FILES + '2026/02/MemoriesOfStone.mp3'),
+    'passage-of-time': ('Passage of Time', SB + 'passage-of-time/', SB_FILES + '2022/01/PassageOfTime.mp3'),
+    'hymn-to-the-dawn': ('Hymn to the Dawn', SB + 'hymn-to-the-dawn/', SB_FILES + '2022/11/HymnToTheDawn.mp3'),
+    'goliath': ('Goliath', SB + 'goliath/', SB_FILES + '2021/08/sb_goliath.mp3'),
+    'victor-lux': ('Victor Lux', SB + 'victor-lux/', SB_FILES + '2023/05/VictorLux.mp3'),
+    'the-great-sea': ('The Great Sea', SB + 'the-great-sea/', SB_FILES + '2024/01/TheGreatSea.mp3'),
+    'permafrost': ('Permafrost', SB + 'permafrost/', SB_FILES + '2022/08/Permafrost.mp3'),
+    'decoherence': ('Decoherence', SB + 'decoherence/', SB_FILES + '2022/03/sb_decoherence.mp3'),
+    'juggernaut': ('Juggernaut', SB + 'juggernaut/', SB_FILES + '2022/07/Juggernaut.mp3'),
 }
 
 
@@ -174,6 +206,30 @@ class Sources:
                      'https://creativecommons.org/licenses/by/4.0/', path)
         self.used[src.key] = src
         return src
+
+    def scottbuckley(self, key: str) -> Source:
+        title, page, mp3 = SCOTT_BUCKLEY[key]
+        path = os.path.join(self.cache, 'scottbuckley', f'{key}.mp3')
+        meta_key = f'sb:{key}'
+        if meta_key not in self.meta or not os.path.exists(path):
+            _, body = self._get(page)
+            text = re.sub(r'<[^>]+>', ' ', body.decode('utf-8', 'replace'))
+            if 'Attribution 4.0' not in text:
+                sys.exit(f'Scott Buckley {title}: the page does not state CC BY 4.0')
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            _, data = self._get(mp3)
+            open(path, 'wb').write(data)
+            self.meta[meta_key] = {'title': title, 'url': page, 'file': mp3, 'license': 'CC-BY 4.0'}
+            self._save()
+        src = Source(meta_key, f'"{title}"', page, 'Scott Buckley (www.scottbuckley.com.au)', 'CC-BY 4.0',
+                     'https://creativecommons.org/licenses/by/4.0/', path)
+        self.used[src.key] = src
+        return src
+
+    def music(self, ref: str) -> Source:
+        """'inc:<key>' (incompetech) or 'sb:<key>' (Scott Buckley)."""
+        kind, key = ref.split(':', 1)
+        return self.incompetech(key) if kind == 'inc' else self.scottbuckley(key)
 
 
 # ---------------------------------------------------------------------------
@@ -657,30 +713,201 @@ def build(src: Sources) -> list[Bank]:
     return banks
 
 
-MUSIC = [
-    # cue, incompetech key, loop, note
-    ('title', 'tempting-secrets', True, 'title screen and the opening of the level'),
-    ('explore', 'lost-frontier', False, 'entering the great hall; plays once, then silence'),
-    ('relic', 'arcadia', False, 'the relic chamber'),
-    ('fanfare', 'hero-theme', False, 'the Heart is taken, end of level'),
+# ---------------------------------------------------------------------------
+# Music (the adaptive score: src/audio/score.ts maps these cues to states per level)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Cue:
+    """One music file. kind: 'stream' (played through, streamed), 'loop' (decoded, seamless,
+    bar-aligned), 'sting' (short, decoded, over the bed)."""
+
+    id: str
+    ref: str  # Sources.music ref: 'inc:<key>' or 'sb:<key>'
+    kind: str
+    note: str
+    start: float = 0.0
+    dur: float | None = None  # excerpt length (s); loops: search window
+    fade_in: float = 0.05
+    fade_out: float = 2.0
+    target: float = -20.0  # LUFS: integrated (streams, loops) or max momentary (stings)
+    bitrate: int = 56
+    bpm: float = 0.0  # loops: nominal tempo (0: estimate; -1: free time, a drone)
+    bars: int = 8  # loops: length in bars of four beats
+    loop_seconds: float = 30.0  # free-time loops
+    rate: int = 0  # decode rate for loops and stings (memory)
+
+
+CUES = [
+    # Title and the chambers' intros.
+    Cue('title', 'sb:age-of-wonder', 'stream', 'title screen (loops)', 40, 210, 4, 6, -18, 64),
+    Cue('antechamber.intro', 'sb:memories-of-stone', 'stream', 'Antechamber intro cards', 0, 95, 0.5, 6, -20),
+    Cue('cisterns.intro', 'sb:permafrost', 'stream', 'Cisterns intro cards', 0, 95, 0.5, 6, -20),
+    Cue('sun_temple.intro', 'sb:hymn-to-the-dawn', 'stream', 'Temple of the Sun intro cards', 0, 100, 1, 6, -20),
+    # Exploration: sparse, played once each, long silences between.
+    Cue('antechamber.explore.1', 'sb:passage-of-time', 'stream', 'Antechamber exploration', 0, 175, 3, 12, -21),
+    Cue('antechamber.explore.2', 'inc:lost-frontier', 'stream', 'Antechamber exploration', 0, 185, 3, 12, -21),
+    Cue('cisterns.explore.1', 'inc:mirage', 'stream', 'Cisterns exploration', 0, 180, 4, 12, -22),
+    Cue('cisterns.explore.2', 'sb:decoherence', 'stream', 'Cisterns exploration', 18, 180, 4, 12, -21),
+    Cue('sun_temple.explore.1', 'sb:hymn-to-the-dawn', 'stream', 'Temple of the Sun exploration', 95, 180, 4, 12, -21),
+    Cue('sun_temple.explore.2', 'sb:passage-of-time', 'stream', 'Temple of the Sun exploration', 150, 118, 4, 10,
+        -21),
+    # Relic climaxes and fanfares.
+    Cue('antechamber.relic', 'inc:arcadia', 'stream', 'Antechamber relic reveal', 0, None, 1, 3, -18, 64),
+    Cue('cisterns.relic', 'sb:the-great-sea', 'stream', 'Cisterns relic reveal', 100, 128, 3, 8, -18, 64),
+    Cue('sun_temple.relic', 'sb:victor-lux', 'stream', 'Temple of the Sun relic reveal', 70, None, 3, 3, -18, 64),
+    Cue('fanfare', 'inc:hero-theme', 'stream', 'end of level fanfare', 0, None, 0.02, 2, -17, 64),
+    Cue('sun_temple.fanfare', 'inc:curtain-rises', 'stream', 'Temple of the Sun fanfare', 0, None, 0.02, 2, -17, 64),
+    # Loops for the dynamic states.
+    Cue('antechamber.tension', 'inc:oppressive-gloom', 'loop', 'Antechamber tension bed', 20, 110, bpm=58, bars=8,
+        rate=24000),
+    Cue('antechamber.combat', 'inc:curse-of-the-scarab', 'loop', 'Antechamber combat', 80, 40, bpm=190, bars=24,
+        target=-19, rate=32000),
+    Cue('cisterns.tension', 'inc:long-note-three', 'loop', 'Cisterns tension drone', 15, 60, bpm=-1,
+        loop_seconds=30, rate=24000),
+    Cue('cisterns.combat', 'inc:constance', 'loop', 'Cisterns combat', 20, 90, bpm=83, bars=12, target=-19,
+        rate=32000),
+    Cue('sun_temple.tension', 'inc:enter-the-maze', 'loop', 'Temple of the Sun tension', 5, 80, bpm=93, bars=12,
+        target=-21, rate=24000),
+    Cue('sun_temple.combat', 'sb:juggernaut', 'loop', 'Temple of the Sun combat', 140, 60, bpm=0, bars=12,
+        target=-19, rate=32000),
+    Cue('chase', 'inc:mistake-the-getaway', 'loop', 'chase (the rolling boulder)', 90, 30, bpm=141, bars=16,
+        target=-18, rate=32000),
+    Cue('boss', 'sb:goliath', 'loop', 'boss (the stone guardian)', 110, 90, bpm=0, bars=16, target=-18,
+        rate=32000),
+    # Stingers (louder than the beds, which duck under them).
+    Cue('sting.vista', 'inc:discovery-hit', 'sting', 'a new vista revealed', 0, None, 0.01, 1.5, -15, 64,
+        rate=48000),
+    Cue('sting.journal', 'inc:greta-sting', 'sting', 'a journal note read', 0, 12, 0.3, 3, -18, 64, rate=32000),
+    Cue('sting.secret', 'inc:mystery-sting', 'sting', 'a secret found (under the secret chord)', 0, 9, 0.05, 2.5,
+        -20, 64, rate=32000),
+    Cue('sting.solved', 'inc:big-hit-1', 'sting', 'a door opened by a plate or lever', 0, None, 0.005, 1.2, -15,
+        64, rate=48000),
+    Cue('sting.solved.2', 'inc:big-hit-2', 'sting', 'a door opened (Cisterns)', 0, None, 0.005, 1.2, -15, 64,
+        rate=48000),
+    Cue('sting.death', 'inc:darkness-speaks', 'sting', 'death', 0, 9, 0.01, 3, -17, 64, rate=32000),
 ]
+
+
+def onset_env(x: np.ndarray, hop: float = 0.01) -> np.ndarray:
+    """Spectral-flux onset strength of a mono signal, one value per `hop` seconds."""
+    m = x if x.ndim == 1 else x.mean(axis=1)
+    h = int(hop * SR)
+    n = 2048
+    frames = len(m) // h - n // h
+    win = np.hanning(n)
+    prev = None
+    out = np.zeros(max(0, frames))
+    for i in range(frames):
+        spec = np.log1p(np.abs(np.fft.rfft(m[i * h:i * h + n] * win))[:512])
+        if prev is not None:
+            out[i] = np.maximum(spec - prev, 0).sum()
+        prev = spec
+    return out
+
+
+def estimate_bpm(x: np.ndarray, lo: float = 70, hi: float = 180) -> float:
+    env = onset_env(x)
+    env = env - env.mean()
+    ac = np.correlate(env, env, 'full')[len(env) - 1:]
+    lags = np.arange(len(ac)) * 0.01
+    best, best_v = 0.0, -1e18
+    for bpm in np.arange(lo, hi, 0.25):
+        lag = 60 / bpm / 0.01
+        i = int(round(lag))
+        # Sum over the first four multiples so the beat, not a subdivision, wins.
+        v = sum(ac[int(round(lag * k))] for k in (1, 2, 4) if int(round(lag * k)) < len(ac))
+        if v > best_v:
+            best, best_v = bpm, v
+    del lags
+    return float(best)
+
+
+def chroma_frames(x: np.ndarray, hop: float = 0.05) -> np.ndarray:
+    """Coarse spectral envelope frames (log magnitude in 24 bands), for comparing two moments."""
+    m = x if x.ndim == 1 else x.mean(axis=1)
+    h = int(hop * SR)
+    n = 4096
+    edges = np.geomspace(60, 8000, 25)
+    freqs = np.fft.rfftfreq(n, 1 / SR)
+    idx = [np.where((freqs >= edges[i]) & (freqs < edges[i + 1]))[0] for i in range(24)]
+    frames = max(0, (len(m) - n) // h)
+    out = np.zeros((frames, 24))
+    win = np.hanning(n)
+    for i in range(frames):
+        spec = np.abs(np.fft.rfft(m[i * h:i * h + n] * win))
+        out[i] = [np.log1p(spec[j].mean()) for j in idx]
+    return out
+
+
+def find_loop(x: np.ndarray, length: float, window: tuple[float, float], flex: float = 0.004,
+              beat: float = 0.0) -> tuple[float, float]:
+    """Best (start, length) inside `window` so the music at start+length matches the music at start:
+    compares 2 s of spectral envelope, tries lengths within ±flex, and starts on onsets when `beat`."""
+    hop = 0.05
+    feats = chroma_frames(x, hop)
+    span = int(2.0 / hop)
+    a, b = int(window[0] / hop), int(window[1] / hop)
+    candidates = range(a, max(a + 1, b))
+    if beat:
+        env = onset_env(x)
+        peaks = [i * 0.01 for i in range(1, len(env) - 1)
+                 if env[i] >= env[i - 1] and env[i] >= env[i + 1] and env[i] > np.percentile(env, 75)]
+        candidates = sorted({int(round(t / hop)) for t in peaks if window[0] <= t < window[1]})
+    best = (window[0], length, 1e18)
+    for L in np.linspace(length * (1 - flex), length * (1 + flex), 9):
+        k = int(round(L / hop))
+        for i in candidates:
+            if i + k + span >= len(feats):
+                continue
+            d = float(np.mean((feats[i:i + span] - feats[i + k:i + k + span]) ** 2))
+            if d < best[2]:
+                best = (i * hop, float(L), d)
+    return best[0], best[1]
 
 
 def build_music(src: Sources, only: set[str] | None) -> dict[str, dict[str, object]]:
     out: dict[str, dict[str, object]] = {}
-    for cue, key, loop, note in MUSIC:
-        s = src.incompetech(key)
-        rel = f'music/{cue}-{key}.webm'
-        out[cue] = {'file': rel, 'loop': loop, 'source': s.key, 'note': note}
-        if only and f'music.{cue}' not in only:
+    for c in CUES:
+        s = src.music(c.ref)
+        rel = f'music/{c.id.replace(".", "-")}.webm'
+        entry: dict[str, object] = {'file': rel, 'kind': c.kind, 'source': s.key, 'note': c.note}
+        out[c.id] = entry
+        if only and c.id not in only and 'music' not in only:
             continue
-        x = load(s.path, channels=2)
-        x = trim(x, -70, pre=0.0, post=0.5)
-        g = -20.0 - loudness(x, 'integrated')
-        x = soft_limit(x * 10 ** (g / 20), CEILING_DB)
-        x = fades(x, 0.01, 0.5)
-        encode(x, os.path.join(OUT, rel), 64)
-        out[cue]['duration'] = round(len(x) / SR, 2)
+        stereo = load(s.path, channels=2)
+        if c.kind == 'loop':
+            if c.bpm < 0:
+                length, beat = c.loop_seconds, 0.0
+                bpm = 0.0
+            else:
+                bpm = c.bpm or estimate_bpm(seg(stereo, c.start, c.start + (c.dur or 60)))
+                beat = 60 / bpm
+                length = c.bars * 4 * beat
+            end = c.start + (c.dur or 60)
+            st, L = find_loop(stereo, length, (c.start, max(c.start + 0.1, end - length)), beat=beat)
+            xf = max(beat, 0.25) if beat else 3.0
+            y = seg(stereo, st, st + L + xf)
+            y = loopify(y, xf)
+            entry.update({'bpm': round(60 / (L / (c.bars * 4)), 3) if beat else 0, 'bars': c.bars if beat else 0,
+                          'length': round(len(y) / SR, 4), 'rate': c.rate, 'loop': True,
+                          'from': round(st, 3)})
+            g = c.target - loudness(y, 'integrated')
+            y = soft_limit(y * 10 ** (g / 20), CEILING_DB)
+        else:
+            y = seg(stereo, c.start, c.start + c.dur) if c.dur else seg(stereo, c.start, len(stereo) / SR)
+            y = trim(y, -70, pre=0.0, post=0.3)
+            y = fades(y, c.fade_in, c.fade_out)
+            mode = 'momentary' if c.kind == 'sting' else 'integrated'
+            g = c.target - loudness(y, mode)
+            y = soft_limit(y * 10 ** (g / 20), CEILING_DB)
+            if c.kind == 'sting':
+                entry['rate'] = c.rate
+        encode(y, os.path.join(OUT, rel), c.bitrate)
+        entry['duration'] = round(len(y) / SR, 3)
+        print(f'{c.id:24s} {c.kind:6s} {len(y) / SR:6.1f} s  {os.path.getsize(os.path.join(OUT, rel)) / 1024:7.1f} KB'
+              + (f'  bpm {entry.get("bpm")} from {entry.get("from")}' if c.kind == 'loop' else ''))
     return out
 
 
@@ -698,9 +925,13 @@ def credits_md(banks: list[Bank], music: dict[str, dict[str, object]], src: Sour
     ]
     for cue, m in music.items():
         s = src.used[str(m['source'])]
-        lines.append(f'- `{m["file"]}` ({m["note"]}): {s.title} Kevin MacLeod (incompetech.com). '
-                     f'Licensed under Creative Commons: By Attribution 4.0 License, '
-                     f'<{s.license_url}>. Source: <{s.url}>')
+        if s.key.startswith('sb:'):
+            credit = (f'{s.title} by Scott Buckley, released under CC-BY 4.0. www.scottbuckley.com.au '
+                      f'(<{s.license_url}>). Source: <{s.url}>')
+        else:
+            credit = (f'{s.title} Kevin MacLeod (incompetech.com). Licensed under Creative Commons: '
+                      f'By Attribution 4.0 License, <{s.license_url}>. Source: <{s.url}>')
+        lines.append(f'- `{m["file"]}` ({cue}: {m["note"]}): {credit}')
     lines += ['', '## Sound effects (CC0)', '', 'One line per bank; `01-10` is a range of numbered variants.', '']
 
     def cite(per: list[Source]) -> str:
@@ -768,7 +999,11 @@ def main() -> None:
         print(f'{b.name:18s} {len(b.files):2d} files {size / 1024:7.1f} KB  '
               f'{min(b.lengths):.2f}-{max(b.lengths):.2f} s')
     music = build_music(src, only or None)
-    manifest['music'] = {k: {kk: vv for kk, vv in v.items() if kk not in ('source', 'note')} for k, v in music.items()}
+    old_music = old.get('music', {}) if isinstance(old, dict) else {}
+    manifest['music'] = {
+        k: {kk: vv for kk, vv in v.items() if kk not in ('source', 'note')} if 'duration' in v else old_music.get(k)
+        for k, v in music.items()
+    }
     os.makedirs(os.path.dirname(MANIFEST), exist_ok=True)
     json.dump(manifest, open(MANIFEST, 'w'), indent=2)
     open(os.path.join(OUT, 'CREDITS.md'), 'w').write(credits_md(banks, music, src))
@@ -777,6 +1012,8 @@ def main() -> None:
                    capture_output=True)
     msize = sum(os.path.getsize(os.path.join(OUT, str(m['file']))) for m in music.values()
                 if os.path.exists(os.path.join(OUT, str(m['file']))))
+    loops = [c for c in CUES if c.kind == 'loop']
+    print(f'music: {len(CUES)} cues ({len(loops)} loops)')
     print(f'sfx {total / 1024 / 1024:.2f} MB, music {msize / 1024 / 1024:.2f} MB')
 
 

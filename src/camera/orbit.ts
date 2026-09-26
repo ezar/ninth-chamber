@@ -82,6 +82,8 @@ export class OrbitCamera {
   fov = cameraTuning.fov;
   /** Reduced motion: no shake and no speed-driven field of view. */
   calm = false;
+  /** Narrow (portrait) screens: keep Nora centred instead of over the shoulder. */
+  narrow = false;
   private focus: { at: Vec3; left: number; blend: number } | null = null;
   private focusEase = 0;
   private autoYaw: number | null = null;
@@ -242,7 +244,7 @@ export class OrbitCamera {
     // clipped against walls so the camera never starts inside stone.
     this.aimNow += ((this.aiming && !hanging ? 1 : 0) - this.aimNow) * Math.min(1, dt * 4);
     const shoulder = cameraTuning.shoulder + (cameraTuning.aimShoulder - cameraTuning.shoulder) * this.aimNow;
-    const want0 = hanging || this.focus ? 0 : shoulder;
+    const want0 = hanging || this.focus ? 0 : shoulder * (this.narrow ? 0.15 : 1);
     this.shoulderNow += (want0 - this.shoulderNow) * Math.min(1, dt * 3);
     const distance =
       this.distance + (Math.min(this.distance, cameraTuning.aimDistance) - this.distance) * this.aimNow;

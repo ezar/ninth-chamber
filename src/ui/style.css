@@ -808,8 +808,10 @@ body.touch.moved #look-ghost {
   stroke-linejoin: round;
 }
 .tbtn span {
+  max-width: calc(var(--size) - 8px);
+  overflow: hidden;
   font: 600 8.5px var(--font-ui);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.7;
 }
@@ -846,7 +848,7 @@ body.touch.moved #look-ghost {
   bottom: calc(var(--pad-b) + 118px);
 }
 .tbtn-slot-b {
-  --size: 52px;
+  --size: 58px;
   right: calc(var(--pad-r) + 36px);
   bottom: calc(var(--pad-b) + 214px);
 }

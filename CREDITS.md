@@ -21,7 +21,9 @@ Recorded sound under open licences. The full list, file by file with source link
 
 ## Music
 
-- "Tempting Secrets", "Lost Frontier", "Arcadia" and "Hero Theme" by Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, https://creativecommons.org/licenses/by/4.0/
+- "Age of Wonder", "Memories Of Stone", "Passage of Time", "Hymn to the Dawn", "Permafrost", "Decoherence", "The Great Sea", "Victor Lux", "Juggernaut" and "Goliath" by Scott Buckley — released under CC-BY 4.0. www.scottbuckley.com.au
+- "Lost Frontier", "Arcadia", "Hero Theme", "The Curtain Rises", "Mirage", "Oppressive Gloom", "Curse of the Scarab", "Long Note Three", "Constance", "Enter the Maze", "Mistake the Getaway", "Discovery Hit", "Greta Sting", "Mystery Sting", "Danse Macabre - Big Hit 1", "Danse Macabre - Big Hit 2" and "Darkness Speaks" by Kevin MacLeod (incompetech.com). Licensed under Creative Commons: By Attribution 4.0 License, https://creativecommons.org/licenses/by/4.0/
+- Excerpted, looped and levelled for the adaptive score by `scripts/audio/build_audio.py`; file by file in [public/audio/CREDITS.md](public/audio/CREDITS.md).
 
 ## Textures
 

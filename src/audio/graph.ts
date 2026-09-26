@@ -18,11 +18,12 @@ import { Ambience } from './ambience';
 import { clamp, noiseBank, Strip, type NoiseBank, type Vec3 } from './dsp';
 import { EmitterSet, type EmitterDef } from './emitters';
 import { Mixer, type BusName } from './mixer';
+import { MusicDirector, PolledClock } from './director';
 import { chime, fadeOut, playCue, relicShimmer, secretMotif, type CueName } from './music';
 import type { ReverbPreset } from './reverb';
 import { SampleBank, vary, type BankName, type Category, type Fetcher } from './samples';
 import * as sfx from './sfx';
-import { isTrack, Soundtrack, type TrackName } from './soundtrack';
+import { ScorePlayer } from './score-player';
 
 export interface ListenerPose extends Vec3 {
   /** 0 looks towards -Z; positive yaw turns towards -X. */
@@ -87,8 +88,15 @@ const LEVEL = {
   ui: { click: 0.6, hover: 0.4, confirm: 0.7 },
 } as const;
 
-/** Which recorded track a sim `music` cue plays. */
-const TRACK_FOR: Partial<Record<string, TrackName>> = { hall: 'explore', relic: 'relic', fanfare: 'fanfare' };
+/** The synthesised cue that stands in for a recorded one that cannot play (no Opus/WebM, a failed file). */
+const FALLBACK_CUE: Record<string, CueName> = {
+  title: 'hall',
+  intro: 'hall',
+  explore: 'hall',
+  relic: 'relic',
+  fanfare: 'fanfare',
+  death: 'death',
+};
 
 type Material = sfx.Material;
 type Gait = 'walk' | 'run';
@@ -136,7 +144,9 @@ export class AudioGraph {
   readonly noise: NoiseBank;
   readonly mixer: Mixer;
   readonly samples: SampleBank | null;
-  private readonly soundtrack: Soundtrack | null;
+  readonly score: ScorePlayer;
+  readonly director: MusicDirector;
+  private readonly musicClock = new PolledClock();
   private readonly ambience: Ambience | null;
   private readonly emitters: EmitterSet;
   private strips = 0;
@@ -154,9 +164,13 @@ export class AudioGraph {
     this.noise = noiseBank(ctx);
     this.mixer = new Mixer(ctx, opts.destination);
     this.samples = opts.samples ? new SampleBank(ctx, opts.samples, opts.fetcher) : null;
-    this.soundtrack = opts.samples
-      ? Soundtrack.create(ctx, this.mixer.bus.music, opts.samples, (name) => this.trackFailed(name))
-      : null;
+    this.score = new ScorePlayer(ctx, this.mixer.bus.music, {
+      base: opts.samples ?? '',
+      strip: () => this.strip('music', null),
+      fallback: (cue) => this.fallbackCue(cue),
+      ...(opts.fetcher ? { fetcher: opts.fetcher } : {}),
+    });
+    this.director = new MusicDirector(this.score, this.musicClock);
     this.emitters = new EmitterSet(ctx, this.noise, this.mixer.bus.ambience);
     this.ambience =
       opts.ambience === false
@@ -228,6 +242,13 @@ export class AudioGraph {
     }
     this.emitters.update(l);
     this.ambience?.update();
+    this.tickMusic();
+  }
+
+  /** Advances the music clock and the score's scheduled layers (also works without a listener update). */
+  tickMusic(): void {
+    this.musicClock.tick(this.ctx.currentTime);
+    this.score.update();
   }
 
   private allow(type: string): boolean {
@@ -311,17 +332,11 @@ export class AudioGraph {
     return this.side * (0.08 + Math.random() * 0.05);
   }
 
+  /** The procedural cues, for when a recorded one cannot play. */
   playMusic(name: CueName): void {
-    const track = TRACK_FOR[name];
-    if (track && this.soundtrack?.play(track)) {
-      if (this.cue) fadeOut(this.cue.strip, 1.5);
-      this.cue = null;
-      return;
-    }
     const now = this.ctx.currentTime;
     // The same cue twice in a row (level.end plus a scripted fanfare) plays once.
     if (this.cue && this.cue.name === name && now - this.cue.at < 2) return;
-    this.soundtrack?.stop(1.5);
     if (this.cue) fadeOut(this.cue.strip, 1.5);
     const s = this.strip('music', null);
     if (!s) return;
@@ -330,21 +345,31 @@ export class AudioGraph {
     this.cue = { name, strip: s, at: now };
   }
 
-  /** Recorded-only cues (the title theme): true if it plays. */
-  playTrack(name: string, fadeIn = 1.5): boolean {
-    return isTrack(name) && (this.soundtrack?.play(name, fadeIn) ?? false);
+  private fallbackCue(cue: string): void {
+    const kind = cue.startsWith('sting.death')
+      ? 'death'
+      : (cue.split('.').find((part) => part in FALLBACK_CUE) ?? '');
+    const name = FALLBACK_CUE[kind];
+    if (name) this.playMusic(name);
   }
 
-  /** Fades whatever music is playing out over `fade` s, starting after `delay` s. */
-  stopMusic(fade = 2, delay = 0): void {
-    this.soundtrack?.stop(fade, delay);
-    if (this.cue && delay === 0) fadeOut(this.cue.strip, fade);
+  /** The level whose palette the score uses (see score.ts). */
+  setLevel(id: string): void {
+    this.director.setLevel(id);
   }
 
-  private trackFailed(name: TrackName): void {
-    // A recorded cue could not stream: play the synthesised one where there is one.
-    const cue = (Object.keys(TRACK_FOR) as CueName[]).find((k) => TRACK_FOR[k] === name);
-    if (cue) this.playMusic(cue);
+  /** Game phase: the title theme, the intro, play, the end screen. */
+  setMusicPhase(phase: 'title' | 'intro' | 'play' | 'end'): void {
+    this.director.setPhase(phase);
+  }
+
+  /** Player health 0..1 (low health: tension, heartbeat, muffled music). */
+  setHealth(h: number): void {
+    this.director.setHealth(h);
+  }
+
+  setPaused(paused: boolean): void {
+    this.score.setPaused(paused);
   }
 
   /** Menu sounds (not simulation events). */
@@ -390,6 +415,7 @@ export class AudioGraph {
   }
 
   onEvent(e: SimEvent, atRaw: Vec3 | null): void {
+    this.director.onEvent(e);
     if (!this.allow(e.type)) return;
     const at = where(e) ?? (atRaw && Number.isFinite(atRaw.x + atRaw.y + atRaw.z) ? atRaw : null);
     const m = this.mixer;
@@ -523,7 +549,6 @@ export class AudioGraph {
           this.layer(s, t, 'body.fall', { gain: LEVEL.bodyFall * 1.3, rate: 0.85 });
           this.layer(s, t, 'debris', { delay: 0.06, gain: LEVEL.debris * 0.5, duration: 1.2, fadeOut: 0.5 });
         });
-        this.playMusic('death');
         break;
       }
       case 'player.respawned':
@@ -731,6 +756,7 @@ export class AudioGraph {
         });
         break;
       case 'secret.found':
+        // The secret chord (spec §12); the director adds a sting under it.
         this.play('ui', null, (s, t) => secretMotif(s, t));
         break;
       case 'relic.taken':
@@ -741,9 +767,6 @@ export class AudioGraph {
           }
           relicShimmer(s, t);
         });
-        break;
-      case 'checkpoint':
-        this.play('ui', null, (s, t) => chime(s, t, [62, 69], 0.05, 0.14));
         break;
       case 'hint':
         this.play('ui', null, (s, t) => chime(s, t, [81, 88], 0.03, 0.09));
@@ -764,14 +787,6 @@ export class AudioGraph {
           });
           m.duck(3.5);
         }
-        break;
-      case 'music': {
-        const name = str(e, 'name');
-        if (name === 'hall' || name === 'relic' || name === 'fanfare') this.playMusic(name);
-        break;
-      }
-      case 'level.end':
-        this.playMusic('fanfare');
         break;
       case 'weapon.fired': {
         const pan = e.hand === 0 ? -0.12 : 0.12;

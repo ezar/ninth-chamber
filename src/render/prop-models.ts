@@ -51,7 +51,7 @@ export class PropLibrary {
         }
       }),
     );
-    lib.tuneEmissive();
+    lib.tuneMaterials();
     return lib;
   }
 
@@ -79,12 +79,21 @@ export class PropLibrary {
     return o instanceof THREE.Mesh && o.material instanceof THREE.MeshStandardMaterial ? o.material : null;
   }
 
-  /** Emissive parts ship at unit strength; lift them into the bloom range. */
-  private tuneEmissive(): void {
+  /**
+   * Emissive parts ship at unit strength; lift them into the bloom range. Sand
+   * drifts get no baked indirect light, unlike the floor they lie on, so they
+   * are darkened to sit in the same light instead of reading as pale sheets.
+   */
+  private tuneMaterials(): void {
     const coals = this.material('brazier', 'coals');
     if (coals) coals.emissiveIntensity = 2.8;
     const amber = this.material('door', 'seal_amber');
     if (amber) amber.emissiveIntensity = 1.6;
+    const drift = this.material('sand_drift', 'sand_drift');
+    if (drift) {
+      drift.color.multiplyScalar(0.55);
+      drift.roughness = 1;
+    }
   }
 }
 

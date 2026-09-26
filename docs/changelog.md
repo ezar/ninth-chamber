@@ -1,5 +1,13 @@
 # Changelog
 
+## Adaptive score
+
+- A music director (`src/audio/director.ts`) plays an adaptive score from simulation and UI events. States: title, intro, sparse exploration with long silences, tension, combat, chase, boss, relic climax, fanfare, death and end. Stingers mark discoveries, solved puzzles, checkpoints and death. The rules and techniques are in `docs/audio.md`.
+- Vertical layering: each tension or danger loop opens from a filtered drone to the full bed as intensity rises, and a war-drum layer comes in on the bar grid. Switches between loops wait for the next bar. Stingers duck the bed. Low health adds a heartbeat and muffles the music.
+- Level rules drive it with `music <name>`: `tension`, `calm`, `combat`, `chase`, `boss`, `vista`, `solved` and `silence`, plus the existing `hall`, `relic` and `fanfare`. Combat follows jackal alerts, deaths and give-ups; tension follows timed-door ticks, cracking floors and health.
+- Palettes per chamber (`src/audio/score.ts`), mapped by level id: the Antechamber (ancient, solemn), the Cisterns (dark, watery) and the Temple of the Sun (majestic, with a boss).
+- 29 cues by Scott Buckley and Kevin MacLeod (CC-BY 4.0), about 17 MB of Opus/WebM. Streams are never decoded; loops and stingers decode lazily at 24–32 kHz. `scripts/audio/build_audio.py` excerpts and levels them, finds seamless bar-length loop points, and writes the credits.
+
 ## Story, journal notes, intro and end screen
 
 - **Story** (i18n, Spanish first): the eight known chambers sealed with a nine-segment ring, the ninth never found; the Ferrand expedition of 1956, from which only Elena Vidal came back and never spoke of it; seventy years later her granddaughter Nora, with Elena's notebooks, comes for the Amber Heart. Cast and dates for later chambers: Auguste Ferrand (leader), Elena Vidal (epigrapher, Nora's grandmother), Hartmann (photographer, lost on the gallery's west ledge); "where the water remembers" points to chamber II, The Cisterns.
