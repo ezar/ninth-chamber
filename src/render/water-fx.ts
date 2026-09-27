@@ -74,6 +74,10 @@ export class WaterFx {
   private seed = 3;
   private dripClock = 0;
   private bubbleClock = 0;
+  /** Whether Nora's feet were in the water last frame, and the ground covered since the last wake ring. */
+  private wading = false;
+  private wakeDist = 0;
+  private stillClock = 0;
   /** Wet cells under a vault, where drips fall. */
   private dripCells: { x: number; z: number; ceil: number }[] = [];
   /** Share of the full particle counts (quality tier). */
@@ -158,8 +162,8 @@ export class WaterFx {
       p.age = 0;
       p.life = 0.5 + this.rand() * 0.6;
     }
-    this.ring(x, y, z, 0.5 + 1.8 * k, 1.3 + k, 0.75);
-    this.ring(x, y, z, 0.3 + 0.9 * k, 0.8, 0.5);
+    this.ring(x, y, z, 0.5 + 1.8 * k, 1.3 + k, 0.4);
+    this.ring(x, y, z, 0.3 + 0.9 * k, 0.8, 0.28);
   }
 
   /** A ring spreading on the surface. */
@@ -185,6 +189,64 @@ export class WaterFx {
       p.vel.set((this.rand() - 0.5) * 0.15, 0.7 + this.rand() * 0.5, (this.rand() - 0.5) * 0.15);
       p.age = 0;
       p.life = 4;
+    }
+  }
+
+  /** Droplets kicked up ahead of a wading foot. */
+  private kick(x: number, y: number, z: number, dx: number, dz: number, speed: number): void {
+    const n = Math.round((2 + speed * 1.2) * this.budget);
+    for (let i = 0; i < n; i++) {
+      const d = this.drops[this.nextDrop];
+      this.nextDrop = (this.nextDrop + 1) % DROPS;
+      if (!d) continue;
+      const a = (this.rand() - 0.5) * 1.6;
+      const c = Math.cos(a);
+      const sn = Math.sin(a);
+      const r = 0.4 + this.rand() * 0.5 * speed;
+      d.pos.set(x + (this.rand() - 0.5) * 0.2, y + 0.02, z + (this.rand() - 0.5) * 0.2);
+      d.vel.set((dx * c - dz * sn) * r, 0.8 + this.rand() * (0.6 + speed * 0.35), (dx * sn + dz * c) * r);
+      d.age = 0;
+      d.life = 0.35 + this.rand() * 0.35;
+    }
+  }
+
+  /**
+   * Walking into, out of and through shallow water: the simulation only
+   * reports falls into water (player.splash), so the wade is read from her
+   * feet against the surface. Entering or leaving splashes a little; moving
+   * leaves rings and kicks droplets every stride; standing still makes a faint
+   * ring now and then.
+   */
+  private wade(p: World['state']['player'], dt: number): void {
+    const s = this.surfaceAt(p.pos.x, p.pos.z);
+    const onFoot = p.mode === 'ground';
+    const wet = onFoot && s !== null && p.pos.y < s - 0.03;
+    const speed = Math.hypot(p.vel.x, p.vel.z);
+    if (s !== null && onFoot && wet !== this.wading) {
+      this.splash(p.pos.x, s, p.pos.z, 1.5 + speed * 0.9);
+      this.wakeDist = 0;
+    }
+    this.wading = wet;
+    if (!wet || s === null) return;
+    const depth = s - p.pos.y;
+    if (speed > 0.3) {
+      this.stillClock = 0;
+      this.wakeDist += speed * dt;
+      const stride = speed > 2.5 ? 0.7 : 0.5;
+      if (this.wakeDist >= stride) {
+        this.wakeDist -= stride;
+        const dx = p.vel.x / speed;
+        const dz = p.vel.z / speed;
+        // Rings trail behind her, a little wider in deeper water and at a run.
+        this.ring(p.pos.x - dx * 0.15, s, p.pos.z - dz * 0.15, 0.8 + depth + speed * 0.15, 1.3, 0.16);
+        this.kick(p.pos.x + dx * 0.25, s, p.pos.z + dz * 0.25, dx, dz, speed);
+      }
+    } else {
+      this.stillClock -= dt;
+      if (this.stillClock <= 0) {
+        this.stillClock = 1.2 + this.rand() * 1.4;
+        this.ring(p.pos.x, s, p.pos.z, 0.7 + depth * 0.5, 1.6, 0.1);
+      }
     }
   }
 
@@ -271,8 +333,10 @@ export class WaterFx {
     });
     this.dripAttr.needsUpdate = true;
 
-    // A diver breathes out now and then.
     const p = world.state.player;
+    this.wade(p, dt);
+
+    // A diver breathes out now and then.
     if (p.mode === 'dive') {
       this.bubbleClock -= dt;
       if (this.bubbleClock <= 0) {

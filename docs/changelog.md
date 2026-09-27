@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.2.3 (2026-09-27): wading and walking into the water
+
+- The simulation only reported falls into water, so walking in or out by the steps and wading through the shallows showed and sounded nothing. The water effects now read Nora's feet against the live surface (`src/render/water-fx.ts`): stepping in or out splashes a little, every stride leaves a soft ring behind her and kicks droplets ahead, and standing in the water makes a faint ring now and then.
+- Wading footsteps use the water step sound, and leave no sand prints under the water (`src/main.ts`).
+- Splash rings are softer.
+
 ## Version 0.2.2 (2026-09-27): water in the Cisterns
 
 The owner, on an iPhone: the water texture in the Cisterns was bad, and the light the water throws on the walls was switched off. Captures at 0.2.1 showed why: a flat, dark teal slab with no normal detail beyond a few regular sine waves (which read as stripes where they showed at all), no reflection of the pillars, walls or fires, a weak single-colour depth fade, a hard stairstep at every wall, refraction that bent up to 35 px and pulled the ledge in front of the water into it, a mobile tier with no foam at walls at all, and no caustics anywhere.
