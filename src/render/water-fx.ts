@@ -76,6 +76,9 @@ export class WaterFx {
   private bubbleClock = 0;
   /** Whether Nora's feet were in the water last frame, and the ground covered since the last wake ring. */
   private wading = false;
+  /** Whether she was on foot last frame, and the surface she was wading in (for the exit splash). */
+  private wasOnFoot = false;
+  private lastSurface: number | null = null;
   private wakeDist = 0;
   private stillClock = 0;
   /** Wet cells under a vault, where drips fall. */
@@ -222,11 +225,20 @@ export class WaterFx {
     const onFoot = p.mode === 'ground';
     const wet = onFoot && s !== null && p.pos.y < s - 0.03;
     const speed = Math.hypot(p.vel.x, p.vel.z);
-    if (s !== null && onFoot && wet !== this.wading) {
-      this.splash(p.pos.x, s, p.pos.z, 1.5 + speed * 0.9);
+    // Only a walking entry or exit splashes here: a fall into the water already
+    // splashed (player.splash) when her feet crossed the surface, before she
+    // landed. Stepping out onto a dry cell has no surface there, so the exit
+    // splashes on the surface she left.
+    const walkedIn = wet && !this.wading && this.wasOnFoot;
+    const walkedOut = !wet && this.wading && onFoot;
+    const at = wet ? s : this.lastSurface;
+    if ((walkedIn || walkedOut) && at !== null) {
+      this.splash(p.pos.x, at, p.pos.z, 1.5 + speed * 0.9);
       this.wakeDist = 0;
     }
     this.wading = wet;
+    this.wasOnFoot = onFoot;
+    this.lastSurface = wet ? s : null;
     if (!wet || s === null) return;
     const depth = s - p.pos.y;
     if (speed > 0.3) {
