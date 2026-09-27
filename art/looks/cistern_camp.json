@@ -1,0 +1,18 @@
+{
+  "id": "cistern_camp",
+  "background": "#08090a",
+  "exposure": 1.08,
+  "hemi": { "sky": "#51646a", "ground": "#1a140e", "intensity": 0.18 },
+  "fog": { "color": "#2c3534", "density": 0.036 },
+  "sun": null,
+  "fire": { "color": "#ffa458", "intensity": 44, "flicker": 0.3 },
+  "bloom": { "strength": 0.65, "radius": 0.5, "threshold": 0.76 },
+  "grade": { "tint": "#f0e6d6", "saturation": 0.92, "contrast": 1.12, "vignette": 0.42 },
+  "water": {
+    "deep": "#0a1d1f",
+    "tint": "#6d9f94",
+    "sky": "#1d2626",
+    "caustics": 0.55,
+    "fog": { "color": "#13332f", "density": 0.2 }
+  }
+}

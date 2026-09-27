@@ -29,6 +29,8 @@ export class Mixer {
   readonly bus: Record<BusName, GainNode>;
   private readonly userGain: Record<BusName, GainNode>;
   private readonly masterIn: GainNode;
+  private readonly water: BiquadFilterNode;
+  private underwater = 0;
   private readonly mute: GainNode;
   private readonly duckGain: GainNode;
   private readonly ducker: DuckEnvelope;
@@ -61,7 +63,9 @@ export class Mixer {
     });
     const clip = new WaveShaperNode(ctx, { curve: softClipCurve(), oversample: '2x' });
     this.mute = new GainNode(ctx, { gain: 1 });
-    this.masterIn.connect(comp).connect(clip).connect(this.mute).connect(destination);
+    // Under water everything goes dull: a low-pass that opens fully (20 kHz) in the air.
+    this.water = new BiquadFilterNode(ctx, { type: 'lowpass', frequency: 20000, Q: 0.7 });
+    this.masterIn.connect(this.water).connect(comp).connect(clip).connect(this.mute).connect(destination);
 
     this.reverbIn = new GainNode(ctx, { gain: 1 });
     this.slots = [this.makeSlot(), this.makeSlot()];
@@ -198,6 +202,21 @@ export class Mixer {
     const t = this.ctx.currentTime;
     holdParam(g, t);
     g.setTargetAtTime(Math.min(1, Math.max(0, v)), t, 0.05);
+  }
+
+  /**
+   * The listener under water: 0 in the air, 1 fully submerged. The whole mix
+   * is low-passed (to about 500 Hz), as heard through water.
+   */
+  setUnderwater(v: number): void {
+    const u = Math.min(1, Math.max(0, v));
+    if (Math.abs(u - this.underwater) < 0.01) return;
+    this.underwater = u;
+    const f = this.water.frequency;
+    const t = this.ctx.currentTime;
+    holdParam(f, t);
+    // Exponential in frequency: 20 kHz dry, 500 Hz submerged.
+    f.setTargetAtTime(20000 * Math.pow(500 / 20000, u), t, 0.06);
   }
 
   setMuted(muted: boolean): void {

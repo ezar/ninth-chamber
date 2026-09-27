@@ -357,6 +357,7 @@
     { "id": "brazier_ph2", "type": "brazier", "room": "plate_hall", "at": [12, 8] },
     { "id": "brazier_ph3", "type": "brazier", "room": "plate_hall", "at": [2, 2] },
     { "id": "brazier_ph4", "type": "brazier", "room": "plate_hall", "at": [9, 2] },
+    { "id": "torch1", "type": "torch", "room": "plate_hall", "at": [8, 1] },
 
     { "id": "z_hourglass", "type": "zone", "room": "hourglass", "at": [1, 2], "size": [7, 2] },
     { "id": "z_hourglass_plate", "type": "zone", "room": "hourglass", "at": [1, 14], "size": [6, 3] },
@@ -378,8 +379,8 @@
     { "id": "z_far_side", "type": "zone", "room": "causeway", "at": [1, 1], "size": [7, 6] },
     { "id": "block_causeway", "type": "block", "room": "causeway", "at": [4, 12] },
     { "id": "medkit_causeway", "type": "medkit", "room": "causeway", "at": [6, 5], "size": "small" },
-    { "id": "brazier_c1", "type": "brazier", "room": "causeway", "at": [2, 2] },
-    { "id": "brazier_c2", "type": "brazier", "room": "causeway", "at": [6, 2] },
+    { "id": "brazier_c1", "type": "brazier", "room": "causeway", "at": [2, 2], "lit": false },
+    { "id": "brazier_c2", "type": "brazier", "room": "causeway", "at": [6, 2], "lit": false },
 
     { "id": "z_scales", "type": "zone", "room": "scales", "at": [1, 9], "size": [10, 2] },
     { "id": "z_shelf", "type": "zone", "room": "scales", "at": [8, 6], "size": [3, 3] },
@@ -429,7 +430,10 @@
     { "when": "z_well_gap.entered", "do": ["hint hint.standingJump"] },
     { "when": "z_well_top.entered", "do": ["checkpoint", "music hall"] },
 
-    { "when": "z_causeway.entered", "do": ["checkpoint", "hint hint.fill"] },
+    { "when": "torch1.taken", "do": ["hint hint.torch"] },
+    { "when": "z_causeway.entered", "do": ["checkpoint"] },
+    { "when": "z_causeway.entered and not torchLit", "do": ["hint hint.dark"] },
+    { "when": "z_causeway.entered and torchLit", "do": ["hint hint.carving", "flag set carving_seen"] },
     { "when": "z_far_side.entered", "do": ["checkpoint"] },
 
     { "when": "z_scales.entered", "do": ["checkpoint", "hint hint.scales"] },

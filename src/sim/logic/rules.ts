@@ -2,9 +2,13 @@
  * Declarative level logic (spec §8): `when → do` rules over named signals
  * and flags. Rules fire on the rising edge of their condition.
  */
+import { guardianAction } from '../actors/guardian';
 import type { RuleFile } from '../grid/schema';
+import { extinguishTorch } from '../player/torch';
+import { mechanismAction } from '../mechanisms';
 import { findActor, resetBlock, saveCheckpoint, type World } from '../world';
 import { evalExpr, parseExpr, parseSeconds, type Expr } from './expr';
+import { runWaterAction } from '../actors/water';
 
 export interface CompiledRule {
   index: number;
@@ -98,6 +102,9 @@ function runAction(world: World, verb: string, args: string[]): void {
       world.ended = true;
       world.events.emit({ type: 'level.end', tick });
       return;
+    case 'torch.extinguish':
+      extinguishTorch(world, 'rule');
+      return;
   }
 
   // "<id>.<verb>": actions on actors.
@@ -105,6 +112,7 @@ function runAction(world: World, verb: string, args: string[]): void {
   if (dot > 0) {
     const id = verb.slice(0, dot);
     const op = verb.slice(dot + 1);
+    if (runWaterAction(world, id, op, args)) return;
     const door = findActor(world, id, 'door');
     if (door) {
       const target =
@@ -122,6 +130,7 @@ function runAction(world: World, verb: string, args: string[]): void {
       resetBlock(world, id);
       return;
     }
+    if (mechanismAction(world, id, op, args) || guardianAction(world, id, op)) return;
   }
   throw new Error(`Unknown action "${[verb, ...args].join(' ')}"`);
 }

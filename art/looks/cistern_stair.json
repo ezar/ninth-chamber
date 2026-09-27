@@ -1,0 +1,11 @@
+{
+  "id": "cistern_stair",
+  "background": "#07090a",
+  "exposure": 1.05,
+  "hemi": { "sky": "#4a5a5e", "ground": "#14100c", "intensity": 0.16 },
+  "fog": { "color": "#27302f", "density": 0.04 },
+  "sun": null,
+  "fire": { "color": "#ffa050", "intensity": 40, "flicker": 0.28 },
+  "bloom": { "strength": 0.6, "radius": 0.5, "threshold": 0.78 },
+  "grade": { "tint": "#e8e6dc", "saturation": 0.9, "contrast": 1.14, "vignette": 0.45 }
+}

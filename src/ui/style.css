@@ -763,6 +763,15 @@ body.touch.moved #look-ghost {
   right: calc(var(--pad-r) + 36px);
   bottom: calc(var(--pad-b) + 214px);
 }
+/* Third slot (the torch): above Fire, clear of Walk and Draw in portrait and landscape. */
+.tbtn-slot-c {
+  --size: 54px;
+  right: calc(var(--pad-r) + 124px);
+  bottom: calc(var(--pad-b) + 206px);
+}
+body:not(.has-torch) .tbtn-slot-c {
+  display: none;
+}
 
 /* The action button glows when something can be used. */
 body.can-act .tbtn-action:not(.on) {
@@ -809,6 +818,10 @@ body.touch #hud-stats {
   .tbtn-slot-b {
     right: calc(var(--pad-r) + 214px);
     bottom: calc(var(--pad-b) + 36px);
+  }
+  .tbtn-slot-c {
+    right: calc(var(--pad-r) + 214px);
+    bottom: calc(var(--pad-b) + 124px);
   }
 }
 
@@ -1253,7 +1266,8 @@ body.touch #hud-stats {
 /* ───────────── Combat (weapons): state styling only; the slots are positioned above. ───────────── */
 
 /* The draw / holster button glows while the pistols are out. */
-.tbtn-slot-b.armed:not(.on) {
+.tbtn-slot-b.armed:not(.on),
+.tbtn-slot-c.lit:not(.on) {
   border-color: var(--ui-amber);
   color: var(--ui-amber);
 }

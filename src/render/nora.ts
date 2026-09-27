@@ -29,6 +29,18 @@ export interface NoraPose {
   /** Aim direction relative to the body: yaw (player convention, + = to her left) and pitch (+ = up), rad. */
   aimYaw: number;
   aimPitch: number;
+  /** The torch in her left hand: 1 held, 0 (or absent) on her belt or none. */
+  torch?: number;
+  /** Swimming and diving: body pitch along the swim direction (rad, + = head up). */
+  pitch?: number;
+  /**
+   * What a 'lever' use is working (the temple's mechanisms reuse the lever
+   * mode): turning a mirror drum or setting an item in a wall slot are
+   * shoves, played with the push clip; absent for a real lever.
+   */
+  use?: 'mirror' | 'slot' | null;
+  /** Standing on a moving platform: her planted feet travel with it. */
+  riding?: boolean;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -700,6 +712,19 @@ const _v5 = new THREE.Vector3();
 const _q1 = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
 const _m1 = new THREE.Matrix4();
+const _t1 = new THREE.Vector3();
+const _t2 = new THREE.Vector3();
+/** The strap's cross-section: four faces (top, side +, bottom, side -), two vertices each. */
+const STRAP_CORNERS: readonly (readonly [number, number])[] = [
+  [-1, 1],
+  [1, 1],
+  [1, 1],
+  [1, -1],
+  [1, -1],
+  [-1, -1],
+  [-1, -1],
+  [-1, 1],
+];
 const _e = new THREE.Euler();
 const _ident = new THREE.Quaternion();
 
@@ -1762,16 +1787,22 @@ export class NoraModel {
     this.bagPivot.updateMatrixWorld(true);
   }
 
+  /** Strap normals in Nora's space, reused every frame (the strap updates per frame). */
+  private readonly strapNormals: THREE.Vector3[] = [];
+
   private updateStrap(): void {
     _m1.copy(this.root.matrixWorld).invert();
     const pts = this.strapCurve.points;
-    const normals: THREE.Vector3[] = [];
-    this.strapPoints.forEach((sp, i) => {
+    const normals = this.strapNormals;
+    _q2.setFromRotationMatrix(this.root.matrixWorld).invert();
+    for (let i = 0; i < this.strapPoints.length; i++) {
+      const sp = at(this.strapPoints, i);
       at(pts, i).copy(sp.pos).applyMatrix4(sp.bone.matrixWorld).applyMatrix4(_m1);
       _q1.setFromRotationMatrix(sp.bone.matrixWorld);
-      _q2.setFromRotationMatrix(this.root.matrixWorld).invert();
-      normals.push(sp.nrm.clone().applyQuaternion(_q1).applyQuaternion(_q2));
-    });
+      const nv = (normals[i] ??= new THREE.Vector3());
+      nv.copy(sp.nrm).applyQuaternion(_q1).applyQuaternion(_q2);
+    }
+    normals.length = this.strapPoints.length;
     const pos = this.strapGeo.getAttribute('position');
     const nrm = this.strapGeo.getAttribute('normal');
     const n = this.strapSamples;
@@ -1780,7 +1811,10 @@ export class NoraModel {
     for (let i = 0; i < n; i++) {
       const t = i / (n - 1);
       this.strapCurve.getPoint(t, _v1);
-      this.strapCurve.getTangent(t, _v2);
+      // The tangent by central difference (Curve.getTangent allocates two vectors per call).
+      this.strapCurve.getPoint(Math.max(0, t - 1e-4), _t1);
+      this.strapCurve.getPoint(Math.min(1, t + 1e-4), _t2);
+      _v2.subVectors(_t2, _t1).normalize();
       const f = t * (normals.length - 1);
       const i0 = Math.floor(f);
       const nA = at(normals, i0);
@@ -1788,19 +1822,10 @@ export class NoraModel {
       _v3.lerpVectors(nA, nB, f - i0);
       const side = _v4.crossVectors(_v2, _v3).normalize();
       const up = _v5.crossVectors(side, _v2).normalize();
-      // Four faces: top, side +, bottom, side -, each with two vertices.
-      const corners: [number, number][] = [
-        [-1, 1],
-        [1, 1],
-        [1, 1],
-        [1, -1],
-        [1, -1],
-        [-1, -1],
-        [-1, -1],
-        [-1, 1],
-      ];
-      const faceN = [up, side, up, side];
-      corners.forEach(([sx, sy], k) => {
+      for (let k = 0; k < STRAP_CORNERS.length; k++) {
+        const corner = at(STRAP_CORNERS, k);
+        const sx = corner[0];
+        const sy = corner[1];
         const vi = i * 8 + k;
         pos.setXYZ(
           vi,
@@ -1808,11 +1833,12 @@ export class NoraModel {
           _v1.y + side.y * sx * w + up.y * sy * th,
           _v1.z + side.z * sx * w + up.z * sy * th,
         );
+        // Faces alternate top/bottom (up) and the sides (side); bottom and side - face away.
         const face = Math.floor(k / 2);
-        const fn = at(faceN, face);
+        const fn = face % 2 === 0 ? up : side;
         const sg = face === 2 || face === 3 ? -1 : 1;
         nrm.setXYZ(vi, fn.x * sg, fn.y * sg, fn.z * sg);
-      });
+      }
     }
     pos.needsUpdate = true;
     nrm.needsUpdate = true;
@@ -1885,13 +1911,15 @@ export class NoraModel {
       const s = sd.s;
       this.rot(q, sd.clav, 0, s * 0.12 * a, s * 0.04);
       this.fk(q, sd.upper, _v3, _q2);
-      // Arms nearly straight when aiming, bent holding the pistols ready; wrists slightly toed in.
+      // Arms nearly straight when aiming, each from its own shoulder so the two
+      // pistols stay side by side (converging, the hands met and the pistols
+      // overlapped); bent and a little toed in holding them ready.
       const reach = lerp(0.38, 0.505, a);
       const inward = new THREE.Vector3().crossVectors(up, aimDir).multiplyScalar(s).normalize();
       const wrist = _v3
         .clone()
         .addScaledVector(aimDir, reach)
-        .addScaledVector(inward, 0.05 + 0.03 * a);
+        .addScaledVector(inward, lerp(0.05, 0.012, a));
       const fingers = aimDir.clone().addScaledVector(up, -0.3).normalize();
       this.armIK(q, sd, wrist, new THREE.Vector3(s * 0.9, -0.6, 0.2), fingers, inward);
       q.curl[s < 0 ? 0 : 1] = 0.95;

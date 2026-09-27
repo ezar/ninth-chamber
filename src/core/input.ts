@@ -27,6 +27,7 @@ const KEY_BUTTONS: Record<string, Button> = {
   KeyR: 'weapons',
   KeyH: 'medkit',
   KeyG: 'flare',
+  KeyT: 'torch',
   KeyI: 'inventory',
   // Spec §6 "Apuntado": Tab switches target (the inventory keeps I).
   Tab: 'target',
@@ -171,7 +172,7 @@ const PAD_BUTTONS: [number, Button][] = [
   [6, 'walk'], // LT
   [5, 'weapons'], // RB (spec §13)
   [4, 'weapons'], // LB: draw / holster on either bumper (owner's request); Y stays the medkit
-  [12, 'flare'], // d-pad up (flares arrive in phase 2)
+  [12, 'torch'], // d-pad up: put the torch away / take it out (the flare slot; flares are not in yet)
   [3, 'medkit'], // Y
   [8, 'inventory'], // Select
   [9, 'pause'], // Start

@@ -59,6 +59,16 @@ class ScannedSkin {
   private readonly hipsBindLocal = new THREE.Vector3();
   private readonly hipsParentInv = new THREE.Matrix4();
   private readonly materials: THREE.Material[] = [];
+  /**
+   * Where each visible palm is, in its hand bone's frame: the centroid of the
+   * vertices the hand bone mostly moves. The scan's hand joints sit well off
+   * the palms (about 13 cm at the wrist's edge), so things held are placed
+   * here rather than at the joint.
+   */
+  private readonly palms: ({ mesh: THREE.SkinnedMesh; bone: THREE.Bone; local: THREE.Vector3 } | null)[] = [
+    null,
+    null,
+  ];
 
   constructor(readonly scene: THREE.Object3D) {
     scene.updateMatrixWorld(true);
@@ -94,6 +104,25 @@ class ScannedSkin {
       this.hipsParentInv.copy(hips.parent.matrixWorld).invert();
     }
     if (hips) this.hipsBindLocal.copy(hips.position);
+    const meshes: THREE.SkinnedMesh[] = [];
+    scene.traverse((o) => {
+      if (o instanceof THREE.SkinnedMesh) meshes.push(o);
+    });
+    (['hand_L', 'hand_R'] as const).forEach((name, side) => {
+      this.palms[side] = palmAnchor(meshes, name);
+    });
+  }
+
+  /** World position of a visible palm (0 left, 1 right); false if the scan has no weights for it. */
+  palm(side: 0 | 1, out: THREE.Vector3): boolean {
+    const a = this.palms[side];
+    if (!a) return false;
+    a.bone.updateWorldMatrix(true, false);
+    a.mesh.updateWorldMatrix(true, false);
+    // As the skinning shader does: mesh × bindInverse × bone × (boneInverse × bind × v).
+    out.copy(a.local).applyMatrix4(a.bone.matrixWorld).applyMatrix4(a.mesh.bindMatrixInverse);
+    out.applyMatrix4(a.mesh.matrixWorld);
+    return true;
   }
 
   apply(pose: AnimPose): void {
@@ -149,6 +178,36 @@ class ScannedSkin {
   }
 }
 
+/** The centroid, in the bone's bind frame, of the vertices a bone moves with weight over one half. */
+function palmAnchor(
+  meshes: readonly THREE.SkinnedMesh[],
+  boneName: string,
+): { mesh: THREE.SkinnedMesh; bone: THREE.Bone; local: THREE.Vector3 } | null {
+  let best: { mesh: THREE.SkinnedMesh; bone: THREE.Bone; local: THREE.Vector3; n: number } | null = null;
+  const v = new THREE.Vector3();
+  for (const mesh of meshes) {
+    const bones = mesh.skeleton.bones;
+    const bi = bones.findIndex((b) => b.name === boneName);
+    const bone = bones[bi];
+    const inverse = mesh.skeleton.boneInverses[bi];
+    const index = mesh.geometry.getAttribute('skinIndex');
+    const weight = mesh.geometry.getAttribute('skinWeight');
+    const position = mesh.geometry.getAttribute('position');
+    if (!bone || !inverse || !index || !weight || !position) continue;
+    const sum = new THREE.Vector3();
+    let n = 0;
+    for (let i = 0; i < position.count; i++) {
+      let w = 0;
+      for (let k = 0; k < 4; k++) if (index.getComponent(i, k) === bi) w += weight.getComponent(i, k);
+      if (w <= 0.5) continue;
+      sum.add(v.fromBufferAttribute(position, i).applyMatrix4(mesh.bindMatrix).applyMatrix4(inverse));
+      n++;
+    }
+    if (n > (best?.n ?? 0)) best = { mesh, bone, local: sum.divideScalar(n), n };
+  }
+  return best && { mesh: best.mesh, bone: best.bone, local: best.local };
+}
+
 async function loadClip(url: string): Promise<Clip> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
@@ -173,11 +232,12 @@ const _qa = new THREE.Quaternion();
 const _qb = new THREE.Quaternion();
 const _axisX = new THREE.Vector3(1, 0, 0);
 const _axisY = new THREE.Vector3(0, 1, 0);
-function lowReady(p: AnimPose, w: number): void {
-  for (const [s, sign] of [
-    ['L', -1],
-    ['R', 1],
+function lowReady(p: AnimPose, wl: number, wr: number): void {
+  for (const [s, sign, w] of [
+    ['L', -1, wl],
+    ['R', 1, wr],
   ] as const) {
+    if (w <= 1e-3) continue;
     _qa.setFromAxisAngle(_axisX, READY_SHOULDER * w);
     p.q(JOINT_INDEX[`upperArm_${s}`]).premultiply(_qa);
     // Toe-in turns the left forearm towards +X and the right one towards -X.
@@ -186,6 +246,36 @@ function lowReady(p: AnimPose, w: number): void {
     p.q(JOINT_INDEX[`lowerArm_${s}`]).premultiply(_qa);
     p.q(JOINT_INDEX[`hand_${s}`]).premultiply(_qa);
   }
+}
+
+/**
+ * Holding the torch in the left hand: the upper arm raised forward about 30°
+ * and a little out, the elbow bent so the torch stands up ahead of her
+ * shoulder, lighting the way without covering her face. Like lowReady, the
+ * rotations are pre-multiplied in model space, only for the left arm; most of
+ * the clip's arm swing is taken out first so the flame rides steadily over
+ * the walk and run clips.
+ */
+const HOLD_LIFT = 0.52;
+const HOLD_OUT = 0.22;
+const HOLD_ELBOW = 1.3;
+/** Share of the clip's own left-arm motion removed while holding the torch. */
+const HOLD_STEADY = 0.75;
+const _axisZ = new THREE.Vector3(0, 0, 1);
+const _rest = new THREE.Quaternion();
+function holdTorch(p: AnimPose, w: number): void {
+  // Out to her left: the left arm hangs at -X, so a negative turn about Z.
+  _qb.setFromAxisAngle(_axisZ, -HOLD_OUT * w);
+  const upper = p.q(JOINT_INDEX.upperArm_L).slerp(_rest, HOLD_STEADY * w);
+  _qa.setFromAxisAngle(_axisX, HOLD_LIFT * w).premultiply(_qb);
+  upper.premultiply(_qa);
+  _qa.setFromAxisAngle(_axisX, (HOLD_LIFT + HOLD_ELBOW) * w).premultiply(_qb);
+  p.q(JOINT_INDEX.lowerArm_L)
+    .slerp(_rest, HOLD_STEADY * w)
+    .premultiply(_qa);
+  p.q(JOINT_INDEX.hand_L)
+    .slerp(_rest, HOLD_STEADY * w)
+    .premultiply(_qa);
 }
 
 export class NoraRig {
@@ -286,6 +376,7 @@ export class NoraRig {
       const armed = upright ? pose.weapons * pose.aiming : 0;
       const ready = upright ? pose.weapons * (1 - pose.aiming) : 0;
       this.readyW += (ready - this.readyW) * (1 - Math.exp(-Math.max(0, dt) * 10));
+      this.torchW += ((pose.torch ?? 0) - this.torchW) * (1 - Math.exp(-Math.max(0, dt) * 9));
       this.aimW += (armed - this.aimW) * (1 - Math.exp(-Math.max(0, dt) * 14));
       if (this.aimW > 1e-3)
         this.animator.setProceduralOverride(Math.max(this.aimW, this.override.weight), AIM_JOINTS);
@@ -293,13 +384,17 @@ export class NoraRig {
       const root = this.driver.root;
       this.rootPos.copy(root.position);
       this.animator.update(pose, dt, this.procPose, this.rootPos, root.rotation.y, this.shown);
-      if (this.readyW > 1e-3) lowReady(this.shown, this.readyW);
+      // With the torch in her left hand only the right arm holds a pistol at low ready.
+      if (this.readyW > 1e-3) lowReady(this.shown, this.readyW * (1 - this.torchW), this.readyW);
+      if (this.torchW > 1e-3) holdTorch(this.shown, this.torchW);
       skin.apply(this.shown);
     } else skin.apply(this.procPose);
   }
 
   /** Weight of the low-ready arms layer (pistols drawn, no target). */
   private readyW = 0;
+  /** Weight of the hold-torch left-arm layer. */
+  private torchW = 0;
 
   /** Last opacity set (the camera fades her when it closes in), for things she holds. */
   opacity = 1;
@@ -317,7 +412,7 @@ export class NoraRig {
    */
   /**
    * Frame for something gripped in a visible hand (0 = left, 1 = right): the
-   * wrist position and the direction the forearm points (hands stay rigid
+   * palm position and the direction the forearm points (hands stay rigid
    * with the forearm, so a held pistol's barrel follows it). False until the
    * scanned model has loaded.
    */
@@ -329,6 +424,7 @@ export class NoraRig {
     pos.setFromMatrixPosition(hand.matrixWorld);
     dir.setFromMatrixPosition(fore.matrixWorld);
     dir.subVectors(pos, dir).normalize();
+    this.skin?.palm(side, pos);
     return true;
   }
 

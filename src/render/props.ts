@@ -14,12 +14,36 @@ import type { World } from '../sim/world';
 import { surfaceParams, type SurfaceSet } from './materials';
 import { DOOR_MODEL_HEIGHT, dressLevel, PropLibrary, type PropModel } from './prop-models';
 import { cracked } from './textures';
+import { torchModel } from './torch';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
+
+/**
+ * Each chamber's relic in its own light (the art bible: the relic is always
+ * the brightest point of its chamber). The Antechamber's Amber Heart keeps
+ * the model's amber; the Cisterns' Tide Glass is a cold sea-green glass.
+ */
+const RELIC_TINTS: Readonly<Record<string, { color: string; emissive: string; light: string }>> = {
+  cisterns: { color: '#bfeee6', emissive: '#46d0c4', light: '#7ee6dc' },
+};
+
+/** Tints a relic gem material for its chamber (in place). */
+function tintRelic(m: THREE.MeshStandardMaterial, levelId: string): void {
+  const t = RELIC_TINTS[levelId];
+  if (!t) return;
+  m.color.set(t.color);
+  m.emissive.set(t.emissive);
+}
 
 export interface FireSource {
   pos: THREE.Vector3;
   phase: number;
+  /** Brazier entity id. */
+  id: string;
+  /** Starts cold, waiting for a flare (the Cisterns' dark hall). */
+  cold: boolean;
+  /** How much it burns now, 0..1: a lit cold brazier flares up over a second. */
+  level: number;
 }
 
 export interface PropMaterials {
@@ -36,12 +60,28 @@ export class Props {
   readonly fires: FireSource[] = [];
   readonly relicLight: THREE.PointLight;
   private readonly actorViews = new Map<string, THREE.Object3D>();
+  /** Actors another view draws instead (e.g. a level's own relic model). */
+  readonly hidden = new Set<string>();
   private readonly actors = new Map<string, Actor>();
   private readonly tileViews = new Map<string, THREE.Mesh>();
-  private readonly flames: { sprite: THREE.Sprite; base: THREE.Vector3; phase: number; scale: number }[] = [];
-  private readonly embers: THREE.Points;
-  private readonly emberData: { origin: THREE.Vector3; t: number; speed: number; drift: THREE.Vector2 }[] =
-    [];
+  private readonly flames: {
+    sprite: THREE.Sprite;
+    base: THREE.Vector3;
+    phase: number;
+    scale: number;
+    fire: number;
+  }[] = [];
+  /** Four flame layers shared by every lit brazier; a cold brazier's sprites get their own, to fade in. */
+  private readonly flameMaterials: THREE.SpriteMaterial[];
+  /** Embers of every fire in one particle system (drawn wherever the rooms are). */
+  readonly embers: THREE.Points;
+  private readonly emberData: {
+    origin: THREE.Vector3;
+    t: number;
+    speed: number;
+    drift: THREE.Vector2;
+    fire: number;
+  }[] = [];
   private relicMesh: THREE.Mesh | null = null;
   /** Emissive gain of the current relic view (the baked gem needs more than the stand-in). */
   private relicGain = 1;
@@ -51,15 +91,31 @@ export class Props {
   private lib: PropLibrary | null = null;
   private readonly brazierViews: THREE.Group[] = [];
   private coals: THREE.MeshStandardMaterial | null = null;
+  /** Coals of each cold brazier (their own material, dark until lit), by fire index. */
+  private readonly coldCoals = new Map<number, THREE.MeshStandardMaterial>();
+  /** Settles once the baked models have replaced the stand-ins. */
+  readonly modelsLoaded: Promise<void>;
 
   constructor(
     private readonly level: Level,
     private readonly mats: PropMaterials,
   ) {
-    this.relicLight = new THREE.PointLight('#ffab3d', 0, 14, 2);
+    this.relicLight = new THREE.PointLight(RELIC_TINTS[level.id]?.light ?? '#ffab3d', 0, 14, 2);
     this.group.add(this.relicLight);
 
     const flameTex = flameTexture();
+    // Four flame layers, one material each shared by every brazier (not one per sprite).
+    this.flameMaterials = [0, 1, 2, 3].map(
+      (k) =>
+        new THREE.SpriteMaterial({
+          map: flameTex,
+          color: k === 0 ? '#ffd9a0' : '#ff8a3a',
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          transparent: true,
+          fog: false,
+        }),
+    );
     for (const e of level.entities) {
       if (e.type !== 'brazier') continue;
       const [cx, cz] = e.at;
@@ -70,24 +126,25 @@ export class Props {
       this.group.add(b);
       this.brazierViews.push(b);
       const firePos = new THREE.Vector3(center(cx), y + 1.25, center(cz));
-      this.fires.push({ pos: firePos, phase: this.fires.length * 1.7 });
+      const cold = !e.lit;
+      this.fires.push({ pos: firePos, phase: this.fires.length * 1.7, id: e.id, cold, level: cold ? 0 : 1 });
       for (let k = 0; k < 4; k++) {
-        const m = new THREE.SpriteMaterial({
-          map: flameTex,
-          color: k === 0 ? '#ffd9a0' : '#ff8a3a',
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          transparent: true,
-          fog: false,
-        });
-        const s = new THREE.Sprite(m);
+        const shared = this.flameMaterials[k];
+        const s = new THREE.Sprite(cold ? shared?.clone() : shared);
         const scale = k === 0 ? 0.55 : 0.8 - k * 0.1;
         s.scale.set(scale * 0.7, scale, 1);
         const base = firePos
           .clone()
           .add(new THREE.Vector3((k - 1.5) * 0.08, 0.15 + k * 0.03, ((k * 7) % 3) * 0.05 - 0.05));
         s.position.copy(base);
-        this.flames.push({ sprite: s, base, phase: k * 2.1 + this.fires.length, scale });
+        s.visible = !cold;
+        this.flames.push({
+          sprite: s,
+          base,
+          phase: k * 2.1 + this.fires.length,
+          scale,
+          fire: this.fires.length - 1,
+        });
         this.group.add(s);
       }
     }
@@ -102,6 +159,7 @@ export class Props {
         t: (i * 0.37) % 1,
         speed: 0.6 + ((i * 13) % 7) * 0.12,
         drift: new THREE.Vector2(((i * 17) % 11) / 11 - 0.5, ((i * 29) % 13) / 13 - 0.5),
+        fire: i % Math.max(1, this.fires.length),
       });
     }
     const eg = new THREE.BufferGeometry();
@@ -120,19 +178,28 @@ export class Props {
 
     this.buildSpikes();
     this.buildCrumbleTiles();
-    void PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
+    this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
   }
 
   /** Swaps the procedural stand-ins for the baked models and dresses the rooms. */
   private useModels(lib: PropLibrary): void {
     this.lib = lib;
     this.coals = lib.material('brazier', 'coals');
-    for (const b of this.brazierViews) {
+    this.brazierViews.forEach((b, i) => {
       const m = lib.instance('brazier');
-      if (!m) break;
+      if (!m) return;
       b.clear();
       b.add(m);
-    }
+      // A cold brazier's coals get their own material, dark until a flare lights them.
+      const coals = this.coals;
+      if (!this.fires[i]?.cold || !coals) return;
+      const own = coals.clone();
+      own.emissiveIntensity = 0;
+      this.coldCoals.set(i, own);
+      m.traverse((o) => {
+        if (o instanceof THREE.Mesh && o.material === coals) o.material = own;
+      });
+    });
     for (const [id, holder] of this.actorViews) {
       const a = this.actors.get(id);
       if (a) this.upgrade(holder, a);
@@ -178,6 +245,7 @@ export class Props {
         if (m && gem instanceof THREE.Mesh && gem.material instanceof THREE.MeshStandardMaterial) {
           m.position.y = -0.11; // the view is placed at the relic's centre
           gem.material = gem.material.clone();
+          tintRelic(gem.material, this.level.id);
           this.relicMesh = gem;
           this.relicGain = 2.4;
         }
@@ -265,6 +333,7 @@ export class Props {
         break;
       case 'relic': {
         const r = relic();
+        tintRelic(r.material, this.level.id);
         this.relicMesh = r;
         obj = r;
         break;
@@ -272,6 +341,26 @@ export class Props {
       case 'medkit':
         obj = medkit();
         break;
+      case 'torch': {
+        // Lying on the floor, the head towards +X raised on its binding (see TorchView.placeOnFloor).
+        const t = torchModel().group;
+        t.rotation.z = -Math.PI / 2 + 0.12;
+        t.position.set(-0.08, 0.06, 0);
+        obj = new THREE.Group().add(t);
+        break;
+      }
+      case 'flares':
+        obj = flarePack();
+        break;
+      case 'watergate': {
+        const e = this.level.entities.find((x) => x.id === a.id);
+        const wall = e?.type === 'watergate' ? e.wall : undefined;
+        obj = sluice(this.mats);
+        const d = wall ? DIR_VEC[wall] : { x: 0, z: 0 };
+        obj.position.set(center(a.cx) + d.x * (BLOCK / 2 - 0.12), 0, center(a.cz) + d.z * (BLOCK / 2 - 0.12));
+        obj.rotation.y = wall ? DIR_YAW[wall] : 0;
+        break;
+      }
       case 'note': {
         const e = this.level.entities.find((x) => x.id === a.id);
         if (e?.type !== 'note') return null;
@@ -290,6 +379,7 @@ export class Props {
         break;
       }
       case 'zone':
+      case 'brazier':
         return null;
     }
     if (!obj) return null;
@@ -353,8 +443,22 @@ export class Props {
         case 'plate':
           v.position.set(center(a.cx), floorY + (a.pressed ? 0.01 : 0.04), center(a.cz));
           break;
+        case 'watergate': {
+          // The sluice's bronze gate rides the water it holds back.
+          const gate = v.getObjectByName('gate');
+          const water = world.state.water[a.rooms[0] ?? '']?.y ?? (a.raised ? a.high : a.low);
+          const frame = v.children[0];
+          if (frame) frame.position.y = a.low - 0.5;
+          if (gate) gate.position.y = water - a.low + 0.5 - 0.6;
+          break;
+        }
+        case 'flares':
+          v.visible = !a.taken;
+          v.position.set(center(a.cx), floorY, center(a.cz));
+          break;
         case 'secret':
         case 'medkit':
+        case 'torch':
           v.visible = !a.taken;
           v.position.set(center(a.cx), floorY + (a.kind === 'secret' ? 0.05 : 0), center(a.cz));
           if (a.kind === 'secret') v.rotation.y = time * 0.6;
@@ -379,6 +483,7 @@ export class Props {
         default:
           break;
       }
+      if (this.hidden.has(a.id)) v.visible = false;
     }
 
     // Collapsing tiles shake while cracked and drop once fallen.
@@ -403,24 +508,51 @@ export class Props {
       }
     }
 
+    // Cold braziers catch over a second once a flare lights them (and go cold again on a restart).
+    for (const f of this.fires) {
+      if (!f.cold) continue;
+      const a = world.state.actors.find((x) => x.kind === 'brazier' && x.id === f.id);
+      const target = a?.kind === 'brazier' && a.lit ? 1 : 0;
+      f.level = target > f.level ? Math.min(1, f.level + dt * 1.2) : target;
+    }
+    for (const [i, m] of this.coldCoals) m.emissiveIntensity = 2.8 * (this.fires[i]?.level ?? 1);
+
     // Flames and embers.
     for (const f of this.flames) {
+      const lit = this.fires[f.fire]?.level ?? 1;
+      f.sprite.visible = lit > 0.01;
+      if (!f.sprite.visible) continue;
       const n = Math.sin(time * 9 + f.phase) * 0.5 + Math.sin(time * 15.3 + f.phase * 2) * 0.3;
+      const grow = 0.3 + 0.7 * lit;
       f.sprite.position.set(f.base.x + Math.sin(time * 3 + f.phase) * 0.02, f.base.y + n * 0.04, f.base.z);
-      f.sprite.scale.set(f.scale * (0.62 + n * 0.08), f.scale * (1 + n * 0.18), 1);
-      (f.sprite.material as THREE.SpriteMaterial).opacity = 0.85 + n * 0.15;
+      f.sprite.scale.set(f.scale * (0.62 + n * 0.08) * grow, f.scale * (1 + n * 0.18) * grow, 1);
+      // A cold brazier's own materials fade with its fire; the shared ones flicker below.
+      const m = f.sprite.material as THREE.SpriteMaterial;
+      if (!this.flameMaterials.includes(m)) m.opacity = (0.85 + n * 0.15) * lit;
     }
+    this.flameMaterials.forEach((m, k) => {
+      const n = Math.sin(time * 9 + k * 2.1) * 0.5 + Math.sin(time * 15.3 + k * 4.2) * 0.3;
+      m.opacity = 0.85 + n * 0.15;
+    });
     const attr = this.embers.geometry.getAttribute('position') as THREE.BufferAttribute;
-    this.emberData.forEach((e, i) => {
+    // Only the tier's share is drawn (the renderer's particle budget), so only that moves.
+    const drawn = Math.min(this.emberData.length, this.embers.geometry.drawRange.count);
+    for (let i = 0; i < drawn; i++) {
+      const e = this.emberData[i];
+      if (!e) break;
       e.t += dt * e.speed * 0.5;
       if (e.t > 1) e.t -= 1;
+      if ((this.fires[e.fire]?.level ?? 1) < e.t) {
+        attr.setXYZ(i, e.origin.x, -1000, e.origin.z);
+        continue;
+      }
       attr.setXYZ(
         i,
         e.origin.x + e.drift.x * e.t * 0.8 + Math.sin(time * 2 + i) * 0.05 * e.t,
         e.origin.y + 0.2 + e.t * 2.2,
         e.origin.z + e.drift.y * e.t * 0.8,
       );
-    });
+    }
     attr.needsUpdate = true;
     if (this.relicMesh) {
       const m = this.relicMesh.material as THREE.MeshStandardMaterial;
@@ -432,7 +564,8 @@ export class Props {
   }
 }
 
-function flameTexture(): THREE.Texture {
+/** A flame's soft teardrop, for additive sprites (braziers and the torch). */
+export function flameTexture(): THREE.Texture {
   const c = document.createElement('canvas');
   c.width = 64;
   c.height = 128;
@@ -578,7 +711,7 @@ function idol(variant: string, m: PropMaterials): THREE.Group {
   return g;
 }
 
-function relic(): THREE.Mesh {
+function relic(): THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial> {
   const mat = new THREE.MeshPhysicalMaterial({
     color: '#f2a93b',
     emissive: '#ff9a2a',
@@ -592,6 +725,56 @@ function relic(): THREE.Mesh {
   const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), mat);
   mesh.scale.set(1, 1.3, 1);
   return mesh;
+}
+
+/** A bundle of red flares tied with cord, lying on the floor. */
+function flarePack(): THREE.Group {
+  const g = new THREE.Group();
+  const red = new THREE.MeshStandardMaterial({ color: '#9a2416', roughness: 0.55 });
+  const cap = new THREE.MeshStandardMaterial({ color: '#d8cdb4', roughness: 0.7 });
+  const cord = new THREE.MeshStandardMaterial({ color: '#5a4630', roughness: 0.9 });
+  const stick = new THREE.CylinderGeometry(0.024, 0.024, 0.3, 8);
+  const top = new THREE.CylinderGeometry(0.025, 0.025, 0.035, 8);
+  for (let i = 0; i < 3; i++) {
+    const s = new THREE.Mesh(stick, red);
+    s.rotation.z = Math.PI / 2;
+    s.position.set(0, 0.026 + (i === 2 ? 0.042 : 0), (i === 2 ? 0 : i - 0.5) * 0.05);
+    const c = new THREE.Mesh(top, cap);
+    c.rotation.z = Math.PI / 2;
+    c.position.set(0.16, s.position.y, s.position.z);
+    g.add(s, c);
+  }
+  const tie = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.008, 6, 14), cord);
+  tie.rotation.y = Math.PI / 2;
+  tie.position.y = 0.045;
+  g.add(tie);
+  g.rotation.y = 0.6;
+  return g;
+}
+
+/** A sluice against its wall: a stone frame and a bronze gate that rides the water level. */
+function sluice(m: PropMaterials): THREE.Group {
+  const g = new THREE.Group();
+  const frame = new THREE.Group();
+  const post = new THREE.BoxGeometry(0.3, 6, 0.3);
+  for (const x of [-0.8, 0.8]) {
+    const p = new THREE.Mesh(post, m.darkMetal);
+    p.position.set(x, 3, 0);
+    frame.add(p);
+  }
+  g.add(frame);
+  const gate = new THREE.Group();
+  gate.name = 'gate';
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.2, 0.08), m.bronze);
+  const bar = new THREE.BoxGeometry(1.36, 0.07, 0.12);
+  for (const y of [-0.45, 0, 0.45]) {
+    const b = new THREE.Mesh(bar, m.darkMetal);
+    b.position.y = y;
+    gate.add(b);
+  }
+  gate.add(panel);
+  frame.add(gate);
+  return g;
 }
 
 function medkit(): THREE.Group {

@@ -5,6 +5,8 @@
  * and diff-friendly. Exceptions (slopes, flags, materials) go in `overrides`.
  */
 import { z } from 'zod';
+import { guardianEntity } from '../actors/guardian-schema';
+import { mechanismEntities } from '../mechanisms/schema';
 import { ENEMY_TYPES } from '../player/tuning';
 
 export const MATERIALS = ['sand', 'stone', 'metal', 'wood', 'water'] as const;
@@ -27,6 +29,8 @@ const legendEntry = z.union([
       ceil: clicks.optional(),
       mat: z.enum(MATERIALS).optional(),
       flags: z.array(z.enum(SECTOR_FLAGS)).optional(),
+      /** Water surface in clicks (spec §4 `water`). */
+      water: clicks.optional(),
     })
     .strict(),
 ]);
@@ -55,6 +59,8 @@ const room = z
     legend: z.record(z.string().length(1), legendEntry),
     rows: z.array(z.string()).min(1),
     overrides: z.array(override).default([]),
+    /** Water surface in clicks for the whole room: every sector whose floor lies under it is wet. */
+    water: clicks.optional(),
     look: z.string().optional(),
     reverb: z.string().optional(),
     music: z.string().optional(),
@@ -102,7 +108,44 @@ const entity = z.discriminatedUnion('type', [
     .strict(),
   z.object({ ...entityBase, type: z.literal('relic') }).strict(),
   z.object({ ...entityBase, type: z.literal('medkit'), size: z.enum(['small', 'large']) }).strict(),
-  z.object({ ...entityBase, type: z.literal('brazier') }).strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('brazier'),
+      /** A cold brazier gives no light and cannot light the torch until a burning flare held or thrown close to it lights it (signal `<id>.lit`). */
+      lit: z.boolean().default(true),
+    })
+    .strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('torch'),
+      /** Found burning (it can also be lit at a brazier). */
+      lit: z.boolean().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('watergate'),
+      /** The wall the sluice is set in (for its view). */
+      wall: z.enum(FACINGS),
+      /** Rooms whose water it moves (default: its own). */
+      rooms: z.array(z.string().min(1)).min(1).optional(),
+      /** Water surface when lowered and raised, in clicks relative to the gate's room origin. */
+      low: clicks,
+      high: clicks,
+      raised: z.boolean().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('flares'),
+      /** Flares in the pack. */
+      count: z.number().int().positive().optional(),
+    })
+    .strict(),
   z
     .object({
       ...entityBase,
@@ -122,6 +165,8 @@ const entity = z.discriminatedUnion('type', [
       size: cell.default([1, 1]),
     })
     .strict(),
+  ...mechanismEntities,
+  guardianEntity,
 ]);
 
 const rule = z

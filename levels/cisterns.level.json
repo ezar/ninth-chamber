@@ -1,0 +1,772 @@
+{
+  "schema": 1,
+  "id": "cisterns",
+  "name": "level.cisterns",
+  "par": 840,
+  "start": {
+    "room": "stair",
+    "at": [2, 9],
+    "face": "N"
+  },
+  "rooms": [
+    {
+      "id": "stair",
+      "origin": [0, 0, 16],
+      "ceil": 10,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "S": 0,
+        "a": -1,
+        "b": -2,
+        "c": -3,
+        "d": -4,
+        "e": -5,
+        "f": -6,
+        "g": -7,
+        "h": -8
+      },
+      "rows": [
+        "##h##",
+        "#hhh#",
+        "#ggg#",
+        "#fff#",
+        "#eee#",
+        "#ddd#",
+        "#ccc#",
+        "#bbb#",
+        "#aaa#",
+        "#.S.#",
+        "#####"
+      ],
+      "look": "cistern_stair",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "camp",
+      "origin": [-3, -9, 8],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        ",": -1,
+        "1": 1
+      },
+      "rows": [
+        "####1####",
+        "#11.....#",
+        "#11.,,..#",
+        "#...,,..#",
+        "#.,,,..1#",
+        "#.,,..11#",
+        "#.....11#",
+        "#.......#",
+        "#####1###"
+      ],
+      "water": 1,
+      "look": "cistern_camp",
+      "reverb": "water_cistern"
+    },
+    {
+      "id": "cistern",
+      "origin": [-4, -20, 8],
+      "ceil": 20,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "W": -8,
+        "k": 0,
+        "3": 3
+      },
+      "rows": [
+        "#####.######",
+        "#..........#",
+        "#WWWWWWWWWW#",
+        "#WW#WWWW#WW#",
+        "#WWWWWWWWWW#",
+        "#WWWWWWWWWk3",
+        "#WWWWWWWWWW#",
+        "#WW#WWWW#WW#",
+        "#WWWWWWWWWW#",
+        "#..........#",
+        "#####.######"
+      ],
+      "water": -1,
+      "look": "cistern_hall",
+      "reverb": "water_cistern"
+    },
+    {
+      "id": "passage",
+      "origin": [-1, -30, 8],
+      "ceil": 10,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "W": -10,
+        "L": {
+          "floor": -10,
+          "ceil": -3
+        }
+      },
+      "rows": ["##.##", "#...#", "#WWW#", "#LLL#", "#LLL#", "#LLL#", "#WWW#", "#...#", "#...#", "##.##"],
+      "water": -1,
+      "look": "cistern_drowned",
+      "reverb": "water_cistern"
+    },
+    {
+      "id": "drowned",
+      "origin": [-9, -47, 8],
+      "ceil": 10,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "W": -10,
+        "L": {
+          "floor": -10,
+          "ceil": -3
+        },
+        "A": -10,
+        "G": -10,
+        "g": 0
+      },
+      "rows": [
+        "#########.#",
+        "#########.#",
+        "########...",
+        "########WWW",
+        "#########L#",
+        "#########L#",
+        "#GG##LLLLL#",
+        "#Gg##L###L#",
+        "#GGLLL###L#",
+        "#########A#",
+        "#########L#",
+        "#########L#",
+        "#########L#",
+        "#########L#",
+        "#########LL",
+        "##########W",
+        "##########."
+      ],
+      "water": -1,
+      "look": "cistern_drowned",
+      "reverb": "water_cistern"
+    },
+    {
+      "id": "sluice",
+      "origin": [-6, -58, 8],
+      "ceil": 18,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "D": 0,
+        "P": -16,
+        "b": -8
+      },
+      "rows": [
+        "######D####",
+        "##.......##",
+        "##PPPPPPP##",
+        "##PPPPPPP##",
+        "#bbPPPPPP##",
+        "#bbPPPPPP##",
+        "##PPPPPPP##",
+        "##PPPPPPP##",
+        "##.......##",
+        "##.......##",
+        "######.####"
+      ],
+      "look": "cistern_sluice",
+      "reverb": "water_cistern"
+    },
+    {
+      "id": "aqueduct",
+      "origin": [-12, -68, 8],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        ",": -1
+      },
+      "rows": [
+        "#.###########",
+        "#...........#",
+        "#.,,,,,,,,,.#",
+        "#...........#",
+        "#...........#",
+        "#.,,,,,,,,,.#",
+        "#...........#",
+        "#...........#",
+        "###########..",
+        "############."
+      ],
+      "water": 0,
+      "look": "cistern_aqueduct",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "dark",
+      "origin": [-16, -80, 8],
+      "ceil": 14,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "1": 0,
+        "~": -10,
+        "k": 0,
+        "3": 3,
+        "D": 0
+      },
+      "rows": [
+        "######D#####",
+        "#..~~~.~~..#",
+        "#.1~~~~~~1.#",
+        "#~~~~~~~~~~#",
+        "#~~~#~#~~~k3",
+        "#~~~~.~~~~~#",
+        "#~~~#~#~~~~#",
+        "#~~~~~~~~~~#",
+        "#~~~~~~~~~~#",
+        "#...~~~~...#",
+        "#.....~....#",
+        "#####.######"
+      ],
+      "water": -1,
+      "look": "cistern_dark",
+      "reverb": "water_cistern"
+    },
+    {
+      "id": "landing",
+      "origin": [-13, -87, 8],
+      "ceil": 10,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4
+      },
+      "rows": ["#######", "#4321..", "#......", "#.....#", "#.....#", "#.....#", "###.###"],
+      "look": "cistern_landing",
+      "reverb": "stone_small"
+    },
+    {
+      "id": "tide",
+      "origin": [-6, -91, 8],
+      "ceil": 24,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "~": -18,
+        "i": 0,
+        "x": 2,
+        "A": {
+          "floor": -18,
+          "ceil": -12
+        },
+        "r": -8,
+        "s": -6,
+        "4": -4
+      },
+      "rows": [
+        "###A#######",
+        "#~~~~~~~~~#",
+        "#~~~~~~~~~#",
+        "#~~~~~~~~~#",
+        "#~~~~iii~~#",
+        "..~~~ixi~~#",
+        "..~~~iii~~#",
+        "#4~~~~~~~~#",
+        "#s~~~~~~~~#",
+        "#rrrrrrrrr#",
+        "###########"
+      ],
+      "look": "cistern_tide",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "cave",
+      "origin": [-6, -98, 8],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": -8,
+        "~": -18,
+        "A": {
+          "floor": -18,
+          "ceil": -12
+        }
+      },
+      "rows": ["#######", "#..~~~#", "#..~~~#", "#~~~~~#", "###A###", "###A###", "###A###"],
+      "look": "cistern_dark",
+      "reverb": "stone_small"
+    }
+  ],
+  "entities": [
+    {
+      "id": "z_start",
+      "type": "zone",
+      "room": "stair",
+      "at": [1, 7],
+      "size": [3, 3]
+    },
+    {
+      "id": "brazier_stair1",
+      "type": "brazier",
+      "room": "stair",
+      "at": [1, 1]
+    },
+    {
+      "id": "brazier_stair2",
+      "type": "brazier",
+      "room": "stair",
+      "at": [3, 1]
+    },
+    {
+      "id": "z_camp",
+      "type": "zone",
+      "room": "camp",
+      "at": [4, 7],
+      "size": [3, 1]
+    },
+    {
+      "id": "note_ferrand",
+      "type": "note",
+      "room": "camp",
+      "at": [1, 1],
+      "text": "journal.cisterns.1",
+      "style": "diary"
+    },
+    {
+      "id": "medkit_camp",
+      "type": "medkit",
+      "room": "camp",
+      "at": [2, 1],
+      "size": "small"
+    },
+    {
+      "id": "brazier_camp",
+      "type": "brazier",
+      "room": "camp",
+      "at": [1, 2]
+    },
+    {
+      "id": "brazier_camp2",
+      "type": "brazier",
+      "room": "camp",
+      "at": [7, 5]
+    },
+    {
+      "id": "z_swim",
+      "type": "zone",
+      "room": "cistern",
+      "at": [1, 9],
+      "size": [10, 1]
+    },
+    {
+      "id": "idol_jade",
+      "type": "secret",
+      "room": "cistern",
+      "at": [11, 5],
+      "idol": "jade"
+    },
+    {
+      "id": "brazier_cis1",
+      "type": "brazier",
+      "room": "cistern",
+      "at": [2, 1]
+    },
+    {
+      "id": "brazier_cis2",
+      "type": "brazier",
+      "room": "cistern",
+      "at": [9, 1]
+    },
+    {
+      "id": "z_dive",
+      "type": "zone",
+      "room": "passage",
+      "at": [1, 7],
+      "size": [3, 2]
+    },
+    {
+      "id": "brazier_pass",
+      "type": "brazier",
+      "room": "passage",
+      "at": [1, 1]
+    },
+    {
+      "id": "z_air",
+      "type": "zone",
+      "room": "drowned",
+      "at": [10, 15],
+      "size": [1, 2]
+    },
+    {
+      "id": "idol_gold",
+      "type": "secret",
+      "room": "drowned",
+      "at": [2, 7],
+      "idol": "gold"
+    },
+    {
+      "id": "medkit_drowned",
+      "type": "medkit",
+      "room": "drowned",
+      "at": [9, 2],
+      "size": "large"
+    },
+    {
+      "id": "brazier_drowned",
+      "type": "brazier",
+      "room": "drowned",
+      "at": [10, 2]
+    },
+    {
+      "id": "z_sluice",
+      "type": "zone",
+      "room": "sluice",
+      "at": [2, 9],
+      "size": [7, 1]
+    },
+    {
+      "id": "z_basin",
+      "type": "zone",
+      "room": "sluice",
+      "at": [1, 4],
+      "size": [2, 2]
+    },
+    {
+      "id": "sluice_gate",
+      "type": "watergate",
+      "room": "sluice",
+      "at": [8, 3],
+      "wall": "E",
+      "low": -9,
+      "high": -1,
+      "raised": true
+    },
+    {
+      "id": "lever_gate_hi",
+      "type": "lever",
+      "room": "sluice",
+      "at": [3, 9],
+      "wall": "S",
+      "spring": true
+    },
+    {
+      "id": "lever_gate_lo",
+      "type": "lever",
+      "room": "sluice",
+      "at": [1, 4],
+      "wall": "W",
+      "spring": true
+    },
+    {
+      "id": "lever_door",
+      "type": "lever",
+      "room": "sluice",
+      "at": [1, 5],
+      "wall": "W"
+    },
+    {
+      "id": "door_sluice",
+      "type": "door",
+      "room": "sluice",
+      "at": [6, 0],
+      "height": 12
+    },
+    {
+      "id": "note_gate",
+      "type": "note",
+      "room": "sluice",
+      "at": [8, 9],
+      "wall": "S",
+      "text": "journal.cisterns.2",
+      "style": "carving"
+    },
+    {
+      "id": "brazier_sl1",
+      "type": "brazier",
+      "room": "sluice",
+      "at": [2, 9]
+    },
+    {
+      "id": "brazier_sl2",
+      "type": "brazier",
+      "room": "sluice",
+      "at": [8, 1]
+    },
+    {
+      "id": "z_aqueduct",
+      "type": "zone",
+      "room": "aqueduct",
+      "at": [11, 8],
+      "size": [2, 2]
+    },
+    {
+      "id": "jackal1",
+      "type": "enemy",
+      "enemy": "jackal",
+      "room": "aqueduct",
+      "at": [3, 3],
+      "face": "S",
+      "pack": "aq"
+    },
+    {
+      "id": "jackal2",
+      "type": "enemy",
+      "enemy": "jackal",
+      "room": "aqueduct",
+      "at": [5, 4],
+      "face": "S",
+      "pack": "aq"
+    },
+    {
+      "id": "flares_cache",
+      "type": "flares",
+      "room": "aqueduct",
+      "at": [1, 1],
+      "count": 4
+    },
+    {
+      "id": "medkit_aq",
+      "type": "medkit",
+      "room": "aqueduct",
+      "at": [11, 1],
+      "size": "small"
+    },
+    {
+      "id": "brazier_aq1",
+      "type": "brazier",
+      "room": "aqueduct",
+      "at": [8, 7]
+    },
+    {
+      "id": "brazier_aq2",
+      "type": "brazier",
+      "room": "aqueduct",
+      "at": [2, 7]
+    },
+    {
+      "id": "z_dark",
+      "type": "zone",
+      "room": "dark",
+      "at": [1, 10],
+      "size": [10, 1]
+    },
+    {
+      "id": "flares_dark",
+      "type": "flares",
+      "room": "dark",
+      "at": [4, 10],
+      "count": 2
+    },
+    {
+      "id": "cold1",
+      "type": "brazier",
+      "room": "dark",
+      "at": [2, 2],
+      "lit": false
+    },
+    {
+      "id": "cold2",
+      "type": "brazier",
+      "room": "dark",
+      "at": [9, 2],
+      "lit": false
+    },
+    {
+      "id": "cold3",
+      "type": "brazier",
+      "room": "dark",
+      "at": [5, 5],
+      "lit": false
+    },
+    {
+      "id": "door_dark",
+      "type": "door",
+      "room": "dark",
+      "at": [6, 0],
+      "height": 10
+    },
+    {
+      "id": "idol_stone",
+      "type": "secret",
+      "room": "dark",
+      "at": [11, 4],
+      "idol": "stone"
+    },
+    {
+      "id": "z_landing",
+      "type": "zone",
+      "room": "landing",
+      "at": [1, 3],
+      "size": [5, 3]
+    },
+    {
+      "id": "note_elena",
+      "type": "note",
+      "room": "landing",
+      "at": [1, 2],
+      "wall": "W",
+      "text": "journal.cisterns.3",
+      "style": "letter"
+    },
+    {
+      "id": "medkit_landing",
+      "type": "medkit",
+      "room": "landing",
+      "at": [5, 5],
+      "size": "large"
+    },
+    {
+      "id": "flares_landing",
+      "type": "flares",
+      "room": "landing",
+      "at": [4, 2],
+      "count": 2
+    },
+    {
+      "id": "brazier_landing",
+      "type": "brazier",
+      "room": "landing",
+      "at": [5, 3]
+    },
+    {
+      "id": "z_tide",
+      "type": "zone",
+      "room": "tide",
+      "at": [0, 5],
+      "size": [2, 2]
+    },
+    {
+      "id": "tide_gate",
+      "type": "watergate",
+      "room": "tide",
+      "at": [9, 1],
+      "wall": "N",
+      "rooms": ["tide", "cave"],
+      "low": -9,
+      "high": -1
+    },
+    {
+      "id": "tide_glass",
+      "type": "relic",
+      "room": "tide",
+      "at": [6, 5]
+    },
+    {
+      "id": "cold_island1",
+      "type": "brazier",
+      "room": "tide",
+      "at": [5, 4],
+      "lit": false
+    },
+    {
+      "id": "cold_island2",
+      "type": "brazier",
+      "room": "tide",
+      "at": [7, 6],
+      "lit": false
+    },
+    {
+      "id": "z_cave",
+      "type": "zone",
+      "room": "cave",
+      "at": [1, 1],
+      "size": [2, 2]
+    },
+    {
+      "id": "lever_tide",
+      "type": "lever",
+      "room": "cave",
+      "at": [1, 1],
+      "wall": "W",
+      "spring": true
+    },
+    {
+      "id": "brazier_cave",
+      "type": "brazier",
+      "room": "cave",
+      "at": [2, 1]
+    }
+  ],
+  "logic": [
+    {
+      "when": "z_start.entered",
+      "do": ["hint hint.cisterns.start"]
+    },
+    {
+      "when": "z_camp.entered",
+      "do": ["checkpoint", "hint hint.cisterns.wade"]
+    },
+    {
+      "when": "z_swim.entered",
+      "do": ["music vista", "hint hint.cisterns.swim"]
+    },
+    {
+      "when": "z_dive.entered",
+      "do": ["checkpoint", "music tension", "hint hint.cisterns.dive"]
+    },
+    {
+      "when": "z_air.entered",
+      "do": ["hint hint.cisterns.air"]
+    },
+    {
+      "when": "z_sluice.entered",
+      "do": ["checkpoint", "music calm", "music hall", "hint hint.cisterns.gate"]
+    },
+    {
+      "when": "lever_gate_hi.used or lever_gate_lo.used",
+      "do": ["sluice_gate.toggle", "camera.focus sluice_gate 3s", "sfx rumble"],
+      "once": false
+    },
+    {
+      "when": "sluice_gate.low",
+      "do": ["hint hint.cisterns.fall"]
+    },
+    {
+      "when": "lever_door.used",
+      "do": ["door_sluice.open", "camera.focus door_sluice 3s"]
+    },
+    {
+      "when": "z_aqueduct.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "flares_cache.taken",
+      "do": ["hint hint.cisterns.flares"]
+    },
+    {
+      "when": "z_dark.entered",
+      "do": ["checkpoint", "music tension", "hint hint.cisterns.braziers"]
+    },
+    {
+      "when": "cold1.lit and cold2.lit and cold3.lit",
+      "do": ["door_dark.open", "camera.focus door_dark 3s", "sfx rumble", "music calm", "music solved"]
+    },
+    {
+      "when": "z_landing.entered",
+      "do": ["checkpoint", "music calm"]
+    },
+    {
+      "when": "z_tide.entered",
+      "do": ["checkpoint", "music relic", "hint hint.cisterns.tide"]
+    },
+    {
+      "when": "z_cave.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "lever_tide.used",
+      "do": ["tide_gate.toggle", "camera.focus tide_glass 4s", "sfx rumble"],
+      "once": false
+    },
+    {
+      "when": "tide_glass.taken",
+      "do": ["camera.focus tide_glass 3s", "music fanfare", "wait 3s", "level.end"]
+    }
+  ]
+}

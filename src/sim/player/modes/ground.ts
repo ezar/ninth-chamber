@@ -1,17 +1,21 @@
 /** Ground mode: run, walk, step up and down, start jumps and interactions. */
 import { distanceToEdge, supportHeight, sweep } from '../../grid/collision';
 import { BLOCK, DIR_VEC, OPPOSITE, cellCenter, yawToDir, yawVec } from '../../grid/units';
+import { useMechanism } from '../../mechanisms';
 import { blockAt } from '../../world';
 import { die, emit, faceDir, setMode, turnTowardsWish, wishAlong, type Ctx } from '../context';
+import { tryLightTorch } from '../torch';
 import { tuning } from '../tuning';
 import { startHang } from './hang';
+import { floatInDeepWater, wadeSpeed, walkTop } from './swim';
 
 export function ground(c: Ctx): void {
   const { p, q, dt } = c;
   const walk = c.held('walk');
   const action = c.held('action');
+  if (floatInDeepWater(c)) return;
 
-  if (c.pressed('action') && tryInteract(c)) return;
+  if (c.pressed('action') && (tryInteract(c) || useMechanism(c))) return;
   if (action && tryGrabBlock(c)) return;
   if (walk && action && tryDropToHang(c)) return;
 
@@ -20,7 +24,7 @@ export function ground(c: Ctx): void {
     return;
   }
 
-  const speed = walk ? tuning.walkSpeed : tuning.runSpeed;
+  const speed = wadeSpeed(c, walk ? tuning.walkSpeed : tuning.runSpeed, walk);
   const k = Math.min(1, tuning.accel * dt);
   p.vel.x += (c.wish.x * speed - p.vel.x) * k;
   p.vel.z += (c.wish.z * speed - p.vel.z) * k;
@@ -31,9 +35,9 @@ export function ground(c: Ctx): void {
   p.runTime = !walk && hspeed > tuning.runSpeed * 0.8 ? p.runTime + dt : 0;
 
   const feet = p.pos.y;
-  // Walking never drops off an edge higher than one click.
+  // Walking never drops off an edge higher than one click (it slips into water that close, though).
   const canEnter = walk
-    ? (cx: number, cz: number): boolean => q.cellFloor(cx, cz) >= feet - 0.5 - 1e-3
+    ? (cx: number, cz: number): boolean => walkTop(c, cx, cz) >= feet - 0.5 - 1e-3
     : undefined;
   const res = sweep(
     q,
@@ -48,7 +52,7 @@ export function ground(c: Ctx): void {
   if (walk) {
     // The box may already overhang a drop (e.g. after a landing); the centre still never crosses it.
     const drop = (x: number, z: number): boolean =>
-      q.cellFloor(Math.floor(x / BLOCK), Math.floor(z / BLOCK)) < feet - 0.5 - 1e-3;
+      walkTop(c, Math.floor(x / BLOCK), Math.floor(z / BLOCK)) < feet - 0.5 - 1e-3;
     if (drop(res.x, p.pos.z)) {
       res.x = p.pos.x;
       p.vel.x = 0;
@@ -109,7 +113,7 @@ export function jump(c: Ctx): void {
   emit(c, 'player.jumped', { kind });
 }
 
-/** Levers, pickups and journal notes in the player's sector. */
+/** Levers, pickups and journal notes in the player's sector, then a brazier to light the torch at. */
 function tryInteract(c: Ctx): boolean {
   const { p, world } = c;
   const cx = Math.floor(p.pos.x / BLOCK);
@@ -123,14 +127,17 @@ function tryInteract(c: Ctx): boolean {
       setMode(p, 'lever');
       return true;
     }
-    if (((a.kind === 'secret' || a.kind === 'relic') && !a.taken) || a.kind === 'note') {
+    if (
+      ((a.kind === 'secret' || a.kind === 'relic' || a.kind === 'torch') && !a.taken) ||
+      a.kind === 'note'
+    ) {
       p.vel = { x: 0, y: 0, z: 0 };
       p.target = a.id;
       setMode(p, 'pickup');
       return true;
     }
   }
-  return false;
+  return tryLightTorch(c);
 }
 
 /** Grabs a block right in front of the player. */

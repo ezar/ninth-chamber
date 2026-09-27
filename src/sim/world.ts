@@ -13,8 +13,13 @@ import { BLOCK, DIR_YAW, cellCenter } from './grid/units';
 import { compileRules, runLogic, type CompiledRule } from './logic/rules';
 import { createEnemies, resetEnemies, updateEnemies } from './actors/enemies';
 import { updateActors } from './actors/update';
+import { updateFlares } from './actors/flares';
+import { createRoomWater, createWaterGates, updateWater } from './actors/water';
+import { createGuardians, resetGuardians, updateGuardians } from './actors/guardian';
+import { createMechanisms, mechanismFloor, resetMechanisms, updateMechanisms } from './mechanisms';
 import { stepPlayer } from './player/controller';
-import { mechanics, tuning } from './player/tuning';
+import { newTorch } from './player/torch';
+import { flares, mechanics, swimming, tuning } from './player/tuning';
 import type { Actor, BlockActor, DoorActor, DynamicState, PlayerState, Stats } from './state';
 
 export type { Vec3 } from './state';
@@ -75,14 +80,24 @@ function createActors(level: Level): Actor[] {
       case 'note':
         actors.push({ kind: 'note', id: e.id, cx, cz });
         break;
+      case 'flares':
+        actors.push({ kind: 'flares', id: e.id, cx, cz, count: e.count ?? flares.perPickup, taken: false });
+        break;
       case 'zone':
         actors.push({ kind: 'zone', id: e.id, cx, cz, w: e.size[0], h: e.size[1], inside: false });
         break;
       case 'brazier':
+        actors.push({ kind: 'brazier', id: e.id, cx, cz, y, lit: e.lit });
+        break;
+      case 'torch':
+        actors.push({ kind: 'torch', id: e.id, cx, cz, taken: false, variant: e.lit ? 'lit' : 'unlit' });
+        break;
+      case 'watergate':
       case 'enemy':
         break;
     }
   }
+  actors.push(...createWaterGates(level));
   return actors;
 }
 
@@ -109,13 +124,16 @@ function createPlayer(level: Level): PlayerState {
     target: null,
     dir: null,
     weapon: { drawn: false, busy: 0, cooldown: 0, target: null, hand: 1 },
+    torch: newTorch(),
+    swim: { air: swimming.airMax, pitch: 0, roll: 0, stroke: 0, drown: 0 },
   };
 }
 
 export function createWorld(level: Level, seed = 1): World {
+  const actors = createActors(level);
   const state: DynamicState = {
     player: createPlayer(level),
-    actors: createActors(level),
+    actors,
     enemies: createEnemies(level),
     tiles: {},
     signals: {},
@@ -123,6 +141,10 @@ export function createWorld(level: Level, seed = 1): World {
     fired: [],
     pending: [],
     inventory: {},
+    water: createRoomWater(actors),
+    flares: [],
+    mechanisms: createMechanisms(level),
+    guardians: createGuardians(level),
   };
   const world: World = {
     tick: 0,
@@ -166,7 +188,7 @@ function makeGrid(world: World): GridQuery {
       const cz = Math.floor(z / BLOCK);
       const s = level.sector(cx, cz);
       if (!s || s.wall) return Infinity;
-      const f = floorWith(world, cx, cz, null);
+      const f = floorWith(world, cx, cz, null, x, z);
       // Slopes only apply to the bare static floor.
       return f === sectorTop(s) ? level.floorAt(x, z) : f;
     },
@@ -174,8 +196,19 @@ function makeGrid(world: World): GridQuery {
   };
 }
 
-/** Effective floor top of a cell, optionally ignoring one block (the one being moved). */
-export function floorWith(world: World, cx: number, cz: number, excludeBlock: string | null): number {
+/**
+ * Effective floor top of a cell, optionally ignoring one block (the one being
+ * moved). Given a point (px, pz) in the cell, moving platforms count only
+ * right under it; otherwise wherever they cover the cell.
+ */
+export function floorWith(
+  world: World,
+  cx: number,
+  cz: number,
+  excludeBlock: string | null,
+  px?: number,
+  pz?: number,
+): number {
   const s = world.level.sector(cx, cz);
   if (!s || s.wall) return Infinity;
   for (const a of world.state.actors) {
@@ -189,7 +222,7 @@ export function floorWith(world: World, cx: number, cz: number, excludeBlock: st
       h = Math.max(h, a.y + mechanics.blockHeight);
     }
   }
-  return h;
+  return mechanismFloor(world, cx, cz, h, px, pz);
 }
 
 export function findActor<K extends Actor['kind']>(
@@ -255,6 +288,8 @@ export function saveCheckpoint(world: World): void {
  */
 export function respawn(world: World): void {
   world.state = clone(world.checkpoint);
+  resetMechanisms(world);
+  resetGuardians(world);
   const p = world.state.player;
   p.mode = 'ground';
   p.modeTime = 0;
@@ -263,6 +298,7 @@ export function respawn(world: World): void {
   p.weapon.target = null;
   p.weapon.cooldown = 0;
   p.weapon.busy = 0;
+  p.swim = { air: swimming.airMax, pitch: 0, roll: 0, stroke: 0, drown: 0 };
   resetEnemies(world);
   // Secrets found since the checkpoint stay found (they count once, like journal notes).
   for (const a of world.state.actors) {
@@ -281,7 +317,11 @@ export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
     stepPlayer(world, input, dt);
     updateActors(world, dt);
     updateEnemies(world, dt);
+    updateWater(world, dt);
+    updateFlares(world, dt);
     runLogic(world, dt);
+    updateMechanisms(world, dt);
+    updateGuardians(world, dt);
     const p = world.state.player.pos;
     world.stats.distance += Math.hypot(p.x - before.x, p.z - before.z);
     world.stats.time += dt;

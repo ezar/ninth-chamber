@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three/webgpu';
 import { contactWeight, decodeInt16, encodeInt16, inContact, ROT_SCALE } from '../src/render/anim/clip';
 import { JOINT_COUNT } from '../src/render/anim/skeleton';
-import { tuning } from '../src/sim/player/tuning';
-import { CLIP_NAMES } from '../src/render/anim/animator';
+import { swimming, tuning } from '../src/sim/player/tuning';
+import { CLIP_NAMES, NoraAnimator, WATER_CLIPS, type ClipName } from '../src/render/anim/animator';
+import { AnimPose } from '../src/render/anim/pose';
+import type { NoraPose } from '../src/render/nora';
 import { loadClip, LocomotionProbe, plantedSlide } from '../scripts/anim/locomotion-probe';
 
 const loops = new Set([
@@ -138,5 +140,80 @@ describe('ground locomotion', () => {
     expect(Math.min(...hips)).toBeGreaterThan(0.8);
     const knees = samples.flatMap((s) => s.feet.map((f) => f.knee));
     expect(Math.max(...knees)).toBeLessThan(1.7);
+  });
+});
+
+describe('Nora in the water', () => {
+  const probe = new LocomotionProbe();
+  const names: ClipName[] = ['idle', 'walk', 'run', 'climb', ...Object.values(WATER_CLIPS)];
+  const clips = Object.fromEntries(names.map((n) => [n, loadClip(n)]));
+  const pose = (over: Partial<NoraPose>): NoraPose => ({
+    mode: 'swim',
+    modeTime: 0,
+    speed: 0,
+    vy: 0,
+    climbT: 0,
+    health: 100,
+    weapons: 0,
+    aiming: 0,
+    aimYaw: 0,
+    aimPitch: 0,
+    ...over,
+  });
+  /** Plays a sequence of poses at 60 Hz; returns the shown pose and the head's height over the root. */
+  function play(steps: NoraPose[]): { out: AnimPose; head: number; hips: number } {
+    const sk = probe.sk;
+    const anim = new NoraAnimator(sk, {
+      ...clips,
+      idle: loadClip('idle'),
+      walk: loadClip('walk'),
+      run: loadClip('run'),
+    });
+    const proc = new AnimPose();
+    proc.hips.copy(sk.hipsBind);
+    const out = new AnimPose();
+    for (const p of steps) anim.update(p, 1 / 60, proc, new THREE.Vector3(), 0, out);
+    const pos: THREE.Vector3[] = [];
+    sk.positions(out.rot, out.hips, pos);
+    const head = Math.max(...pos.map((v) => v.y));
+    return { out, head, hips: out.hips.y };
+  }
+  const hold = (p: NoraPose, seconds: number): NoraPose[] =>
+    Array.from({ length: Math.round(seconds * 60) }, (_, i) => ({ ...p, modeTime: i / 60 }));
+
+  it('treads water with the head out when still at the surface', () => {
+    const { head } = play(hold(pose({}), 1.5));
+    // The root is `surfaceSink` under the surface: the top of her head clears it.
+    expect(head).toBeGreaterThan(swimming.surfaceSink);
+    expect(head).toBeLessThan(swimming.surfaceSink + 0.6);
+  });
+
+  it('swims lying along the surface when moving', () => {
+    const { head, hips } = play(hold(pose({ speed: swimming.swimSpeed }), 1.5));
+    expect(hips).toBeGreaterThan(swimming.surfaceSink - 0.3);
+    // Lying down: nothing rises far above the water.
+    expect(head).toBeLessThan(swimming.surfaceSink + 0.45);
+  });
+
+  it('pitches the body with the dive and keeps it centred on the collision cylinder', () => {
+    const level = play(hold(pose({ mode: 'dive', speed: swimming.diveSpeed, pitch: 0 }), 1.5)).out;
+    const down = play(hold(pose({ mode: 'dive', speed: swimming.diveSpeed, pitch: -0.9 }), 1.5)).out;
+    expect(level.hips.y).toBeCloseTo(tuning.height / 2, 3);
+    // The hips turn by the pitch (model-space rotations rotated about X).
+    expect(level.q(0).angleTo(down.q(0))).toBeGreaterThan(0.6);
+  });
+
+  it('climbs out of the water from the edge reach into the climb', () => {
+    const swim = hold(pose({}), 0.5);
+    const climb = Array.from({ length: 66 }, (_, i) =>
+      pose({ mode: 'climb', climbT: i / 65, modeTime: i / 60 }),
+    );
+    const mid = play([...swim, ...climb.slice(0, 10)]).out;
+    const end = play([...swim, ...climb]).out;
+    const plainClimb = new AnimPose();
+    loadClip('climb').samplePhase(0.999, plainClimb.rot, plainClimb.hips);
+    // It ends like a land climb (crouched on the edge) and starts differently (reaching).
+    expect(end.q(0).angleTo(plainClimb.q(0))).toBeLessThan(0.05);
+    expect(mid.q(JOINT_COUNT - 1).angleTo(end.q(JOINT_COUNT - 1))).toBeGreaterThan(0.05);
   });
 });

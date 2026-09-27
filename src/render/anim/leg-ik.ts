@@ -100,6 +100,18 @@ export class LegIK {
     }));
   }
 
+  /**
+   * Moves planted feet with the ground under them (a moving platform), so
+   * they ride along instead of being left behind and stepping to catch up.
+   */
+  carry(d: THREE.Vector3): void {
+    for (const f of this.feet) {
+      if (!f.locked) continue;
+      f.pivot.add(d);
+      f.floor += d.y;
+    }
+  }
+
   /** Forgets locks, e.g. after a teleport or while another mode drives the legs. */
   reset(): void {
     for (const f of this.feet) {

@@ -1,0 +1,18 @@
+{
+  "id": "cistern_aqueduct",
+  "background": "#08090a",
+  "exposure": 1.05,
+  "hemi": { "sky": "#5a6660", "ground": "#16120d", "intensity": 0.17 },
+  "fog": { "color": "#2f332d", "density": 0.034 },
+  "sun": null,
+  "fire": { "color": "#ff9a48", "intensity": 46, "flicker": 0.3 },
+  "bloom": { "strength": 0.62, "radius": 0.5, "threshold": 0.77 },
+  "grade": { "tint": "#ece2cc", "saturation": 0.92, "contrast": 1.14, "vignette": 0.45 },
+  "water": {
+    "deep": "#0b1b1b",
+    "tint": "#739c8e",
+    "sky": "#1f2623",
+    "caustics": 0.5,
+    "fog": { "color": "#153230", "density": 0.18 }
+  }
+}

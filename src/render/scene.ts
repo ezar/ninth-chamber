@@ -12,13 +12,15 @@ import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
 import { CombatView } from './combat';
 import { FireLightScheduler, type FireSpot } from './fire-lights';
-import { buildLevelMeshes } from './level-mesh';
+import { buildLevelMeshes, type Surface } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
 import type { NoraPose } from './nora';
 import { NoraRig } from './nora-scan';
+import { GuardianView } from './guardian';
 import { Props } from './props';
 import { loadSurfaces, surfaceParams, type SurfaceName, type SurfaceSet } from './materials';
 import { PostStack } from './post';
+import { RoomCulling } from './room-culling';
 import {
   QUALITY,
   anisotropyFor,
@@ -27,6 +29,12 @@ import {
   type ResolutionMode,
   type TextureFiltering,
 } from './quality';
+import { TorchView } from './torch';
+import { FlareView } from './flares';
+import { WaterFx } from './water-fx';
+import { WaterView, waterLookOf } from './water';
+import type { SimEvent } from '../core/events';
+import { TempleView } from './temple';
 
 export interface PlayerPose {
   pos: Vec3;
@@ -43,6 +51,8 @@ const FIRE_GAIN = 1.8;
 const CHARACTER_LAYER = 1;
 /** Seconds between refreshes of a non-live (mobile) sun shadow. */
 const STATIC_SHADOW_REFRESH = 1;
+/** Groups whose children are culled one by one (the static set dressing). */
+const DRESSING: ReadonlySet<string> = new Set(['dressing']);
 /** Film grain amplitude on the display image (art bible: subtle; lowered after phone feedback). */
 const GRAIN = 0.022;
 /** Frames between passes that bring newly loaded textures (prop models) to the filtering level. */
@@ -81,13 +91,31 @@ export class GameRenderer {
   private readonly nora = new NoraRig();
   /** Jackals, pistols, muzzle flashes and the target marker. */
   readonly combat = new CombatView(`${import.meta.env.BASE_URL}models/jackal.glb`);
+  /** The torch Nora carries, with its own light (not one of the fire pool's). */
+  private readonly torch: TorchView;
   private props: Props | null = null;
+  /** The Temple of the Sun's mechanisms and its guardian (empty for levels without them). */
+  private temple: TempleView | null = null;
+  private guardians: GuardianView | null = null;
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
   private currentRoom: string | null = null;
-  private readonly shafts: { mesh: THREE.Group; dust: THREE.Points; room: string }[] = [];
-  private readonly bounces: { light: THREE.PointLight; room: string; strength: number }[] = [];
+  private readonly shafts: { mesh: THREE.Group; dust: THREE.Points; sky: THREE.Mesh; room: string }[] = [];
+  /** Where each sunlit room's floor bounce sits, and how strong it is. */
+  private readonly bounces: { at: THREE.Vector3; room: string; strength: number }[] = [];
+  /**
+   * Two bounce lights serve every sunlit room: the current room's, and the
+   * previous one's fading out. Every light costs every lit pixel, so one per
+   * room (ten) was the largest per-pixel cost on phones.
+   */
+  private readonly bounceLights = [0, 1].map(() => ({
+    light: new THREE.PointLight('#e0b27a', 0, 22, 1.6),
+    room: null as string | null,
+    strength: 0,
+  }));
   private readonly levelMeshes: THREE.Mesh[] = [];
+  /** Hides the rooms the camera cannot see (render/room-culling.ts). */
+  culling: RoomCulling | null = null;
   private time = 0;
   private surfaces: Record<SurfaceName, SurfaceSet> | null = null;
   private reducedMotion = false;
@@ -95,6 +123,15 @@ export class GameRenderer {
   private readonly contactShadow: THREE.Mesh;
   private readonly contactStrength: THREE.UniformNode<'float', number>;
   private focus: { at: THREE.Vector3; amount: number } | null = null;
+  /** Water surfaces and caustics, flares, splashes and drips (level 2, the Cisterns). */
+  readonly water: WaterView;
+  private readonly flares = new FlareView();
+  private readonly waterFx: WaterFx;
+  private underwaterMix = 0;
+  /** 0 in the air … 1 with the camera under water (fog, grade, muffled sound). */
+  get underwater(): number {
+    return this.underwaterMix;
+  }
   private resolution: ResolutionMode = 'auto';
   /** Pixel ratio cap in the automatic mode; null uses the tier's. */
   private autoCap: number | null = null;
@@ -149,6 +186,10 @@ export class GameRenderer {
       casters: this.fireCasters.length,
     });
     this.scene.add(this.nora.root, this.combat.group);
+    // Torch shadows on the high tier only; castShadow is fixed from the tier the session starts on.
+    this.torch = new TorchView(profile.tier === 'high');
+    this.scene.add(this.torch.group);
+    for (const b of this.bounceLights) this.scene.add(b.light);
     // A soft fill that follows Nora so she reads against backlight (a common
     // character-lighting cheat); short range, so it barely touches the set.
     this.characterFill.position.set(0.6, 2.2, 1.6);
@@ -157,6 +198,9 @@ export class GameRenderer {
     this.contactShadow = contact.mesh;
     this.contactStrength = contact.strength;
     this.scene.add(this.contactShadow);
+    this.water = new WaterView(profile);
+    this.waterFx = new WaterFx((x, z) => this.water.surfaceAt(x, z));
+    this.scene.add(this.water.group, this.flares.group, this.waterFx.root);
     this.applyProfile(false);
   }
 
@@ -257,10 +301,14 @@ export class GameRenderer {
     sun.autoUpdate = p.sun.live;
     this.sunShadowAge = Infinity;
     this.contactShadow.visible = p.contactShadow;
+    this.torch.setQuality(p);
+    this.water?.setQuality(p);
+    if (this.waterFx) this.waterFx.budget = p.particles;
 
     this.configurePost();
     // Volumetric shafts replace the modelled cones; the dust stays.
     for (const s of this.shafts) s.mesh.visible = !p.godrays;
+    this.temple?.setQuality(p);
     this.applyParticleBudget();
     if (anisotropyChanged) this.applyAnisotropy();
     this.resize();
@@ -318,8 +366,11 @@ export class GameRenderer {
 
   /** Scene render scale from dynamic resolution (spec §14); post effects keep the output size. */
   setRenderScale(scale: number): void {
+    this.renderScale = scale;
     this.post.setRenderScale(scale);
   }
+
+  private renderScale = 1;
 
   /** Reduced motion (spec §13): no film grain. */
   setReducedMotion(on: boolean): void {
@@ -346,6 +397,10 @@ export class GameRenderer {
    * the first frames of play.
    */
   warmup(): void {
+    this.warmAll();
+    // Behind the loading screen the whole level is drawn only to compile it: at a
+    // tenth of the resolution its fill cost is negligible (pipelines do not depend on size).
+    this.post.setRenderScale(0.1);
     // Every shadow map gets created now rather than on entering its room.
     for (const l of [this.sun, ...this.fireCasters]) l.shadow.needsUpdate = true;
     this.post.dofAmount.value = this.post.hasDepthOfField ? 0.5 : 0;
@@ -354,7 +409,30 @@ export class GameRenderer {
     this.post.render(0);
     this.post.render(0);
     this.post.dofAmount.value = 0;
+    this.post.setRenderScale(this.renderScale);
+    this.warmAll(false);
   }
+
+  /**
+   * Draws every room, in or out of view, while `on` (restoring culling after):
+   * a frame drawn like this compiles the materials of rooms not yet seen, so
+   * entering them never stalls on a shader.
+   */
+  private warmAll(on = true): void {
+    this.culling?.setEnabled(!on);
+    this.scene.traverse((o) => {
+      if (on && o.frustumCulled) {
+        o.frustumCulled = false;
+        o.userData.warmCulled = true;
+      } else if (!on && o.userData.warmCulled) {
+        o.frustumCulled = true;
+        delete o.userData.warmCulled;
+      }
+    });
+  }
+
+  /** Set when late assets (the baked props) arrive: the next frame is drawn whole, for warm-up. */
+  private warmNext = false;
 
   /**
    * Builds all level geometry and props. A new World on the same level (a
@@ -364,6 +442,7 @@ export class GameRenderer {
     const sameLevel = this.world?.level === world.level;
     this.world = world;
     this.currentRoom = null;
+    this.water.setWorld(world);
     if (sameLevel) return;
     const level = world.level;
 
@@ -377,32 +456,48 @@ export class GameRenderer {
       extra: THREE.MeshStandardMaterialParameters = {},
     ): THREE.MeshStandardMaterial =>
       new THREE.MeshStandardMaterial({ ...surfaceParams(set), vertexColors: true, ...extra });
-    const add = (geo: THREE.BufferGeometry, material: THREE.Material, cast = true): void => {
-      const m = new THREE.Mesh(geo, material);
-      m.castShadow = cast;
-      m.receiveShadow = true;
-      this.scene.add(m);
-      this.levelMeshes.push(m);
+    // One material per surface, shared by every room's mesh of it.
+    const materials: Record<Surface, THREE.MeshStandardMaterial> = {
+      wall: mat(surf.wall),
+      floorStone: mat(surf.floor, { color: '#d9c6a8' }),
+      floorSand: mat(surf.sand),
+      ceiling: mat(surf.ceiling, { side: THREE.DoubleSide }),
+      lip: mat(surf.floor, { color: '#fff4e0' }),
     };
-    add(meshes.surfaces.wall, mat(surf.wall));
-    add(meshes.surfaces.floorStone, mat(surf.floor, { color: '#d9c6a8' }), false);
-    add(meshes.surfaces.floorSand, mat(surf.sand), false);
-    add(meshes.surfaces.ceiling, mat(surf.ceiling, { side: THREE.DoubleSide }));
-    add(meshes.surfaces.lip, mat(surf.floor, { color: '#fff4e0' }));
+    const culling = new RoomCulling(level, this.scene);
+    this.culling = culling;
+    for (const part of meshes.parts) {
+      const m = new THREE.Mesh(part.geometry, materials[part.surface]);
+      m.castShadow = part.surface !== 'floorStone' && part.surface !== 'floorSand';
+      m.receiveShadow = true;
+      m.name = `level:${part.room}:${part.surface}`;
+      culling.group(part.room)?.add(m);
+      this.levelMeshes.push(m);
+    }
+    this.water.build(world, this.levelMeshes);
+    this.waterFx.build(level, world);
 
     const bronze = new THREE.MeshStandardMaterial({ color: '#5e7b68', roughness: 0.65, metalness: 0.35 });
-    this.props = new Props(level, {
+    const propMats = {
       stone: surf.wall,
       floor: surf.floor,
       block: surf.block,
       bronze,
       darkMetal: new THREE.MeshStandardMaterial({ color: '#2b2622', roughness: 0.5, metalness: 0.7 }),
       gold: new THREE.MeshStandardMaterial({ color: '#e8b75a', roughness: 0.25, metalness: 1 }),
-    });
+    };
+    this.props = new Props(level, propMats);
     this.scene.add(this.props.group);
+    void this.props.modelsLoaded.then(() => (this.warmNext = true));
+    this.temple = new TempleView(level, propMats);
+    this.temple.setQuality(this.profile);
+    for (const id of this.temple.replacedActors) this.props.hidden.add(id);
+    this.guardians = new GuardianView(world, surf.wall);
+    this.scene.add(this.temple.group, this.guardians.group);
     this.indexFires();
 
     this.buildShafts(meshes.skylights, sunRooms);
+    this.adoptRoomObjects();
     void this.loadLightmap(level.id);
     this.applyParticleBudget();
   }
@@ -437,6 +532,8 @@ export class GameRenderer {
         mat.lightMapIntensity = intensity;
         mat.needsUpdate = true;
       }
+      this.lightmapIntensity = intensity;
+      this.lightmapScale = 1;
       this.hasLightmap = true;
     } catch {
       this.hasLightmap = false;
@@ -446,6 +543,9 @@ export class GameRenderer {
   /** Artistic gain on the baked bounce light. */
   static LIGHTMAP_GAIN = 1;
   private hasLightmap = false;
+  private lightmapIntensity = 0;
+  /** The look's scale on the baked light last applied (dark rooms dim what was baked with their fires). */
+  private lightmapScale = 1;
 
   /** A soft volumetric-looking beam and dust under each skylight. */
   private buildShafts(skylights: { x: number; z: number; ceil: number }[], rooms: Set<string>): void {
@@ -517,10 +617,11 @@ export class GameRenderer {
           .multiplyScalar(-(ceil - floor) / Math.max(0.2, dir.y))
           .setY(0),
       );
-      const bounce = new THREE.PointLight('#e0b27a', 0, 22, 1.6);
-      bounce.position.set(hit.x, floor + 1.2, hit.z);
-      this.scene.add(bounce);
-      this.bounces.push({ light: bounce, room: roomId, strength: look.sunIntensity });
+      this.bounces.push({
+        at: new THREE.Vector3(hit.x, floor + 1.2, hit.z),
+        room: roomId,
+        strength: look.sunIntensity,
+      });
 
       const n = 260;
       const pos = new Float32Array(n * 3);
@@ -548,7 +649,7 @@ export class GameRenderer {
         }),
       );
       this.scene.add(dust);
-      this.shafts.push({ mesh, dust, room: roomId });
+      this.shafts.push({ mesh, dust, sky, room: roomId });
       mesh.visible = !this.profile.godrays;
     }
   }
@@ -597,8 +698,10 @@ export class GameRenderer {
     if (dy > Math.PI) dy -= 2 * Math.PI;
     if (dy < -Math.PI) dy += 2 * Math.PI;
     this.nora.root.rotation.y = prev.yaw + dy * alpha;
-    this.nora.update(pose, dt);
+    // Swimming and diving: the body pitches with the simulation's swim direction.
+    this.nora.update({ ...pose, pitch: world.state.player.swim.pitch }, dt);
     this.combat.update(world, this.nora, alpha, dt);
+    this.torch.update(world, this.nora, this.time, dt);
     this.nora.setOpacity(Math.min(1, Math.max(0.15, (cameraDistance - 0.6) / 0.8)));
 
     // Room look.
@@ -614,12 +717,20 @@ export class GameRenderer {
     this.applyLook();
 
     this.props?.update(world, this.time, dt);
+    this.adoptRoomObjects();
+    this.temple?.update(world, this.time, dt, eye);
+    this.guardians?.update(world, this.time, dt, eye);
     this.updateFireLights(eye, dt);
     this.updateShafts(dt);
     this.updateContactShadow(world, px, py, pz);
+    const view = this.updateWater(world, room?.look ?? null, eye, dt);
 
-    this.camera.position.set(eye.x, eye.y, eye.z);
+    this.camera.position.copy(view);
     this.camera.lookAt(lookAt.x, lookAt.y, lookAt.z);
+    if (this.culling) {
+      this.culling.update(this.camera, this.nora.root.position);
+      this.combat.cullEnemies(this.culling.shows);
+    }
     this.updateShadowBudget(dt);
     this.updateFocus();
     this.post.grain.value = this.grainOn ? GRAIN : 0;
@@ -627,7 +738,102 @@ export class GameRenderer {
       this.filteringSweep = 0;
       this.applyAnisotropy();
     }
+    const warm = this.warmNext;
+    if (warm) {
+      this.warmNext = false;
+      this.warmAll();
+    }
     this.post.render(dt);
+    if (warm) this.warmAll(false);
+  }
+
+  /**
+   * Sorts props (views appear lazily, baked models arrive late) and the sun
+   * shafts into their rooms' groups for culling. Lights and the shared ember
+   * system stay where they are.
+   */
+  private adoptRoomObjects(): void {
+    const culling = this.culling;
+    if (!culling) return;
+    if (this.props) {
+      const embers = this.props.embers;
+      culling.adopt(this.props.group, (o) => o instanceof THREE.Light || o === embers, DRESSING);
+    }
+    for (const s of this.shafts) {
+      if (s.mesh.parent === this.scene) culling.place(s.mesh, s.room);
+      if (s.dust.parent === this.scene) culling.place(s.dust, s.room);
+      if (s.sky.parent === this.scene) culling.place(s.sky, s.room);
+    }
+  }
+
+  /**
+   * Water, flares and splashes for this frame; returns the camera position,
+   * kept off the water plane. Under the surface the fog turns to water.
+   */
+  private updateWater(world: World, look: string | null, eye: Vec3, dt: number): THREE.Vector3 {
+    const view = new THREE.Vector3(eye.x, eye.y, eye.z);
+    this.water.clearEye(view);
+    const wet = (x: number, y: number, z: number): boolean => {
+      const s = this.water.surfaceAt(x, z);
+      return s !== null && y < s;
+    };
+    let hand: THREE.Vector3 | null = null;
+    if (world.state.flares.some((f) => f.held)) {
+      hand = new THREE.Vector3();
+      this.nora.handFrame(0, hand, new THREE.Quaternion());
+    }
+    this.flares.update(world, dt, hand, view, wet);
+    this.water.update(dt, view, waterLookOf(look), [
+      ...this.flares.lights,
+      ...this.fireCasters,
+      ...this.fireLights,
+    ]);
+    this.waterFx.update(dt, world, view);
+    const target = this.water.underwater ? 1 : 0;
+    this.underwaterMix += (target - this.underwaterMix) * Math.min(1, dt * 14);
+    if (this.underwaterMix > 0.001) {
+      const fog = this.scene.fog as THREE.FogExp2;
+      const w = this.water.fog;
+      fog.color.lerp(w.color, this.underwaterMix);
+      fog.density += (w.density - fog.density) * this.underwaterMix;
+      (this.scene.background as THREE.Color).lerp(w.color, this.underwaterMix);
+    }
+    this.post.underwater.value = this.underwaterMix;
+    const tint = this.post.waterTint.value.copy(this.water.fog.color);
+    tint.multiplyScalar(1 / Math.max(1e-4, tint.r, tint.g, tint.b));
+    return view;
+  }
+
+  /** Splashes and rings from the simulation's water events. */
+  onEvent(e: SimEvent): void {
+    const n = (k: string, d = 0): number => (typeof e[k] === 'number' ? (e[k] as number) : d);
+    const p = this.world?.state.player;
+    if (!p) return;
+    switch (e.type) {
+      case 'player.splash':
+        this.waterFx.splash(n('x', p.pos.x), n('y', p.pos.y), n('z', p.pos.z), n('speed', 3));
+        break;
+      case 'player.stroke': {
+        const s = this.water.surfaceAt(p.pos.x, p.pos.z);
+        if (s !== null && e.under !== true) this.waterFx.ring(p.pos.x, s, p.pos.z, 0.9, 1.4, 0.35);
+        else if (s !== null) this.waterFx.bubble(p.pos.x, p.pos.y + 1.5, p.pos.z, 2);
+        break;
+      }
+      case 'player.surfaced':
+      case 'player.dived': {
+        const s = this.water.surfaceAt(p.pos.x, p.pos.z);
+        if (s !== null) this.waterFx.splash(p.pos.x, s, p.pos.z, e.type === 'player.dived' ? 2.5 : 1.5);
+        break;
+      }
+      case 'player.climbing':
+        if (e.water === true) {
+          const s = this.water.surfaceAt(p.pos.x, p.pos.z);
+          if (s !== null) this.waterFx.ring(p.pos.x, s, p.pos.z, 1.2, 1.2, 0.4);
+        }
+        break;
+      default:
+        break;
+    }
   }
 
   private fitSun(minX: number, minZ: number, maxX: number, maxZ: number): void {
@@ -707,6 +913,11 @@ export class GameRenderer {
     this.hemi.color.copy(l.hemiSky);
     this.hemi.groundColor.copy(l.hemiGround);
     this.hemi.intensity = l.hemiIntensity * (this.hasLightmap ? 0.6 : 1);
+    if (this.hasLightmap && Math.abs(l.lightmap - this.lightmapScale) > 1e-3) {
+      this.lightmapScale = l.lightmap;
+      for (const m of this.levelMeshes)
+        (m.material as THREE.MeshStandardMaterial).lightMapIntensity = this.lightmapIntensity * l.lightmap;
+    }
     this.sun.color.copy(l.sunColor);
     this.sun.intensity = l.sunIntensity;
     const t = this.sun.target.position;
@@ -735,6 +946,7 @@ export class GameRenderer {
       y: f.pos.y,
       z: f.pos.z,
       room: level.roomAt(Math.floor(f.pos.x / BLOCK), Math.floor(f.pos.z / BLOCK))?.id ?? null,
+      off: f.level <= 0,
     }));
     this.neighbours = new Map();
     for (const a of level.rooms) {
@@ -755,6 +967,8 @@ export class GameRenderer {
   private updateFireLights(eye: Vec3, dt: number): void {
     const fires = this.props?.fires ?? [];
     if (this.fireSpots.length !== fires.length) this.indexFires();
+    // Cold braziers (the Cisterns' dark hall) get a light once a flare lights them.
+    this.fireSpots.forEach((spot, i) => (spot.off = (fires[i]?.level ?? 1) <= 0));
     const p = this.profile;
     const preferred = this.neighbours.get(this.currentRoom ?? '') ?? new Set<string>();
     // Single-shadow tiers give the budget to the sun where it shines.
@@ -784,8 +998,24 @@ export class GameRenderer {
     });
   }
 
+  /** Moves the dimmer bounce light to the current room when that room has a sun and no light yet. */
+  private assignBounce(): void {
+    const room = this.currentRoom;
+    if (this.bounceLights.some((b) => b.room === room)) return;
+    const source = this.bounces.find((b) => b.room === room);
+    if (!source) return;
+    const [a, b] = this.bounceLights;
+    if (!a || !b) return;
+    const free = a.light.intensity <= b.light.intensity ? a : b;
+    free.room = source.room;
+    free.strength = source.strength;
+    free.light.intensity = 0;
+    free.light.position.copy(source.at);
+  }
+
   private updateShafts(dt: number): void {
-    for (const b of this.bounces) {
+    this.assignBounce();
+    for (const b of this.bounceLights) {
       const target = this.currentRoom === b.room ? b.strength * 9 : 0;
       b.light.intensity += (target - b.light.intensity) * Math.min(1, dt * 1.5);
     }
@@ -795,9 +1025,13 @@ export class GameRenderer {
         const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
         m.opacity += (on - m.opacity) * Math.min(1, dt * 2);
       }
+      // Dust in rooms out of sight is not animated (nor uploaded) until it is seen again.
+      if (s.dust.parent && !s.dust.parent.visible) continue;
       const attr = s.dust.geometry.getAttribute('position') as THREE.BufferAttribute;
       const base = s.dust.geometry.userData.base as Float32Array;
-      for (let i = 0; i < attr.count; i++) {
+      // Only the tier's share of the particles is drawn (applyParticleBudget), so only that moves.
+      const drawn = Math.min(attr.count, s.dust.geometry.drawRange.count);
+      for (let i = 0; i < drawn; i++) {
         const ph = i * 1.3;
         attr.setXYZ(
           i,

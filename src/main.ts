@@ -1,7 +1,6 @@
 import './ui/style.css';
 import './ui/screens.css';
 import './ui/prelude.css';
-import levelJson from '../levels/antechamber.level.json';
 import { AudioEngine, type ReverbPreset } from './audio/engine';
 import { entranceShots, shotYaw, titleShot, type Shot } from './camera/cinematic';
 import { OrbitCamera, cameraTuning } from './camera/orbit';
@@ -23,15 +22,18 @@ import {
   type QualityTier,
 } from './render/quality';
 import { GameRenderer, type PlayerPose } from './render/scene';
-import { Level } from './sim/grid/level';
+import { levelFromQuery, levelIds, levelUrl, loadPlayableLevel } from './levels';
 import type { NoteStyle } from './sim/grid/schema';
 import { BLOCK } from './sim/grid/units';
+import { torchInHand } from './sim/player/torch';
 import { tuning } from './sim/player/tuning';
 import { createWorld, respawn, stepWorld, type World } from './sim/world';
-import { chamberOf } from './ui/campaign';
+import { chamberOf, nextChamber } from './ui/campaign';
+import { ChamberMap } from './ui/chamber-map';
 import { EndScreen } from './ui/end-screen';
+import { browserProgressStorage, loadReached, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
-import { applyStaticStrings, pickLocale, setLocale, type StringKey } from './ui/i18n';
+import { applyStaticStrings, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
 import { Intro } from './ui/intro';
 import { LoadingScreen } from './ui/loading';
 import { Menu } from './ui/menu';
@@ -39,6 +41,7 @@ import { PadEdgeReader } from './ui/nav';
 import { PAD, PadReader, focusItem, padHas } from './ui/pad';
 import { Prelude } from './ui/prelude';
 import { Reader } from './ui/reader';
+import { registerServiceWorker } from './ui/service-worker';
 import { browserStorage, defaultSettings, loadSettings, saveSettings, type Settings } from './ui/settings';
 import { TitleScreen } from './ui/title';
 
@@ -52,6 +55,32 @@ const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(
 
 /** Title screen → intro → play (the pause menu and the note reader stop it) → end of the level. */
 type Phase = 'title' | 'intro' | 'play' | 'end';
+
+/** Which temple mechanism a 'lever' use is working, for Nora's animation (see NoraPose.use). */
+function useKind(world: World): 'mirror' | 'slot' | null {
+  const use = world.state.mechanisms.use;
+  const p = world.state.player;
+  if (!use || p.mode !== 'lever') return null;
+  const m = world.state.mechanisms;
+  if (m.mirrors.some((x) => x.id === use.id)) return 'mirror';
+  if (m.slots.some((x) => x.id === use.id)) return 'slot';
+  return null;
+}
+
+/** Whether Nora stands on a moving platform's deck (her planted feet ride with it). */
+function riding(world: World): boolean {
+  const p = world.state.player;
+  if (p.mode !== 'ground') return false;
+  for (const pl of world.state.mechanisms.platforms) {
+    if (
+      Math.abs(pl.pos.x - p.pos.x) <= 1.1 &&
+      Math.abs(pl.pos.z - p.pos.z) <= 1.1 &&
+      Math.abs(pl.pos.y - p.pos.y) < 0.1
+    )
+      return true;
+  }
+  return false;
+}
 
 function deviceHints(): DeviceHints {
   const nav = navigator as Navigator & { deviceMemory?: number };
@@ -82,8 +111,22 @@ async function main(): Promise<void> {
   const stats = $('#hud-stats');
   const startButton = $<HTMLButtonElement>('#start-button');
 
-  const level = Level.parse(levelJson);
+  // The chamber asked for in the URL (?level=<id>), or the first one if it is unknown or broken.
+  const level = await loadPlayableLevel(levelFromQuery(location.search));
   const chamber = chamberOf(level.id);
+  const progress = browserProgressStorage();
+  markReached(progress, level.id);
+  const playable = new Set(levelIds());
+  // The title's kicker and the pause menu name the chamber being played.
+  const kicker = document.querySelector<HTMLElement>('.title-block .kicker');
+  if (kicker && chamber?.kicker) {
+    kicker.dataset.i18n = chamber.kicker;
+    kicker.textContent = t(chamber.kicker);
+  }
+  for (const el of document.querySelectorAll<HTMLElement>('.menu-kicker[data-i18n^="level."]')) {
+    el.dataset.i18n = level.name;
+    el.textContent = t(level.name as StringKey);
+  }
 
   // Audio exists before the renderer loads: the first tap or key, even during the
   // splash and the story cards, unlocks it and brings in the title theme softly.
@@ -111,6 +154,8 @@ async function main(): Promise<void> {
   const loadingDone = (): void => {
     loading.ready();
     prelude.ready();
+    // Offline play and fast restarts, once the first room no longer needs the bandwidth.
+    registerServiceWorker();
   };
 
   // Quality: the stored tier, or on first run the device heuristic until the benchmark decides.
@@ -132,7 +177,7 @@ async function main(): Promise<void> {
 
   audio.setEmitters(
     level.entities
-      .filter((e) => e.type === 'brazier' || e.type === 'relic')
+      .filter((e) => (e.type === 'brazier' && e.lit) || e.type === 'relic')
       .map((e) => {
         const x = e.at[0] * BLOCK + BLOCK / 2;
         const z = e.at[1] * BLOCK + BLOCK / 2;
@@ -351,7 +396,15 @@ async function main(): Promise<void> {
   }
 
   const start = (): void => {
-    if (phase !== 'title' || starting || !loading.isReady || prelude.running || menu.isOpen) return;
+    if (
+      phase !== 'title' ||
+      starting ||
+      !loading.isReady ||
+      prelude.running ||
+      menu.isOpen ||
+      chambers.isOpen
+    )
+      return;
     starting = true;
     // Audio and fullscreen must be requested inside the gesture itself.
     void audio.unlock();
@@ -386,8 +439,11 @@ async function main(): Promise<void> {
   const title = new TitleScreen(
     start,
     (type) => cue(type),
-    () => menu.isOpen || !loading.isReady || prelude.running,
+    () => menu.isOpen || chambers.isOpen || !loading.isReady || prelude.running,
   );
+  $('#start-chambers').addEventListener('click', () => {
+    if (!menu.isOpen && !prelude.running) chambers.open(loadReached(progress), playable);
+  });
   $('#start-options').addEventListener('click', () => {
     if (!menu.isOpen) menu.open('title');
   });
@@ -428,6 +484,8 @@ async function main(): Promise<void> {
     audio.ui('confirm');
     world = createWorld(level, 1);
     renderer.resetWorld(world);
+    // A fresh world carries no torch: its crackle stops.
+    audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
     prev = pose();
     hud.reset();
     endScreen.hide();
@@ -442,6 +500,8 @@ async function main(): Promise<void> {
     document.body.classList.remove('paused');
     world = createWorld(level, 1);
     renderer.resetWorld(world);
+    // A fresh world carries no torch: its crackle stops.
+    audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
     prev = pose();
     shots = entranceShots(level, world.state.player.pos, world.state.player.yaw);
     hud.reset();
@@ -452,7 +512,19 @@ async function main(): Promise<void> {
     title.show();
     focusItem(startButton);
   };
-  const endScreen = new EndScreen(restart, quitToTitle, cue);
+  /**
+   * Another chamber: the page loads again with its id, which releases every
+   * GPU resource of this one (the WebGPU device goes with the page).
+   */
+  const goToLevel = (id: string): void => {
+    if (id === level.id && phase === 'title') return;
+    markReached(progress, id);
+    audio.ui('confirm');
+    curtain.classList.add('in');
+    window.setTimeout(() => location.assign(levelUrl(location.href, id)), 480);
+  };
+  const chambers = new ChamberMap(goToLevel, level.id, (type) => cue(type));
+  const endScreen = new EndScreen(restart, quitToTitle, cue, goToLevel);
 
   const reader = new Reader(
     (note) => {
@@ -528,8 +600,14 @@ async function main(): Promise<void> {
   const onEvent = (e: SimEvent): void => {
     const p = world.state.player.pos;
     audio.onEvent(e, soundAt(e));
+    if (e.type === 'player.respawned') {
+      // The checkpoint may bring back a torch in another state: the crackle follows it.
+      const t = world.state.player.torch;
+      audio.onEvent({ type: 'torch.state', tick: e.tick, lit: t.has && t.lit, hand: !t.stowed }, p);
+    }
     hud.onEvent(e, world);
     renderer.combat.onEvent(e, world);
+    renderer.onEvent(e);
     if (e.type === 'camera.focus') {
       const at = renderer.entityPosition(String(e.target));
       if (at) camera.focusOn(at, Number(e.duration) || 2);
@@ -553,7 +631,10 @@ async function main(): Promise<void> {
       setPhase('end');
       // The page owns the keyboard again (Tab, Enter on the end screen's buttons).
       keyboard.setEnabled(false);
-      endScreen.show(world, (id) => id === level.id);
+      // The next chamber is reached: the map opens it, and the end screen offers it.
+      const next = nextChamber(level.id)?.level;
+      if (next && playable.has(next)) markReached(progress, next);
+      endScreen.show(world, (id) => playable.has(id));
     }
   };
   bus.on('*', onEvent);
@@ -675,6 +756,9 @@ async function main(): Promise<void> {
         vy: p.vel.y,
         climbT: p.move ? Math.min(1, p.modeTime / p.move.duration) : 0,
         health: p.health,
+        torch: torchInHand(p) ? 1 : 0,
+        use: useKind(world),
+        riding: riding(world),
         ...renderer.combat.aimPose(world),
       },
       view.eye,
@@ -750,7 +834,8 @@ async function main(): Promise<void> {
     if (!menuOwnsPad) {
       if (phase === 'title' && prelude.running) {
         if (pad.any) prelude.skip();
-      } else if (phase === 'title') title.pad(pad);
+      } else if (phase === 'title' && chambers.isOpen) chambers.pad(pad);
+      else if (phase === 'title') title.pad(pad);
       else if (phase === 'intro' && pad.any) intro.skip();
       else if (phase === 'end') endScreen.pad(pad);
       else reader.pad(pad);
@@ -768,6 +853,7 @@ async function main(): Promise<void> {
     redraw = false;
     if (phase === 'play') hud.update(world, dt);
     audio.setHealth(world.state.player.health / tuning.maxHealth);
+    audio.setUnderwater(renderer.underwater);
 
     const p = world.state.player.pos;
     const r = level.roomAt(Math.floor(p.x / BLOCK), Math.floor(p.z / BLOCK));

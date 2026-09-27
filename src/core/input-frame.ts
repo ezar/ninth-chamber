@@ -17,6 +17,8 @@ export const BUTTONS = [
   'recenter',
   /** Cycles the locked target while aiming. */
   'target',
+  /** Puts the torch away or takes it out (last, so older recordings keep their bits). */
+  'torch',
 ] as const;
 
 export type Button = (typeof BUTTONS)[number];

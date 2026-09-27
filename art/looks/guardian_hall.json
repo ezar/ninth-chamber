@@ -1,0 +1,12 @@
+{
+  "id": "guardian_hall",
+  "background": "#0d0806",
+  "exposure": 1.04,
+  "hemi": { "sky": "#c79a6c", "ground": "#1e130b", "intensity": 0.26 },
+  "fog": { "color": "#6b4c33", "density": 0.024 },
+  "sun": { "color": "#ffcf92", "intensity": 5.0, "direction": [0.08, 0.99, -0.04] },
+  "fire": { "color": "#ff9a48", "intensity": 36, "flicker": 0.25 },
+  "bloom": { "strength": 0.7, "radius": 0.6, "threshold": 0.76 },
+  "grade": { "tint": "#ffe2bc", "saturation": 1.0, "contrast": 1.15, "vignette": 0.42 },
+  "trim": { "friezeHeight": 4.6, "reliefs": true }
+}

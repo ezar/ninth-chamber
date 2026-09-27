@@ -1,0 +1,18 @@
+{
+  "id": "cistern_dark",
+  "background": "#020303",
+  "exposure": 1.0,
+  "hemi": { "sky": "#1a2224", "ground": "#050606", "intensity": 0.035 },
+  "fog": { "color": "#0b0f0f", "density": 0.05 },
+  "sun": null,
+  "fire": { "color": "#ff9c4c", "intensity": 44, "flicker": 0.3 },
+  "bloom": { "strength": 0.75, "radius": 0.55, "threshold": 0.72 },
+  "grade": { "tint": "#e4e0d6", "saturation": 0.9, "contrast": 1.2, "vignette": 0.55 },
+  "water": {
+    "deep": "#030a0b",
+    "tint": "#3f6f6b",
+    "sky": "#070b0b",
+    "caustics": 0.4,
+    "fog": { "color": "#061616", "density": 0.24 }
+  }
+}

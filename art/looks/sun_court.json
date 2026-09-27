@@ -1,0 +1,12 @@
+{
+  "id": "sun_court",
+  "background": "#140d07",
+  "exposure": 1.08,
+  "hemi": { "sky": "#e3b988", "ground": "#4a2f1b", "intensity": 0.34 },
+  "fog": { "color": "#b98c5c", "density": 0.018 },
+  "sun": { "color": "#ffd296", "intensity": 6.0, "direction": [0.12, 0.96, -0.22] },
+  "fire": { "color": "#ffa24a", "intensity": 30, "flicker": 0.22 },
+  "bloom": { "strength": 0.62, "radius": 0.6, "threshold": 0.8 },
+  "grade": { "tint": "#ffe8c6", "saturation": 1.04, "contrast": 1.1, "vignette": 0.34 },
+  "trim": { "friezeHeight": 4.4, "reliefs": true }
+}

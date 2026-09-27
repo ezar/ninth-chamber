@@ -10,6 +10,9 @@ import { air } from './modes/air';
 import { ground } from './modes/ground';
 import { climb, hang } from './modes/hang';
 import { block, dead, lever, moveBlock, pickup } from './modes/interact';
+import { stepTorch } from './torch';
+import { breathe, dive, swim } from './modes/swim';
+import { stepFlare } from './flare';
 import { stepMedkit, stepWeapons } from './weapons';
 
 const MODES: Record<PlayerMode, (c: Ctx) => void> = {
@@ -23,6 +26,8 @@ const MODES: Record<PlayerMode, (c: Ctx) => void> = {
   lever,
   pickup,
   dead,
+  swim,
+  dive,
 };
 
 export function stepPlayer(world: World, input: InputFrame, dt: number): void {
@@ -38,6 +43,10 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
     world.events.emit({ type: 'player.mode', tick: world.tick, from: before, to: p.mode });
   // A respawn replaces the whole state: this tick's context is stale.
   if (world.state.player !== p) return;
+  // The torch first: whether it fills her left hand decides how many pistols she can use.
+  stepTorch(c);
   stepWeapons(c);
   stepMedkit(c);
+  breathe(c);
+  stepFlare(c);
 }

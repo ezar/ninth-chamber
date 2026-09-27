@@ -886,6 +886,19 @@ export class AudioGraph {
         if (target && e.hit !== true) this.play('sfx', target, (s, t) => sfx.ricochet(s, t + 0.02));
         break;
       }
+      case 'torch.lit':
+      case 'torch.drawn':
+      case 'torch.stowed':
+      case 'torch.out':
+      case 'torch.state': {
+        // A whoosh as the pitch catches or the torch swings; a hiss as it dies. The crackle follows.
+        const lit = e.type === 'torch.lit' || (e.type !== 'torch.out' && e.lit === true);
+        const inHand =
+          e.type === 'torch.lit' || e.type === 'torch.drawn' || (e.type === 'torch.state' && e.hand === true);
+        if (e.type !== 'torch.state') this.play('sfx', at, (s, t) => sfx.torch(s, t, e.type));
+        this.emitters.torch(lit ? (inHand ? 1 : 0.5) : 0);
+        break;
+      }
       case 'weapons.drawn':
       case 'weapons.holstered': {
         const drawing = e.type === 'weapons.drawn';
@@ -924,6 +937,85 @@ export class AudioGraph {
         });
         break;
       }
+      // The Temple of the Sun: every trap sounds before it acts (spec §12).
+      case 'blade.swish':
+        this.play('sfx', at, (s, t) => sfx.whoosh(s, t));
+        break;
+      case 'fire.warn':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'fire', { gain: 0.35, rate: 1.3, duration: 0.9, fadeOut: 0.2 }))
+            sfx.fireHiss(s, t, 0.9);
+        });
+        break;
+      case 'fire.burst':
+        this.play('sfx', at, (s, t) => {
+          this.layer(s, t, 'fire', { gain: 0.9, rate: 0.8, duration: 1.3, fadeOut: 0.4 });
+          sfx.fireBurst(s, t, 1.3);
+        });
+        break;
+      case 'mirror.turned':
+        this.play('sfx', at, (s, t) => {
+          if (
+            !this.layer(s, t, 'block.drag', {
+              gain: LEVEL.drag * 0.6,
+              rate: 1.3,
+              duration: 0.7,
+              fadeOut: 0.2,
+            })
+          )
+            sfx.drumTurn(s, t);
+        });
+        break;
+      case 'receiver.lit':
+        this.play('sfx', at, (s, t) => sfx.sunChime(s, t));
+        break;
+      case 'boulder.warning':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'rumble', { gain: 0.9, duration: 1.4, fadeOut: 0.3 })) sfx.rumble(s, t, 1.4);
+          this.layer(s, t, 'debris', { delay: 0.2, gain: LEVEL.debris, duration: 1.1, fadeOut: 0.3 });
+        });
+        break;
+      case 'boulder.rolling': {
+        const dur = Math.max(1, num(e, 'duration', 3));
+        this.play('sfx', at, (s, t) => {
+          if (this.ready('rumble'))
+            this.loopLayer(s, t, 'rumble', dur, { gain: 1, rate: 0.8, fadeIn: 0.3, fadeOut: 0.5 });
+          else sfx.rumble(s, t, dur);
+        });
+        m.duck(dur);
+        break;
+      }
+      case 'boulder.crashed':
+      case 'guardian.fell':
+      case 'guardian.defeated':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'stone.impact', { gain: LEVEL.impact, rate: 0.6 })) sfx.heavyImpact(s, t, 1);
+          this.layer(s, t, 'debris', { delay: 0.1, gain: LEVEL.debris, duration: 1.4, fadeOut: 0.5 });
+          sfx.weight(s, t, 0.3);
+        });
+        m.duck(1.6);
+        break;
+      case 'guardian.step':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'stone.impact', { gain: LEVEL.impact * 0.35, rate: 0.55, lp: 900 }))
+            sfx.heavyImpact(s, t, 0.35);
+        });
+        break;
+      case 'guardian.windup':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'stone.shift', { gain: LEVEL.shift, rate: 0.6, duration: 0.9, fadeOut: 0.3 }))
+            sfx.grind(s, t, 0.9, 0.6, 0.12, true);
+        });
+        break;
+      case 'guardian.slam':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'stone.impact', { gain: LEVEL.impact * 1.1, rate: 0.5 }))
+            sfx.heavyImpact(s, t, 1.2);
+          this.layer(s, t, 'debris', { delay: 0.05, gain: LEVEL.debris * 0.8, duration: 1, fadeOut: 0.4 });
+          sfx.weight(s, t, 0.4);
+        });
+        m.duck(1.2);
+        break;
       case 'medkit.none':
         this.play('ui', null, (s, t) => sfx.denied(s, t));
         break;

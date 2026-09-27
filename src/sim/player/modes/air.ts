@@ -5,9 +5,11 @@ import { die, emit, hurt, setMode, type Ctx } from '../context';
 import { tuning } from '../tuning';
 import { jump } from './ground';
 import { startClimb, startHang } from './hang';
+import { enterWaterFromAir, softLanding } from './swim';
 
 export function air(c: Ctx): void {
   const { p, q, dt } = c;
+  const y0 = p.pos.y;
 
   // Coyote time: a jump just after running off an edge still counts.
   if (!p.jumped && p.sinceGround <= tuning.coyoteTime && c.pressed('jump')) {
@@ -54,6 +56,7 @@ export function air(c: Ctx): void {
   p.fallFrom = Math.max(p.fallFrom, y);
 
   if (tryGrab(c, rising)) return;
+  if (enterWaterFromAir(c, y0)) return;
 
   const floor = q.floorAt(p.pos.x, p.pos.z);
   if (p.vel.y <= 0 && y <= floor) land(c, floor);
@@ -102,9 +105,11 @@ function land(c: Ctx, floor: number): void {
   p.vel.y = 0;
   p.jumped = false;
   setMode(p, 'ground');
-  const hard = fall > tuning.fallDamageFrom;
-  emit(c, 'player.landed', { fall, hard });
-  if (fall >= tuning.fallDeathFrom) {
+  // Water deep enough breaks any fall (spec §5.10).
+  const soft = softLanding(c);
+  const hard = fall > tuning.fallDamageFrom && !soft;
+  emit(c, 'player.landed', { fall, hard, water: soft });
+  if (fall >= tuning.fallDeathFrom && !soft) {
     die(c, 'fall');
     return;
   }

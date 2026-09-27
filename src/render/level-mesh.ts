@@ -5,6 +5,7 @@
  * corners (baked vertex AO) so the grid does not read as cubes.
  */
 import * as THREE from 'three/webgpu';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Level, Sector } from '../sim/grid/level';
 import { BLOCK } from '../sim/grid/units';
 
@@ -119,8 +120,18 @@ function noise3(x: number, y: number, z: number): number {
   return s + Math.sin(x * 9.1 + y * 7.7 - z * 8.3) * 0.2;
 }
 
+export const SURFACES: readonly Surface[] = ['wall', 'floorStone', 'floorSand', 'ceiling', 'lip'];
+
+/** One room's geometry for one surface: the unit room culling shows and hides. */
+export interface LevelPart {
+  room: string;
+  surface: Surface;
+  geometry: THREE.BufferGeometry;
+}
+
 export interface LevelMeshes {
-  surfaces: Record<Surface, THREE.BufferGeometry>;
+  /** Static geometry merged per room and surface (room culling draws only visible rooms). */
+  parts: LevelPart[];
   /** Lightmap atlas size in texels (the second UV set covers it). */
   lightmapSize: { width: number; height: number };
   /** Cells that are sky holes in the ceiling, per room. */
@@ -132,12 +143,20 @@ export interface LevelMeshes {
  * centre (rooms lit by a sun shaft).
  */
 export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySet<string> }): LevelMeshes {
-  const b: Record<Surface, Builder> = {
-    wall: new Builder(),
-    floorStone: new Builder(),
-    floorSand: new Builder(),
-    ceiling: new Builder(),
-    lip: new Builder(),
+  const builders = new Map<string, Record<Surface, Builder>>();
+  const buildersOf = (room: string): Record<Surface, Builder> => {
+    let b = builders.get(room);
+    if (!b) {
+      b = {
+        wall: new Builder(),
+        floorStone: new Builder(),
+        floorSand: new Builder(),
+        ceiling: new Builder(),
+        lip: new Builder(),
+      };
+      builders.set(room, b);
+    }
+    return b;
   };
   const atlas = new Atlas();
   const sector = (cx: number, cz: number): Sector | undefined => level.sector(cx, cz);
@@ -196,6 +215,8 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
 
   for (const s of level.allSectors()) {
     if (s.wall) continue;
+    // Faces go to the room of the open sector that draws them; the atlas order is unchanged.
+    const b = buildersOf(s.room);
     const x0 = s.cx * BLOCK;
     const z0 = s.cz * BLOCK;
     const top = floorTop(s);
@@ -311,17 +332,28 @@ export function buildLevelMeshes(level: Level, opts: { skylightRooms: ReadonlySe
   }
 
   const size = atlas.pack();
+  const parts: LevelPart[] = [];
+  for (const [room, b] of builders) {
+    for (const surface of SURFACES) {
+      if (b[surface].idx.length) parts.push({ room, surface, geometry: b[surface].geometry(size) });
+    }
+  }
   return {
-    surfaces: {
-      wall: b.wall.geometry(size),
-      floorStone: b.floorStone.geometry(size),
-      floorSand: b.floorSand.geometry(size),
-      ceiling: b.ceiling.geometry(size),
-      lip: b.lip.geometry(size),
-    },
+    parts,
     lightmapSize: size,
     skylights,
   };
+}
+
+/** Whole-level geometry per surface (the lightmap bake works on the level as one). */
+export function mergeSurfaces(parts: readonly LevelPart[]): Record<Surface, THREE.BufferGeometry> {
+  const out = {} as Record<Surface, THREE.BufferGeometry>;
+  for (const surface of SURFACES) {
+    const geos = parts.filter((p) => p.surface === surface).map((p) => p.geometry);
+    const merged = geos.length ? mergeGeometries(geos) : null;
+    out[surface] = merged ?? new THREE.BufferGeometry();
+  }
+  return out;
 }
 
 /** Adds a planar quad, fixing the winding so it faces `normal`. */

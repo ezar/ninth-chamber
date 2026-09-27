@@ -14,6 +14,18 @@ export interface LookFile {
   fire: { color: string; intensity: number; flicker: number };
   bloom: { strength: number; radius: number; threshold: number };
   grade: { tint: string; saturation: number; contrast: number; vignette: number };
+  /** Scale on the baked bounce light while in this room (default 1): a room gone dark dims what was baked with its fires. */
+  lightmap?: number;
+  /** Rooms with water: its colours, caustics and the fog under the surface (render/water.ts). */
+  water?: {
+    deep: string;
+    tint: string;
+    sky: string;
+    caustics: number;
+    fog: { color: string; density: number };
+  };
+  /** Architectural dressing: a gilded frieze round the walls (height above the floor, m) and painted relief panels. */
+  trim?: { friezeHeight?: number; reliefs?: boolean };
 }
 
 /** A look with colours parsed, ready to blend. */
@@ -38,6 +50,7 @@ export interface Look {
   saturation: number;
   contrast: number;
   vignette: number;
+  lightmap: number;
 }
 
 const files = import.meta.glob<LookFile>('../../art/looks/*.json', { eager: true, import: 'default' });
@@ -77,6 +90,7 @@ export function parseLook(f: LookFile): Look {
     saturation: f.grade.saturation,
     contrast: f.grade.contrast,
     vignette: f.grade.vignette,
+    lightmap: f.lightmap ?? 1,
   };
 }
 
@@ -114,6 +128,7 @@ export function blendLook(out: Look, to: Look, k: number): void {
   out.saturation = n(out.saturation, to.saturation);
   out.contrast = n(out.contrast, to.contrast);
   out.vignette = n(out.vignette, to.vignette);
+  out.lightmap = n(out.lightmap, to.lightmap);
 }
 
 export function cloneLook(l: Look): Look {

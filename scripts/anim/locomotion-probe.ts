@@ -78,6 +78,7 @@ export class LocomotionProbe {
         climbT: 0,
         health: 100,
         weapons: 0,
+        torch: 0,
         aiming: 0,
         aimYaw: 0,
         aimPitch: 0,

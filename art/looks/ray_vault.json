@@ -1,0 +1,12 @@
+{
+  "id": "ray_vault",
+  "background": "#0a0604",
+  "exposure": 1.0,
+  "hemi": { "sky": "#6e4c30", "ground": "#150d07", "intensity": 0.16 },
+  "fog": { "color": "#3a2618", "density": 0.035 },
+  "sun": null,
+  "fire": { "color": "#ffa04a", "intensity": 40, "flicker": 0.28 },
+  "bloom": { "strength": 0.8, "radius": 0.5, "threshold": 0.72 },
+  "grade": { "tint": "#ffe4bd", "saturation": 1.0, "contrast": 1.16, "vignette": 0.48 },
+  "trim": { "friezeHeight": 3.0, "reliefs": true }
+}

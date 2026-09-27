@@ -1,0 +1,12 @@
+{
+  "id": "ray_court",
+  "background": "#120c07",
+  "exposure": 1.08,
+  "hemi": { "sky": "#dcb283", "ground": "#23160c", "intensity": 0.3 },
+  "fog": { "color": "#9a7650", "density": 0.02 },
+  "sun": { "color": "#ffd59c", "intensity": 5.5, "direction": [-0.15, 0.96, 0.2] },
+  "fire": { "color": "#ffa24a", "intensity": 30, "flicker": 0.22 },
+  "bloom": { "strength": 0.65, "radius": 0.6, "threshold": 0.78 },
+  "grade": { "tint": "#ffe7c4", "saturation": 1.03, "contrast": 1.1, "vignette": 0.36 },
+  "trim": { "friezeHeight": 4.2, "reliefs": true }
+}

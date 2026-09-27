@@ -485,3 +485,78 @@ export function medkit(s: Strip, t: number, large: boolean): void {
 export function denied(s: Strip, t: number): void {
   s.tone(t, { wave: 'triangle', f: 220, f2: 180, gain: 0.04, a: 0.002, d: 0.08 });
 }
+
+/** The torch: a whoosh as it catches (torch.lit), a swing to or from the belt, a wet hiss as it dies. */
+export function torch(s: Strip, t: number, what: string): void {
+  if (what === 'torch.out') {
+    s.noiseHit(t, { type: 'highpass', f: 3500, f2: 1800, gain: 0.07, a: 0.01, hold: 0.15, d: 0.5 });
+    return;
+  }
+  const ignite = what === 'torch.lit';
+  s.noiseHit(t, {
+    buf: 'brown',
+    type: 'bandpass',
+    f: ignite ? 220 : 380,
+    f2: ignite ? 900 : 700,
+    q: 0.8,
+    gain: ignite ? 0.22 : 0.08,
+    a: ignite ? 0.05 : 0.03,
+    d: ignite ? 0.45 : 0.22,
+  });
+  if (ignite) s.debris(t + 0.05, t + 0.4, 6, 0.03, 2000, 5000);
+}
+
+// ─────────────────────────── The Temple of the Sun ───────────────────────────
+
+/** A pendulum blade sweeping through the bottom of its arc: a rising, then falling rush of air. */
+export function whoosh(s: Strip, t: number): void {
+  s.noiseHit(t, { type: 'bandpass', f: 380, f2: 1700, q: 1.4, gain: 0.16, a: 0.16, d: 0.28 });
+  s.noiseHit(t + 0.1, {
+    buf: 'pink',
+    type: 'bandpass',
+    f: 900,
+    f2: 320,
+    q: 0.9,
+    gain: 0.08,
+    a: 0.06,
+    d: 0.3,
+  });
+}
+
+/** Fire grates: the hiss before a burst, and the burst itself. */
+export function fireHiss(s: Strip, t: number, dur: number): void {
+  s.noiseHit(t, { type: 'highpass', f: 2600, gain: 0.05, a: dur * 0.8, d: 0.25 });
+  s.debris(t, t + dur, 10, 0.03, 2500, 6000);
+}
+
+export function fireBurst(s: Strip, t: number, dur: number): void {
+  s.noiseHit(t, {
+    buf: 'brown',
+    type: 'lowpass',
+    f: 700,
+    gain: 0.32,
+    a: 0.03,
+    hold: dur * 0.6,
+    d: dur * 0.5,
+  });
+  s.noiseHit(t, { type: 'bandpass', f: 1500, q: 0.6, gain: 0.08, a: 0.02, hold: dur * 0.5, d: 0.4 });
+  s.tone(t, { f: 70, f2: 48, gain: 0.12, a: 0.02, d: 0.5 });
+}
+
+/** A mirror drum turning a quarter on its stone collar. */
+export function drumTurn(s: Strip, t: number): void {
+  grind(s, t, 0.7, 1.3, 0.1);
+  s.tone(t + 0.62, { f: 180, f2: 150, gain: 0.05, a: 0.004, d: 0.18 });
+}
+
+/** A sun disc catching the light: a warm, shimmering chord. */
+export function sunChime(s: Strip, t: number): void {
+  for (const [f, g] of [
+    [523.25, 0.05],
+    [659.25, 0.04],
+    [783.99, 0.035],
+    [1046.5, 0.02],
+  ] as const) {
+    s.tone(t, { wave: 'sine', f, gain: g, a: 0.05, d: 2.2 });
+  }
+}

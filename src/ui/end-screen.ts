@@ -43,7 +43,12 @@ export class EndScreen {
     onRestart: () => void,
     onMenu: () => void,
     private readonly cue: (type: string, data?: Record<string, unknown>) => void,
+    onNext: (levelId: string) => void = () => {},
   ) {
+    $('end-next').addEventListener('click', () => {
+      const id = $('end-next').dataset.level;
+      if (id) onNext(id);
+    });
     $('end-restart').addEventListener('click', onRestart);
     $('end-menu').addEventListener('click', onMenu);
     this.root.addEventListener('pointerdown', () => this.skip());
@@ -155,7 +160,13 @@ export class EndScreen {
     $('end-next-name').textContent = open && next ? t(next.name) : '';
     $('end-next-name').hidden = !open;
     $('end-next-line').textContent = text(chamberOf(levelId)?.teaser);
-    $('end-next-soon').hidden = !open || playable(next?.level ?? '');
+    const ready = open && playable(next?.level ?? '');
+    $('end-next-soon').hidden = !open || ready;
+    // "Enter the next chamber" once that chamber can be played in this build.
+    const button = $('end-next');
+    button.hidden = !ready;
+    if (ready && next?.level) button.dataset.level = next.level;
+    else delete button.dataset.level;
     this.root.querySelector('.end-teaser')?.toggleAttribute('hidden', !next);
   }
 

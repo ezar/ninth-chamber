@@ -106,4 +106,25 @@ describe('fire lights', () => {
     expectSeamless(frames);
     for (const f of frames) expect(f.plain.length).toBe(4);
   });
+
+  it('gives a cold brazier no light, then fades it in once lit', () => {
+    const s = new FireLightScheduler({ plain: 4, casters: 0 });
+    const spots: FireSpot[] = [
+      { x: 0, y: 1, z: 0, room: 'dark', off: true },
+      { x: 4, y: 1, z: 0, room: 'dark' },
+    ];
+    const eye = { x: 2, y: 2, z: 2 };
+    const step = (n: number): void => {
+      for (let i = 0; i < n; i++) s.update(spots, eye, new Set(['dark']), 4, 0, DT);
+    };
+    step(120);
+    expect(s.total(0)).toBe(0);
+    expect(s.total(1)).toBe(1);
+    (spots[0] as FireSpot).off = false;
+    step(1);
+    expect(s.total(0)).toBeGreaterThan(0);
+    expect(s.total(0)).toBeLessThanOrEqual(FADE_RATE * DT + 1e-9);
+    step(120);
+    expect(s.total(0)).toBe(1);
+  });
 });

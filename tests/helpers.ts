@@ -43,6 +43,8 @@ export function testLevel(
     legend?: Record<string, unknown>;
     ceil?: number;
     face?: 'N' | 'E' | 'S' | 'W';
+    /** Room-wide water surface in clicks. */
+    water?: number;
   } = {},
 ): World {
   let start: [number, number] = [1, 1];
@@ -58,7 +60,14 @@ export function testLevel(
     name: 'test',
     start: { room: 'r', at: start, face: extra.face ?? 'N' },
     rooms: [
-      { id: 'r', origin: [0, 0, 0], ceil: extra.ceil ?? 24, legend: { ...legend, ...extra.legend }, rows },
+      {
+        id: 'r',
+        origin: [0, 0, 0],
+        ceil: extra.ceil ?? 24,
+        legend: { ...legend, ...extra.legend },
+        rows,
+        ...(extra.water === undefined ? {} : { water: extra.water }),
+      },
     ],
     entities: extra.entities ?? [],
     logic: extra.logic ?? [],
