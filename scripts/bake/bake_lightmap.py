@@ -170,24 +170,53 @@ def bake(objects: list[bpy.types.Object], samples: int) -> None:
     bake.use_pass_direct = False
     bake.use_pass_indirect = True
     bake.use_pass_color = False
-    bake.margin = 4
-    bake.margin_type = "EXTEND"
+    # No margin from Blender: with several objects it dilates each one on its
+    # own, so a later room's margin paints over the gutters of the rooms baked
+    # before it, and thin faces (lips, plinth tops) pick up the wrong room's
+    # light. The margin is applied once over the whole atlas in `dilate`.
+    bake.margin = 0
     bpy.ops.object.select_all(action="DESELECT")
     for obj in objects:
         obj.data.uv_layers.active = obj.data.uv_layers["lightmap"]
         obj.select_set(True)
     bpy.context.view_layer.objects.active = objects[0]
-    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"INDIRECT"}, use_clear=True, margin=4)
+    bpy.ops.object.bake(type="DIFFUSE", pass_filter={"INDIRECT"}, use_clear=True, margin=0)
 
 
-def smooth(pixels: np.ndarray) -> np.ndarray:
-    """Light 3×3 box filter to take the edge off Monte Carlo noise (indirect light is smooth)."""
-    padded = np.pad(pixels, ((1, 1), (1, 1), (0, 0)), mode="edge")
-    acc = np.zeros_like(pixels)
+def box3(values: np.ndarray) -> np.ndarray:
+    """Sum over each texel's 3×3 neighbourhood (zero outside the image)."""
+    padded = np.pad(values, ((1, 1), (1, 1), (0, 0)))
+    acc = np.zeros_like(values)
     for dy in range(3):
         for dx in range(3):
-            acc += padded[dy : dy + pixels.shape[0], dx : dx + pixels.shape[1]]
-    return acc / 9
+            acc += padded[dy : dy + values.shape[0], dx : dx + values.shape[1]]
+    return acc
+
+
+def smooth(pixels: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Light 3×3 box filter over baked texels only, to take the edge off Monte Carlo
+    noise (indirect light is smooth). Face rectangles are 2·LIGHTMAP_PAD texels apart,
+    so a texel only ever averages with its own face."""
+    m = mask[:, :, None].astype(np.float32)
+    out = box3(pixels * m) / np.maximum(box3(m), 1e-6)
+    return np.where(m > 0, out, 0)
+
+
+def dilate(pixels: np.ndarray, mask: np.ndarray, steps: int = 4) -> np.ndarray:
+    """Bake margin for the whole atlas at once: grows the baked texels into the gutters
+    (each new texel takes the mean of its filled neighbours), so bilinear filtering at a
+    face's edge reads that face's own light, and each gutter splits between its two faces."""
+    px = pixels.copy()
+    m = mask[:, :, None].astype(np.float32)
+    for _ in range(steps):
+        weight = box3(m)
+        grown = (weight[:, :, 0] > 0) & (m[:, :, 0] == 0)
+        if not grown.any():
+            break
+        acc = box3(px * m) / np.maximum(weight, 1e-6)
+        px[grown] = acc[grown]
+        m[grown] = 1
+    return px
 
 
 def main() -> None:
@@ -199,7 +228,9 @@ def main() -> None:
     w, h = data["lightmapSize"]["width"], data["lightmapSize"]["height"]
 
     reset_scene()
-    image = bpy.data.images.new("lightmap", w, h, alpha=False, float_buffer=True)
+    # With alpha, the bake clears the image to transparent and writes opaque texels,
+    # so alpha is the coverage mask of every object's faces.
+    image = bpy.data.images.new("lightmap", w, h, alpha=True, float_buffer=True)
     objects = build_meshes(data, image)
     add_lights(data, objects)
 
@@ -207,8 +238,10 @@ def main() -> None:
     bake(list(objects.values()), samples)
     print(f"baked {w}×{h} at {samples} spp in {time.time() - t0:.0f} s")
 
-    px = np.array(image.pixels[:], dtype=np.float32).reshape(h, w, 4)[:, :, :3]
-    px = smooth(px)
+    rgba = np.array(image.pixels[:], dtype=np.float32).reshape(h, w, 4)
+    mask = rgba[:, :, 3] > 0.5
+    print(f"{int(mask.sum())} baked texels")
+    px = dilate(smooth(rgba[:, :, :3], mask), mask)
     scale = float(np.percentile(px, 99.7)) or 1.0
     norm = np.clip(px / scale, 0, 1)
     # Store with an sRGB curve so dark indirect light keeps precision in 8 bits.

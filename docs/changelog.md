@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.2.1 (2026-09-27): no more bright lines along edges in the lightmaps
+
+- **The cause** (`scripts/bake/bake_lightmap.py`): the bake splits the level into one object per room so each sun lights only its own room, and Blender applies the bake margin per object. Each room baked later painted its 4-texel margin over the gutters of rooms baked before it, and the atlas leaves only 4 texels between faces. The smoothing and the game's bilinear filtering then pulled that foreign light onto 1-texel faces (ledge lips, plinth tops, block rims, corbels), which showed as orange-red lines up to 20× too bright.
+- **The fix**: Blender bakes with no margin. The smoothing averages only baked texels, and one margin over the whole atlas fills each gutter from its nearest face. The per-room sun, the shared fire gain and height, and leaving out the cold braziers all stay.
+- **All three chambers re-baked** at the same size and samples. The Antechamber leaves the pre-shadow-audit bake that 0.2.0 restored as a stopgap.
+
 ## Version 0.2.0 (2026-09-27)
 
 Three chambers to play, and a tomb that runs and sounds better on phones:
