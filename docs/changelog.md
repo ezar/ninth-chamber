@@ -1,5 +1,30 @@
 # Changelog
 
+## Version 0.2.2 (2026-09-27): water in the Cisterns
+
+The owner, on an iPhone: the water texture in the Cisterns was bad, and the light the water throws on the walls was switched off. Captures at 0.2.1 showed why: a flat, dark teal slab with no normal detail beyond a few regular sine waves (which read as stripes where they showed at all), no reflection of the pillars, walls or fires, a weak single-colour depth fade, a hard stairstep at every wall, refraction that bent up to 35 px and pulled the ledge in front of the water into it, a mobile tier with no foam at walls at all, and no caustics anywhere.
+
+- **Surface** (`src/render/water.ts`): normals from a slow analytic swell plus two or three layers of a procedural ripple texture at unrelated sizes, angles and drifts (no visible tiling). The texture holds slopes, so its mipmaps flatten distant water instead of shimmering, and glints widen and dim with distance instead of sparkling. Schlick fresnel between the reflection (the room's dark vault, brighter towards the walls; the walls each fire and flare lights; their sharp glints; the sky through the skylight, traced to the opening in the vault) and what lies below. Per-channel absorption from the room's tint (clear shallows, tinted deep water, the sunk floor visible) and light scattered in the water, warmer near the fires. Snell's window from below, with rippled crests and a bright rim.
+- **High tier**: screen-space reflections traced through the depth buffer (14 steps and 4 of bisection, unrolled for both backends), so pillars, walls and fires are mirrored in the ripples; refraction bends less (and less in the shallows) and never takes what stands in front of the water.
+- **Shoreline on every tier**: each surface cell knows the tops of its eight neighbours, so the distance to walls, pillar corners and steps is exact without the depth buffer (mobile had no foam at walls before); the rich tiers add the depth buffer for Nora and props. Lacy foam and a thin meniscus hug the stone.
+- **Flow**: while a gate drains or fills a room the ripples drift towards or away from it, roughen and churn near the gate.
+- **Caustics are back without touching the level materials**: one overlay per wet room made of the room's own floor and wall triangles near and under the water (position and normal only, lifted 1 cm), drawn right after the opaque level with a modulate-2x blend. Map, normal map, AO, the uv1 lightmap, fog and shadows stay exactly as they were, and dry levels are untouched. Under the water the caustics dance on the pool floors and walls, fading with depth (red and blue a hair apart on high); above it, softer reflected ripples climb 1.6 m up the walls. The pattern is a photon-traced caustic texture made in code (`src/render/water-maths.ts`, tested): no assets.
+- **Culling**: water surfaces and caustic overlays live in their room's group, so they are hidden with their room (the surfaces used to be drawn in every room).
+- **One copy of the frame**: every viewport texture node copies the frame per render; all water reads now share one depth and one colour copy (0.2.1 made one per surface).
+- **Tiers**: high 3 ripple layers, 3 swell waves, 6 lights, reflections, refraction, dispersed caustics; medium 3 layers, 2 waves, 4 lights, depth-buffer thickness and foam; mobile 2 layers, 1 wave, 2 lights, grid thickness and shoreline, caustics from two texture reads with a narrower band (0.9 m above the water, 4 m below).
+- `pnpm bench --level cisterns` routes through a chamber other than the Antechamber.
+
+Performance, `pnpm bench --level cisterns --warm 3 --frames 4` on SwiftShader (no GPU; wall time is only a rough direction), 0.2.1 → now:
+
+| Tier   | Draw calls (mean / max) | Triangles (mean) | CPU frame median | Wall frame median | Textures (MB)         |
+| ------ | ----------------------- | ---------------- | ---------------- | ----------------- | --------------------- |
+| mobile | 147 / 206 → 137 / 197   | 121k → 136k      | 13.5 → 13.5 ms   | 851 → 887 ms      | 100 (360) → 102 (360) |
+| high   | 244 / 370 → 235 / 361   | 688k → 703k      | 21.7 → 21.8 ms   | 1606 → 1713 ms    | 162 (438) → 131 (405) |
+
+Same camera views before and after (`?level=cisterns`, WebGL 2 on SwiftShader), wall time per frame: mobile 390×844 at DPR 3 about +5 % on average (cistern pool 989 → 1081 ms, tide 1156 → 1233 ms, camp 1253 → 1296 ms; the caustic overlays are most of it), high 1280×720 about +8 % (the reflections). The Antechamber and the Temple keep the same draw calls and triangles.
+
+The overlays add triangles and the high tier's reflections cost fill; culling the surfaces with their rooms takes back more draw calls than the overlays add. The ripple and caustic textures take about 0.25 s to generate on a desktop CPU, once, behind the loading screen.
+
 ## Version 0.2.1 (2026-09-27): no more bright lines along edges in the lightmaps
 
 - **The cause** (`scripts/bake/bake_lightmap.py`): the bake splits the level into one object per room so each sun lights only its own room, and Blender applies the bake margin per object. Each room baked later painted its 4-texel margin over the gutters of rooms baked before it, and the atlas leaves only 4 texels between faces. The smoothing and the game's bilinear filtering then pulled that foreign light onto 1-texel faces (ledge lips, plinth tops, block rims, corbels), which showed as orange-red lines up to 20× too bright.

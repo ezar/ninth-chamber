@@ -9,6 +9,7 @@ The in-game Credits screen reads the bullet items of the **Audio** and **Music**
 - Game by César.
 - [Three.js](https://threejs.org) — MIT License. Rendering (WebGPU with WebGL2 fallback).
 - [Zod](https://zod.dev) — MIT License. Level file validation.
+- Water ripple and caustic textures are generated in code at load time (src/render/water-maths.ts): no texture assets.
 - Development tooling, not shipped: Vite, Vitest, TypeScript, ESLint, Prettier, tsx (MIT / Apache-2.0).
 
 ## Audio

@@ -6,6 +6,10 @@
  *
  *   pnpm bench [--url http://localhost:5173/] [--tiers high,medium,mobile]
  *              [--out bench.json] [--shots dir] [--warm 12] [--frames 16]
+ *              [--level cisterns]
+ *
+ * `--level` plays another chamber (the Cisterns route crosses every wet
+ * room, so it measures the water); the default is the Antechamber.
  *
  * The route stands Nora in each room and looks through every doorway to a
  * neighbouring room, so room culling is measured (and screenshotted) exactly
@@ -29,6 +33,7 @@ const OUT = arg('out', '');
 const SHOTS = arg('shots', '');
 const WARM = Number(arg('warm', '12'));
 const FRAMES = Number(arg('frames', '16'));
+const LEVEL = arg('level', '');
 
 /** One frame as the page records it. */
 interface FrameSample {
@@ -329,7 +334,9 @@ async function runTier(tier: Tier): Promise<TierResult> {
   const cdp = await context.newCDPSession(page);
   await cdp.send('Performance.enable');
 
-  await page.goto(URL_, { waitUntil: 'load' });
+  const target = new URL(URL_);
+  if (LEVEL) target.searchParams.set('level', LEVEL);
+  await page.goto(target.toString(), { waitUntil: 'load' });
   await page.waitForFunction(
     () => (window as unknown as { __nc?: { loading: { isReady: boolean } } }).__nc?.loading.isReady === true,
     null,

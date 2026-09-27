@@ -778,3 +778,362 @@ El mayor riesgo no es técnico: es que el movimiento pierda la sensación del Po
 - [ ] Licencia del código: abierto (MIT) con assets cerrados, o todo cerrado.
 - [ ] Idiomas en fase 3: ¿solo ES y EN, o también CA?
 - [ ] Nombre definitivo tras la búsqueda de marca.
+
+## 19. Las cámaras IV a IX (especificación, sin construir)
+
+Sep 27, 2026 · Especificación de las seis cámaras que faltan. Nada de esta sección está implementado: sirve para decidir el arco, el orden de producción y el trabajo técnico antes de construir ninguna. Las cámaras I a III (La Antesala, Las Cisternas, El Templo del Sol) están jugables desde la versión 0.2.0.
+
+### El arco de la campaña
+
+Las tres primeras reliquias ya dan las tres llaves de la novena que Elena enumera en su carta de 1989: **la estrella** (dónde mirar, el Corazón de Ámbar), **la noche sin luna** (cuándo, el Cristal de las Mareas) y **el rayo que no se talla** (hacia dónde caminar, el Disco Solar). Al terminar la tercera, Nora marca el noveno punto en el mapa, y entre ella y ese punto quedan "cinco puertas que no se abren desde hace tres mil años".
+
+Las cámaras IV a VIII son esas cinco puertas. Ya no responden a *dónde* ni *cuándo*, sino a *cómo* se entra en la novena: cada reliquia es una parte de la llave. La novena es el nivel final.
+
+| Cámara | Guardián | La reliquia da… | Mecanismo nuevo | Amenaza principal | Duración |
+| --- | --- | --- | --- | --- | --- |
+| IV · El Archivo de Barro | Tamrit, el escriba | **El nombre**: la palabra que abre la novena | Cerraduras de glifos que se leen en las notas | Guardián de barro que se rehace; dardos | 25 a 30 min |
+| V · Las Salas de las Raíces | Erreth, la que brota | **El paso**: la raíz viva que sostiene la puerta | Paredes de raíces escalables; raíces que huyen del fuego | Escorpiones (veneno); suelos de raíz que ceden | 25 a 30 min |
+| VI · La Fragua de Bronce | Bazûr, el fundidor | **La llave**: el noveno segmento del sello, fundido por Nora | Canales de bronce fundido que se desvían y se enfrían en puentes | Autómatas de bronce; calor; suelo de fuego | 30 a 35 min |
+| VII · La Escalera del Viento | Suhal, el que canta | **La voz**: el tono que la puerta escucha | Viento: rachas con ritmo que empujan y alargan saltos | Caídas; rachas que tiran de las cornisas; aves | 25 a 30 min |
+| VIII · El Observatorio | Anzur, el que mira | **El momento**: el astrolabio que une estrella, noche y dirección | Anillos de la cúpula que se giran para alinear el cielo | El octavo guardián, el jefe más largo | 35 a 40 min |
+| IX · La Novena Cámara | (sin nombre) | Final de la campaña | Todo lo aprendido, sin nada nuevo | La propia cámara | 30 a 40 min |
+
+Los nombres de los guardianes siguen el patrón de Qarrum, Nahrem y Ubara: inventados, cortos y sin referencias a lugares o dioses reales.
+
+**Hilo de Elena y Ferrand.** Ferrand muere entre la segunda y la tercera cámara: el cuaderno que Nora encontró en las Cisternas termina con el dibujo del guardián del Templo, y Elena escribe en 1989 que Nora "ha llegado más lejos que Auguste". Elena llegó hasta la tercera en 1989, sin el Corazón, así que ninguna de las puertas IV a VIII se ha abierto en tres mil años. En estas cámaras ya no hay notas de 1956 ni de 1989. La voz del diario pasa a ser la de los constructores y la de Nora. Elena vuelve solo en la novena, que resuelve lo que "nunca contó" (ver IX).
+
+**Reloj de la campaña.** El astrolabio de la octava calcula la próxima vez que coinciden la estrella, la luna nueva y el solsticio: dentro de pocos días. La novena se juega con ese plazo como motivo narrativo, no como temporizador real.
+
+### Reglas comunes a las seis cámaras
+
+- **Tamaño:** de 10 a 12 salas, tres secretos (ídolo de oro, jade y piedra), tres notas de diario, puntos de control antes de cada trampa y de cada combate, botiquines contados.
+- **Un mecanismo nuevo por cámara** (§8, principio 2): se presenta solo y seguro en la primera sala donde aparece, se combina después con lo ya conocido y culmina en la sala de la reliquia.
+- **Meta a la vista** (§8, principio 1): la reliquia o su puerta se ve desde una de las primeras salas.
+- **Datos, no código:** cada cámara es `levels/<id>.level.json` con sus reglas `when → do`, sus looks en `art/looks/`, su lightmap horneado, su registro en `src/levels.ts` y su entrada en `src/ui/campaign.ts`, con intro, reliquia, teaser y notas del diario. Los textos van en `i18n/*.json`.
+- **Verificación:**
+  - `pnpm validate:levels`.
+  - El bot recorre la cámara de principio a fin con los tres secretos, sin muertes.
+  - Tests de "cada puzle es necesario" y tests de movimiento de cada mecánica nueva.
+  - Capturas de referencia por sala en calidad alta y móvil.
+  - Rendimiento medido con `pnpm bench`, dentro de los presupuestos de §14.
+- **Música:** una paleta propia por cámara en el director adaptativo (exploración, tensión, combate, persecución, jefe, reliquia), con temas con licencia CC-BY o CC0 anotados en CREDITS.md.
+- **Luz:** cada cámara tiene una fuente dominante que la distingue de las demás (arena y sol en la I, agua y bengalas en la II, bronce y sol en la III). Las nuevas se definen abajo.
+
+---
+
+### IV · El Archivo de Barro
+
+**Premisa.** Bajo el Templo del Sol, un laberinto de estanterías talladas en la roca guarda diez mil tablillas de barro. Tamrit, el cuarto guardián, "lo escribió todo": la historia de los ocho, los nombres de los constructores y el nombre de la novena. El archivo es seco, silencioso y oscuro, y el polvo apaga el sonido de los pasos.
+
+**Reliquia: la Tablilla del Nombre.** Una tablilla de barro cocido con nueve columnas de signos. Ocho columnas dicen el nombre de cada guardián. La novena solo tiene un signo, y ese signo es la palabra que abre la puerta. *Pista:* "Cómo llamar a la puerta".
+
+**Mecanismo nuevo: cerraduras de glifos.** Cilindros de piedra con seis caras que se giran con Acción, como los tambores de espejos del Templo. Cada cerradura pide una secuencia que se deduce leyendo las notas y los relieves de la sala: la lectura es parte del puzle. Los glifos tienen forma y color distintos para ser legibles en móvil y con daltonismo, y la nota correspondiente se relee desde el diario.
+
+**Recuperado.** La antorcha: varias galerías están a oscuras y el polvo en suspensión hace de haz visible. También los bloques: las estanterías bajas se empujan y se arrastran como bloques y abren pasillos.
+
+**Amenazas.**
+- **Dardos** (§8): losas marcadas con un trazo de pintura que disparan desde los nichos de las estanterías, con veneno leve.
+- **Suelos de barro que ceden:** son las losas que ceden de la Antesala, con otra textura.
+- **Tamrit, el escriba de barro:** una figura de barro húmedo que se rehace si se la rompe a disparos. Solo se la vence desbordando sobre ella el agua de las cisternas, que corre bajo el archivo, desde una compuerta superior. Enlaza con el mecanismo de agua de la II.
+
+**Salas (propuesta).**
+1. **Pozo de bajada** desde el Templo: la luz entra solo por arriba.
+2. **Sala de lectura:** primera cerradura de glifos, segura, con la nota que da la secuencia en la misma sala.
+3. **Galería de estanterías:** laberinto de bloques-estantería.
+4. **Galería oscura:** con antorcha, dardos y la primera tablilla rota.
+5. **Horno de cocer tablillas:** bloque, placa y una cerradura de dos cilindros.
+6. **Scriptorium:** la sala más bella, con miles de nichos iluminados por un tragaluz.
+7. **Sala del índice:** la secuencia se deduce combinando dos notas.
+8. **Canal subterráneo:** la compuerta que inunda la sala del guardián, vista antes de necesitarla.
+9. **Sala de Tamrit:** combate y puzle, abrir el agua mientras el guardián persigue.
+10. **Sala del Nombre:** reliquia y tres cerraduras a la vez.
+
+**Secretos.** Una estantería que se empuja y revela un nicho. Un saliente sobre el scriptorium al que se llega desde las estanterías altas. Una tablilla en una galería inundable, alcanzable solo antes de abrir el canal.
+
+**Diario.**
+- **Nota 1, «El que escribió»:** relieve de Tamrit. Da la primera secuencia de glifos.
+- **Nota 2, «Los nombres de los ocho»:** lista tallada con un hueco. Nora reconoce a Qarrum, Nahrem y Ubara.
+- **Nota 3, «La palabra sin sonido»:** tablilla sobre la novena puerta. «No se pronuncia: se escribe en la piedra con la luz».
+
+**Luz y arte.** Barro ocre y rojo quemado, polvo en suspensión, haces de tragaluz muy finos y una sensación de biblioteca inmensa. Tablillas instanciadas por miles, con una sola malla y variaciones.
+
+**Trabajo técnico nuevo.**
+- Cerradura de glifos en `sim/mechanisms`, con la misma base que el tambor de espejos.
+- Trampa de dardos con veneno y aviso visible.
+- Guardián de barro con regeneración y vulnerabilidad al agua, sobre la base de `guardian.ts`.
+- Relectura de notas desde el diario en pausa, que ya existe.
+- Instanciado de tablillas.
+
+---
+
+### V · Las Salas de las Raíces
+
+**Premisa.** Un bosque quedó enterrado cuando la montaña se hundió, y sus raíces han crecido tres mil años a través de la piedra, partiendo las salas. Erreth, la quinta guardiana, "la que brota", no está tallada en piedra: es un árbol petrificado en el centro. Es la cámara más orgánica y la única con color verde.
+
+**Reliquia: la Semilla de Piedra.** Una semilla del tamaño de un puño, de piedra verde, que late caliente cuando la acerca al Corazón. La novena puerta está sellada por raíces vivas, y solo la semilla les pide que se aparten. *Pista:* "Por dónde pasar".
+
+**Mecanismo nuevo: raíces.**
+- **Paredes de raíces escalables:** Nora trepa por ellas en las cuatro direcciones (§5, "escalar paredes"). Es el primer muro escalable del juego y se marca con raíces claras y visibles.
+- **Raíces que huyen del fuego:** acercar la antorcha encendida a una maraña la hace retraerse, lo que abre pasos y quita asideros. Al apagar o alejar la antorcha, la maraña vuelve a crecer despacio. El puzle combina qué abrir y qué conservar para trepar.
+
+**Recuperado.** La antorcha como herramienta, no solo como luz. El agua de la II en un estanque donde crecen raíces sumergidas.
+
+**Amenazas.**
+- **Escorpiones** (§7): pequeños, en grupo y con veneno. Son el enemigo nuevo del acto medio.
+- **Suelos de raíz que ceden** bajo el peso, con crujido de madera.
+- **Espinos** en fosos, en lugar de estacas.
+- **Sin jefe:** el clímax es una escalada por el tronco de Erreth mientras las raíces se cierran detrás.
+
+**Salas (propuesta).**
+1. **La grieta:** entrada partida en dos por una raíz gigante.
+2. **Primer muro escalable:** seguro, sin caída mortal.
+3. **Galería de marañas:** primer uso de la antorcha contra las raíces.
+4. **Nido de escorpiones.**
+5. **El estanque de raíces:** buceo corto entre raíces sumergidas.
+6. **Sala partida:** la mitad de la sala se ha hundido un bloque y medio.
+7. **Puente de raíz:** se escala por debajo.
+8. **La bóveda del bosque:** vista grande, luz verde filtrada por las grietas.
+9. **El tronco de Erreth:** escalada vertical larga y un contrarreloj suave.
+10. **Corazón del árbol:** la reliquia.
+
+**Secretos.** Una maraña que solo se abre con la antorcha sostenida desde arriba. Un muro escalable oculto tras una cascada de raíces. Una cámara bajo el estanque.
+
+**Diario.**
+- **Nota 1, «Lo que la montaña enterró»:** cómo se hundió el bosque.
+- **Nota 2, «Erreth no duerme»:** la guardiana creció en lugar de morir.
+- **Nota 3, «La puerta viva»:** la novena está cerrada por raíces y solo la semilla las aparta.
+
+**Luz y arte.** Verde musgo y ámbar, luz de día filtrada en rayos, humedad, hojas petrificadas y raíces con relieve y oclusión fuertes. Es la cámara más cara de modelar: raíces modulares en un kit de piezas.
+
+**Trabajo técnico nuevo.**
+- Modo de escalada de pared en `sim/player/modes` (subir, bajar, lateral, saltar a cornisa), con tests de movimiento.
+- Actor "maraña" con estados abierta y cerrada según la distancia a la antorcha encendida.
+- Escorpiones: nuevo tipo de enemigo con veneno en `actors/enemies`.
+- Animaciones de escalada de Mixamo sobre la malla de Nora.
+- Kit de raíces en Blender.
+
+---
+
+### VI · La Fragua de Bronce
+
+**Premisa.** Aquí los constructores fundían los sellos de las nueve cámaras. Los canales de fuego están fríos, pero no todos: en el fondo de la montaña aún corre bronce fundido. Bazûr, el sexto guardián, es un autómata de bronce que aún trabaja.
+
+**Reliquia: el Molde del Noveno Segmento.** El molde en el que se fundió cada segmento del sello. Solo falta fundir el noveno, y Nora lo funde en la última sala: la reliquia es la pieza que ella misma saca del molde. *Pista:* "Con qué abrir". Es la llave física.
+
+**Mecanismo nuevo: bronce fundido.**
+- **Canales con compuertas:** el bronce fundido corre por canales que se desvían con compuertas. Es la lógica de las compuertas de agua de la II, pero el líquido mata al contacto.
+- **Enfriamiento:** el bronce vertido en una zanja se enfría en unos segundos y queda como suelo firme, un puente nuevo. Brilla rojo mientras quema y se oscurece al enfriarse, así que el aviso es visible.
+- **Fuelles:** se empujan y arrastran como bloques y avivan las fraguas, que abren puertas por calor.
+
+**Recuperado.** El suelo de fuego del Templo, las placas y los bloques.
+
+**Amenazas.**
+- **Autómatas de bronce:** lentos, con coraza, las pistolas apenas los dañan. Se vencen atrayéndolos a un pozo de temple (agua fría) o bajo una colada.
+- **Calor:** zonas donde la salud baja despacio fuera de la sombra de los muros, con aviso por distorsión en pantalla y sonido.
+- **Bazûr:** jefe en la sala de colada, con fases en las que desvía el bronce hacia Nora.
+
+**Salas (propuesta).**
+1. **Galería de moldes fríos.**
+2. **Primera colada:** segura, sin caída; se ve cómo el bronce se enfría en puente.
+3. **Sala de fuelles.**
+4. **Canal principal:** tres compuertas.
+5. **Taller de autómatas:** el primero, dormido, despierta al tocar la reliquia de la sala.
+6. **Pozo de temple:** el agua fría que vence a los autómatas.
+7. **Hornos:** suelo de fuego y calor.
+8. **Puente de bronce:** colar, esperar y cruzar antes de que la colada siguiente lo cubra.
+9. **Sala de colada:** combate con Bazûr.
+10. **El molde del sello:** Nora funde el noveno segmento.
+
+**Secretos.** Un molde con un ídolo dentro que solo se abre al calentarlo. Un conducto de ventilación que se trepa. Una zanja que, bien colada, lleva a una repisa oculta.
+
+**Diario.**
+- **Nota 1, «Nueve sellos»:** los constructores fundían cada segmento con el bronce de la cámara anterior.
+- **Nota 2, «El que aún trabaja»:** Bazûr.
+- **Nota 3, «El noveno no se fundió»:** nadie se atrevió; «lo fundirá quien llegue con las ocho».
+
+**Luz y arte.** Negro y bronce, luz de metal fundido (emisivo intenso, bloom), chispas y distorsión por calor. Es la cámara con más contraste.
+
+**Trabajo técnico nuevo.**
+- Líquido letal con nivel y flujo, derivado de `actors/water.ts`.
+- Sectores que cambian de mortales a transitables al enfriarse, con test de alcance en el validador.
+- Zonas de calor con daño y aviso.
+- Autómata: enemigo con coraza y vulnerabilidad al temple.
+- Jefe con fases.
+- Material emisivo del bronce que se enfría (TSL).
+
+---
+
+### VII · La Escalera del Viento
+
+**Premisa.** Un pozo vertical de ochenta metros atraviesa la montaña entera, de la fragua a la cima. El viento lo recorre, y los constructores tallaron en sus paredes flautas de piedra que cantan cuando pasa. Suhal, el séptimo guardián, "el que canta", es el propio pozo.
+
+**Reliquia: el Caracol del Viento.** Una caracola de bronce que, al soplar el viento, da una sola nota: la que la novena puerta escucha para abrirse. *Pista:* "Qué decirle a la puerta". Se complementa con el nombre de la IV: la palabra se escribe, la nota se toca.
+
+**Mecanismo nuevo: el viento.**
+- **Rachas con ritmo** que empujan en horizontal y sostienen en vertical: alargan un salto un bloque o lo acortan.
+- **Aviso por sonido:** el tono de las flautas sube antes de cada racha y hay polvo arrastrado. Todo es determinista, con ciclo fijo como las cuchillas del Templo.
+- **Palancas de flauta:** abren o cierran tubos, cambian qué rachas soplan y por dónde.
+
+**Recuperado.**
+- **Cuerda para tirar** (§8): primera vez que se usa, colgada.
+- **Plataformas móviles** del Templo, como contrapesos.
+- **Caídas con daño.**
+
+**Amenazas.**
+- **Rachas que tiran de las cornisas:** Nora colgada debe esperar el hueco entre dos rachas.
+- **Aves de roca** que anidan en el pozo: dos o tres, rápidas, que empujan en lugar de morder.
+- **Sin jefe:** el clímax es la subida final con tormenta, rachas más frecuentes y puntos de control seguidos.
+
+**Salas (propuesta).** Todo es vertical, con tramos que dan a salas laterales.
+1. **La base del pozo:** desde la fragua, primera racha segura.
+2. **Cornisas de la primera flauta.**
+3. **Sala de contrapesos:** plataformas móviles.
+4. **Primera sala lateral:** palancas de flauta.
+5. **El nido.**
+6. **Travesía colgada entre rachas.**
+7. **Sala de la cuerda.**
+8. **La gran flauta:** vista del pozo entero y el canto más fuerte.
+9. **Subida con tormenta.**
+10. **La cima:** reliquia, y por primera vez el cielo abierto sobre la montaña.
+
+**Secretos.** Un nicho al que solo se llega saltando con una racha a favor. Una flauta que, cerrada, revela un pasadizo detrás. Un nido con un ídolo en lo alto del pozo.
+
+**Diario.**
+- **Nota 1, «La montaña respira»:** el pozo conecta el agua de abajo con el cielo de arriba.
+- **Nota 2, «Suhal»:** el guardián es el canto.
+- **Nota 3, «La nota»:** «la puerta no tiene cerradura: tiene oído».
+
+**Luz y arte.** Piedra gris azulada, luz fría de lo alto que se calienta al subir, polvo y hojas arrastradas por el viento y una vista vertical vertiginosa. La cámara va con mando de cámara especial: vistas verticales y encuadres fijos en la travesía.
+
+**Audio.** Es la cámara donde el sonido es mecánica: las flautas se sintetizan o graban con varias alturas, y hay espacialización vertical.
+
+**Trabajo técnico nuevo.**
+- Zonas de viento en `sim` (fuerza por sector y ciclo) con tests de salto: "con racha a favor un salto con carrerilla cruza 3 bloques".
+- Cuerda para tirar desde colgada.
+- Aves: enemigo que empuja.
+- Cámara vertical.
+- Audio de flautas ligado a las rachas.
+
+---
+
+### VIII · El Observatorio
+
+**Premisa.** La última cámara conocida: una cúpula tallada en la cima para mirar las estrellas. Su puerta nunca se ha abierto. Anzur, el octavo guardián, "el que mira", es el más grande de los ocho: una figura sentada que sostiene la cúpula y se levanta.
+
+**Reliquia: el Astrolabio de los Nueve.** Un astrolabio de bronce y cristal con encajes para el Corazón (la estrella), el Cristal (la noche) y el Disco (la dirección). Con los tres puestos marca una fecha: la próxima conjunción, dentro de pocos días. *Pista:* "Cuándo exactamente". Es el reloj del final.
+
+**Mecanismo nuevo: la cúpula.** Tres anillos concéntricos que se giran desde palancas en su borde: el cielo (estrellas), la luna (fases) y el horizonte (dirección del sol). La luz entra por un óculo y, cuando los tres anillos están alineados con las pistas de las reliquias I, II y III, cae en el suelo sobre la puerta. Es el puzle que resume la campaña, y quien no recuerde las pistas las tiene en el diario.
+
+**Recuperado.** El haz de luz del Templo, el viento de la VII en la galería exterior, las cerraduras de glifos de la IV para el nombre de Anzur y los bloques.
+
+**Amenazas.** **Anzur**, jefe en tres fases:
+1. Barre la cúpula mientras Nora gira un anillo.
+2. Rompe el suelo y deja fosos.
+3. Solo se detiene cuando la luz alineada le cae encima.
+
+Es el combate más largo y con más puntos de control. Además hay dos o tres chacales en la subida, como eco de la I.
+
+**Salas (propuesta).**
+1. **La terraza exterior:** viento, vista de la montaña y del valle, y la puerta cerrada.
+2. **Galería de instrumentos.**
+3. **Primer anillo:** seguro, enseña a girar.
+4. **Sala de las lunas:** las fases talladas.
+5. **Sala del horizonte:** marca de la puesta de sol del solsticio.
+6. **Las escaleras de la cúpula.**
+7. **Bajo la cúpula:** vista y primer encuentro con Anzur.
+8. **Combate y alineación.**
+9. **El óculo.**
+10. **La cámara del astrolabio:** la reliquia.
+
+**Secretos.** Una constelación que, alineada por error, abre un nicho. Un saliente en la cara exterior de la cúpula. Un ídolo en la mano de Anzur, alcanzable solo durante la fase dos.
+
+**Diario.**
+- **Nota 1, «El que mira»:** Anzur.
+- **Nota 2, «Tres cosas»:** los constructores explican la conjunción con las mismas palabras que Elena.
+- **Nota 3, «La novena no es una tumba»:** un aviso.
+
+**Luz y arte.** Noche y bronce: cielo estrellado a través del óculo, luz de luna fría, cúpula tallada con constelaciones. Es la cámara de "vista que obliga a detenerse" por excelencia.
+
+**Trabajo técnico nuevo.**
+- Anillos giratorios con estado combinado y validador de alineación.
+- Jefe grande en tres fases, sobre la base del guardián del Templo.
+- Cielo nocturno con estrellas que coincide con el mapa del Corazón.
+- Encajes de las tres reliquias en el astrolabio: inventario entre cámaras, que ya existe como progreso.
+
+---
+
+### IX · La Novena Cámara
+
+**Premisa.** La noche de la conjunción, Nora sigue la dirección del rayo desde la cima hasta una grieta que solo se ve con esa luz. Todo lo aprendido la abre:
+- el nombre de la IV, escrito con luz;
+- las raíces apartadas con la semilla de la V;
+- el segmento fundido de la VI;
+- la nota del caracol de la VII;
+- el momento que marca el astrolabio de la VIII.
+
+**Qué hay dentro (propuesta de final).** La novena no es la tumba de un guardián: es el lugar donde se elige al noveno. El segmento que falta en el sello no se talló porque se graba con el nombre de quien llega con las ocho reliquias. En 1956 Elena llegó hasta la puerta de la primera cámara y leyó esa promesa en el estrado de Qarrum: por eso dejó el Corazón donde estaba ("no es nuestro") y nunca contó lo que vio. La cámara hace a Nora la misma pregunta que a Elena.
+
+**Final.** Hay dos opciones y la elección es del dueño (ver decisiones).
+- **A, un solo final:** Nora devuelve las ocho reliquias a sus pedestales y deja el noveno segmento en blanco, como hizo su abuela. El sello se cierra y la montaña respira. Después de los créditos se ve la firma de Elena, «E. V. — 1956», junto a la de Nora.
+- **B, dos finales:** Nora escribe su nombre (el noveno segmento se graba y la montaña la conserva como guardiana) o lo deja en blanco (final A). La elección se hace con Acción ante el sello, sin menú.
+
+**Mecanismo.** Ninguno nuevo: es un recorrido de todos, en orden inverso a la campaña. Tiene viento, raíces, bronce, agua, glifos, espejos, bloques y placas, en salas que recuerdan a cada cámara anterior. Hay poco combate y mucho asombro.
+
+**Amenaza.** La propia cámara: trampas que combinan todo lo anterior. No hay jefe. El último desafío es un recorrido con la luz de la conjunción, que dura poco: un temporizador real pero generoso, con puntos de control cada dos salas.
+
+**Salas (propuesta).**
+1. **La grieta del rayo.**
+2. **Antesala de los ocho:** ocho estatuas y un pedestal vacío.
+3. Una sala por cada cámara anterior (salas 3 a 10):
+   - agua que respira;
+   - espejos;
+   - glifos;
+   - raíces;
+   - bronce;
+   - viento;
+   - cúpula;
+   - arena.
+4. **El sello:** la sala final.
+
+**Secretos.** Uno por cada una de las tres primeras cámaras, escondidos en sus salas-eco: son los tres últimos del juego.
+
+**Diario.**
+- **Nota 1, «La promesa»:** la inscripción que leyó Elena.
+- **Nota 2, «Carta de Elena, 1956»:** la que nunca envió, escondida en el estrado de Qarrum y que aparece aquí por primera vez. Es la revelación de lo que vio.
+- **Nota 3:** la que escribe Nora al final.
+
+**Luz y arte.** Cada sala-eco toma la paleta de su cámara, y la sala del sello es blanca de luz de conjunción: estrella, luna nueva y sol de solsticio a la vez, imposible y deliberado.
+
+**Trabajo técnico nuevo.**
+- Temporizador de conjunción, con reglas `wait` y cuenta atrás en el HUD.
+- Estado de campaña completo: las ocho reliquias en los pedestales.
+- Final con elección si se decide la B.
+- Créditos largos con la música del título.
+
+---
+
+### Orden de producción y dependencias
+
+1. **IV · El Archivo.** Reutiliza casi todo (tambor, antorcha, bloques, agua). Necesita cerraduras de glifos, dardos y guardián de barro. Es la de menor riesgo técnico: buena para la versión 0.3.
+2. **VI · La Fragua.** Líquido letal y enfriamiento, derivados del agua de la II. Autómatas y jefe.
+3. **VII · La Escalera del Viento.** Viento y cuerda: física de salto nueva, con los tests de movimiento más delicados.
+4. **V · Las Raíces.** Escalada de pared, que es un modo de movimiento nuevo con animaciones propias, y un kit de arte orgánico caro. Por eso va tras las otras, aunque en la campaña sea la quinta.
+5. **VIII · El Observatorio.** Necesita las pistas de I a III y el viento de la VII. Tiene el jefe más grande.
+6. **IX · La Novena Cámara.** Necesita todo lo anterior.
+
+Se pueden construir fuera de orden porque cada cámara carga por URL (`?level=`) y el progreso las abre en orden de campaña. El mapa de cámaras ya muestra IV a VIII selladas y IX sin encontrar.
+
+**Mecánicas nuevas por prioridad técnica.**
+- En `sim` y con tests de movimiento: escalada de pared y viento.
+- Actores nuevos: cerraduras de glifos, dardos, líquido letal con enfriamiento, marañas de raíces y anillos giratorios.
+- Enemigos nuevos: escorpiones, autómatas y aves.
+- Tres jefes: Tamrit, Bazûr y Anzur.
+
+### Decisiones abiertas de las cámaras IV a IX
+
+- [ ] ¿Final único (A) o dos finales con elección (B)?
+- [ ] ¿Se reordena la campaña para que la V (escalada) no sea la quinta, o se mantiene el orden narrativo y se construye más tarde?
+- [ ] ¿La novena tiene temporizador real, o el plazo de la conjunción es solo narrativo?
+- [ ] Nombres definitivos de los guardianes IV a VIII y de las reliquias.
+- [ ] ¿La carta de Elena de 1956 se muestra al final, o se deja la revelación implícita?
+- [ ] Presupuesto de arte: la V (raíces) y la VIII (cúpula y jefe grande) son las más caras de modelar.
