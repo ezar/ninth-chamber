@@ -5,7 +5,9 @@ global para lo estático").
 
 The game keeps direct light dynamic (sun shadows, flickering fires), so only
 the indirect diffuse pass is baked; the runtime adds it as the materials'
-lightMap on the second UV set.
+lightMap on the second UV set. The lights match the runtime ones: fires at
+the runtime gain and height, and each room's sun lighting only its own room
+(light linking), since the game shows one sun at a time.
 
 Usage (Blender as a Python module, `pip install bpy`):
     python scripts/bake/bake_lightmap.py <export.json> <out-dir> [samples]
@@ -55,24 +57,13 @@ def reset_scene() -> bpy.types.Scene:
     return scene
 
 
-def build_mesh(data: dict, image: bpy.types.Image) -> bpy.types.Object:
-    verts: list[tuple[float, float, float]] = []
-    faces: list[tuple[int, int, int]] = []
-    uvs: list[tuple[float, float]] = []
-    face_mat: list[int] = []
-    materials = []
-    for mi, (name, s) in enumerate(data["surfaces"].items()):
-        base = len(verts)
-        p = s["position"]
-        uv = s["uv1"]
-        for i in range(0, len(p), 3):
-            verts.append(to_blender(p[i], p[i + 1], p[i + 2]))
-            uvs.append((uv[(i // 3) * 2], uv[(i // 3) * 2 + 1]))
-        idx = s["index"]
-        for i in range(0, len(idx), 3):
-            faces.append((base + idx[i], base + idx[i + 1], base + idx[i + 2]))
-            face_mat.append(mi)
+def build_meshes(data: dict, image: bpy.types.Image) -> dict[int, bpy.types.Object]:
+    """One object per room (room index -> object; -1 for triangles outside any room).
 
+    Split by room so each room's sun can be linked to its own geometry only.
+    """
+    materials = []
+    for name, s in data["surfaces"].items():
         mat = bpy.data.materials.new(name)
         mat.use_nodes = True
         nodes = mat.node_tree.nodes
@@ -85,24 +76,46 @@ def build_mesh(data: dict, image: bpy.types.Image) -> bpy.types.Object:
         nodes.active = tex
         materials.append(mat)
 
-    mesh = bpy.data.meshes.new("level")
-    mesh.from_pydata(verts, [], faces)
-    mesh.update()
-    # (x, y, z) -> (x, -z, y) is a proper rotation, so the winding and normals carry over.
-    layer = mesh.uv_layers.new(name="lightmap")
-    for poly in mesh.polygons:
-        poly.material_index = face_mat[poly.index]
-        for li in poly.loop_indices:
-            layer.data[li].uv = uvs[mesh.loops[li].vertex_index]
-    for m in materials:
-        mesh.materials.append(m)
-    obj = bpy.data.objects.new("level", mesh)
-    bpy.context.scene.collection.objects.link(obj)
-    return obj
+    # room -> (verts, uvs, faces, face material)
+    parts: dict[int, tuple[list, list, list, list]] = {}
+    for mi, s in enumerate(data["surfaces"].values()):
+        p = s["position"]
+        uv = s["uv1"]
+        idx = s["index"]
+        rooms = s.get("rooms") or [-1] * (len(idx) // 3)
+        for t in range(0, len(idx), 3):
+            verts, uvs, faces, face_mat = parts.setdefault(rooms[t // 3], ([], [], [], []))
+            face = []
+            for k in range(3):
+                i = idx[t + k]
+                face.append(len(verts))
+                verts.append(to_blender(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]))
+                uvs.append((uv[i * 2], uv[i * 2 + 1]))
+            faces.append(tuple(face))
+            face_mat.append(mi)
+
+    objects: dict[int, bpy.types.Object] = {}
+    for room, (verts, uvs, faces, face_mat) in parts.items():
+        mesh = bpy.data.meshes.new(f"level_{room}")
+        mesh.from_pydata(verts, [], faces)
+        mesh.update()
+        # (x, y, z) -> (x, -z, y) is a proper rotation, so the winding and normals carry over.
+        layer = mesh.uv_layers.new(name="lightmap")
+        for poly in mesh.polygons:
+            poly.material_index = face_mat[poly.index]
+            for li in poly.loop_indices:
+                layer.data[li].uv = uvs[mesh.loops[li].vertex_index]
+        for m in materials:
+            mesh.materials.append(m)
+        obj = bpy.data.objects.new(f"level_{room}", mesh)
+        bpy.context.scene.collection.objects.link(obj)
+        objects[room] = obj
+    return objects
 
 
-def add_lights(data: dict) -> None:
+def add_lights(data: dict, objects: dict[int, bpy.types.Object]) -> None:
     scene = bpy.context.scene
+    room_ids = data.get("roomIds", [])
     for sun in data["suns"]:
         light = bpy.data.lights.new(f"sun_{sun['room']}", "SUN")
         light.energy = sun["intensity"]
@@ -112,6 +125,13 @@ def add_lights(data: dict) -> None:
         d = Vector(to_blender(*sun["direction"])).normalized()
         obj.rotation_mode = "QUATERNION"
         obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(d)
+        # The game has one sun at a time, the current room's: each sun lights
+        # only its own room (light linking); bounce still spreads from there.
+        room = room_ids.index(sun["room"]) if sun["room"] in room_ids else None
+        if room is not None and room in objects:
+            receivers = bpy.data.collections.new(f"sunlit_{sun['room']}")
+            receivers.objects.link(objects[room])
+            obj.light_linking.receiver_collection = receivers
         scene.collection.objects.link(obj)
 
     for i, p in enumerate(data["points"]):
@@ -143,7 +163,7 @@ def add_lights(data: dict) -> None:
         plane.visible_camera = False
 
 
-def bake(obj: bpy.types.Object, samples: int) -> None:
+def bake(objects: list[bpy.types.Object], samples: int) -> None:
     scene = bpy.context.scene
     scene.cycles.samples = samples
     bake = scene.render.bake
@@ -152,10 +172,11 @@ def bake(obj: bpy.types.Object, samples: int) -> None:
     bake.use_pass_color = False
     bake.margin = 4
     bake.margin_type = "EXTEND"
-    obj.data.uv_layers.active = obj.data.uv_layers["lightmap"]
     bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    for obj in objects:
+        obj.data.uv_layers.active = obj.data.uv_layers["lightmap"]
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = objects[0]
     bpy.ops.object.bake(type="DIFFUSE", pass_filter={"INDIRECT"}, use_clear=True, margin=4)
 
 
@@ -179,11 +200,11 @@ def main() -> None:
 
     reset_scene()
     image = bpy.data.images.new("lightmap", w, h, alpha=False, float_buffer=True)
-    obj = build_mesh(data, image)
-    add_lights(data)
+    objects = build_meshes(data, image)
+    add_lights(data, objects)
 
     t0 = time.time()
-    bake(obj, samples)
+    bake(list(objects.values()), samples)
     print(f"baked {w}×{h} at {samples} spp in {time.time() - t0:.0f} s")
 
     px = np.array(image.pixels[:], dtype=np.float32).reshape(h, w, 4)[:, :, :3]
@@ -202,6 +223,7 @@ def main() -> None:
     out.save()
     with open(os.path.join(out_dir, f"{data['level']}.lightmap.json"), "w") as f:
         json.dump({"scale": scale, "samples": samples, "width": w, "height": h}, f, indent=2)
+        f.write("\n")
     print(f"wrote {png} (scale {scale:.4f})")
 
 

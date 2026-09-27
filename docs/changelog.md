@@ -1,5 +1,17 @@
 # Changelog
 
+## Shadow audit: the sun through the skylight, true fire shadows, a bake that matches
+
+- **Sun framed on the skylight** (`src/render/shadows.ts`): daylight only enters through a sun room's opening, so the sun's shadow map now covers the prism under that opening (about 5 m across) instead of the whole room plus 4 m. Texels shrink from 14–20 mm to 2.6 mm on high and from 27–39 mm to 5 mm on medium and mobile, with the same map sizes. Outside the frustum counts as under the roof: three.js treats the outside of a shadow frustum as lit, which let the sun light every neighbouring room beyond the old frustum. The frustum is snapped to texels and stays put while the camera moves; it follows the last sun room while its light fades after leaving.
+- **Biases from texel sizes, not by eye** (`src/render/shadow-math.ts`, tested): about a texel of depth bias and a texel plus half the filter's reach of normal offset, along the geometric normal (three's normalBias uses the normal-mapped one, which jitters on the rough scans). The fire casters had a constant bias in perspective depth, which grows with the square of the distance: 8 mm at 1 m, 20 cm at 5 m, over 1 m at 12 m of shadows detached from their casters. Theirs is now computed per pixel from the cube texel at that distance.
+- **The mobile tier really leaves Nora out of the sun's static map**: with only layer 0 left, three copied the view camera's layers into the shadow camera and baked her in, a stale shadow refreshed once a second next to her contact blob.
+- **Brazier bowls no longer shadow themselves**: the fire's light hangs 0.4 m above the bowl, inside the cube camera's 0.5 m near plane, which printed a broken half-ring on the floor; the near plane is 0.65 m and the whole bowl stays out of its own fire's map.
+- **Ceilings**: only their sky side goes into shadow maps (they are double-sided), so fires no longer self-shadow the ceiling they light.
+- **Contact blob** (mobile): it shrinks at ledges instead of hanging in the air past an edge.
+- **Nora's torch** (high tier) had the same constant bias, worse at its 0.15 m near plane (about 1 m of detached shadow at 6 m); it now uses the fire casters' filter.
+- **Lightmaps re-baked to match the realtime lights** (all three chambers): the bake is indirect-only (no double direct light), but every sun shone through every skylight at once, fires were baked at 2.5× the look's candela while the game drives them at 1.8×, and the Cisterns' cold braziers were baked burning, so the dark room and the tide glowed before any flare lit them. Each sun now lights only its own room (Cycles light linking), cold braziers are left out, and the fire gain and height are shared with the runtime.
+- **Debug view**: `?debug=shadows` tints sunlight in shadow blue and firelight in shadow magenta, and draws the sun's frustum and each fire caster's near sphere; `GameRenderer.shadowAudit()` reports the framing, texel sizes, biases and every caster.
+
 ## The Temple of the Sun (chamber III)
 
 Play it with `?level=sun_temple` (registered in `src/levels.ts`).

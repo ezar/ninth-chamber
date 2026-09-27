@@ -11,7 +11,7 @@ import { BLOCK } from '../sim/grid/units';
 import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
 import { CombatView } from './combat';
-import { FireLightScheduler, type FireSpot } from './fire-lights';
+import { FIRE_GAIN, FIRE_LIGHT_LIFT, FireLightScheduler, type FireSpot } from './fire-lights';
 import { buildLevelMeshes, type Surface } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
 import type { NoraPose } from './nora';
@@ -20,6 +20,8 @@ import { GuardianView } from './guardian';
 import { Props } from './props';
 import { loadSurfaces, surfaceParams, type SurfaceName, type SurfaceSet } from './materials';
 import { PostStack } from './post';
+import { CHARACTER_LAYER, ShadowRig, shadowTierFor, type SkylightWindow } from './shadows';
+import { levelReach } from './shadow-math';
 import { RoomCulling } from './room-culling';
 import {
   QUALITY,
@@ -41,19 +43,13 @@ export interface PlayerPose {
   yaw: number;
 }
 
-/** Fire light intensity per unit of the look's brazier candela (the lights also stand in for bounce). */
-const FIRE_GAIN = 1.8;
-/**
- * Nora's meshes live on this layer only, so a shadow camera can leave her out
- * (the mobile tier's occasionally refreshed sun shadow) while the view camera
- * and the live shadows include her.
- */
-const CHARACTER_LAYER = 1;
 /** Seconds between refreshes of a non-live (mobile) sun shadow. */
 const STATIC_SHADOW_REFRESH = 1;
 /** Groups whose children are culled one by one (the static set dressing). */
 const DRESSING: ReadonlySet<string> = new Set(['dressing']);
 /** Film grain amplitude on the display image (art bible: subtle; lowered after phone feedback). */
+/** Half-width of the mobile contact shadow blob (m). */
+const CONTACT_RADIUS = 0.8;
 const GRAIN = 0.022;
 /** Frames between passes that bring newly loaded textures (prop models) to the filtering level. */
 const FILTERING_SWEEP_FRAMES = 90;
@@ -84,6 +80,8 @@ export class GameRenderer {
   private readonly fireLights: THREE.PointLight[] = [];
   private readonly fireCasters: THREE.PointLight[] = [];
   private readonly fireSchedule: FireLightScheduler;
+  /** Sun window, fire shadow filters and biases, the debug view (shadows.ts). */
+  private readonly shadows: ShadowRig;
   private fireSpots: FireSpot[] = [];
   /** Rooms touching each room (their braziers rank with the current room's). */
   private neighbours = new Map<string, Set<string>>();
@@ -161,8 +159,6 @@ export class GameRenderer {
     this.scene.background = new THREE.Color('#0e0c0a');
     this.scene.add(this.hemi, this.sun, this.sun.target);
     this.sun.castShadow = true;
-    this.sun.shadow.bias = -0.0004;
-    this.sun.shadow.normalBias = 0.03;
     // Fixed for the session, like the fire casters' maps (see fireLights).
     this.sun.shadow.mapSize.set(profile.sun.size, profile.sun.size);
     for (let i = 0; i < profile.fireLights.pool; i++) {
@@ -174,13 +170,13 @@ export class GameRenderer {
       const l = new THREE.PointLight('#ff8a3d', 0, 18, 2);
       l.castShadow = true;
       l.shadow.mapSize.set(profile.fireShadowSize, profile.fireShadowSize);
-      // Point shadows: a small bias against acne on rough stone, a normal bias for grazing walls.
-      l.shadow.bias = -0.004;
-      l.shadow.normalBias = 0.05;
-      l.shadow.camera.layers.enable(CHARACTER_LAYER);
       this.fireCasters.push(l);
       this.scene.add(l);
     }
+    // Biases, filters, layers and the sun's framing (shadows.ts).
+    const debugShadows = new URLSearchParams(location.search).get('debug') === 'shadows';
+    this.shadows = new ShadowRig(this.sun, this.fireCasters, shadowTierFor(profile), debugShadows);
+    this.shadows.addHelpers(this.scene);
     this.fireSchedule = new FireLightScheduler({
       plain: this.fireLights.length,
       casters: this.fireCasters.length,
@@ -188,6 +184,7 @@ export class GameRenderer {
     this.scene.add(this.nora.root, this.combat.group);
     // Torch shadows on the high tier only; castShadow is fixed from the tier the session starts on.
     this.torch = new TorchView(profile.tier === 'high');
+    this.shadows.adoptPointLight(this.torch.light);
     this.scene.add(this.torch.group);
     for (const b of this.bounceLights) this.scene.add(b.light);
     // A soft fill that follows Nora so she reads against backlight (a common
@@ -294,11 +291,7 @@ export class GameRenderer {
   private applyProfile(anisotropyChanged: boolean): void {
     const p = this.profile;
     // Sun: a live shadow sees Nora; the static (mobile) one leaves her to the contact blob.
-    const sun = this.sun.shadow;
-    sun.radius = p.sun.radius;
-    if (p.sun.live) sun.camera.layers.enable(CHARACTER_LAYER);
-    else sun.camera.layers.disable(CHARACTER_LAYER);
-    sun.autoUpdate = p.sun.live;
+    this.shadows.applyTier(shadowTierFor(p));
     this.sunShadowAge = Infinity;
     this.contactShadow.visible = p.contactShadow;
     this.torch.setQuality(p);
@@ -402,7 +395,10 @@ export class GameRenderer {
     // tenth of the resolution its fill cost is negligible (pipelines do not depend on size).
     this.post.setRenderScale(0.1);
     // Every shadow map gets created now rather than on entering its room.
-    for (const l of [this.sun, ...this.fireCasters]) l.shadow.needsUpdate = true;
+    // Culling is off here, so every caster is drawn into them and each shadow-depth
+    // variant compiles too (the torch's included, on tiers where it casts).
+    for (const l of [this.sun, ...this.fireCasters, this.torch.light])
+      if (l.castShadow) l.shadow.needsUpdate = true;
     this.post.dofAmount.value = this.post.hasDepthOfField ? 0.5 : 0;
     this.post.raysStrength.value = Math.max(this.post.raysStrength.value, 0.01);
     // Twice: god rays join the pipeline once the first frame has made the sun's shadow map.
@@ -448,6 +444,7 @@ export class GameRenderer {
 
     const sunRooms = new Set(level.rooms.filter((r) => lookFile(r.look)?.sun).map((r) => r.id));
     const meshes = buildLevelMeshes(level, { skylightRooms: sunRooms });
+    this.shadows.setWindows(skylightWindows(world, meshes.skylights));
 
     const surf = this.surfaces;
     if (!surf) throw new Error('GameRenderer.init() must finish before setWorld()');
@@ -461,7 +458,11 @@ export class GameRenderer {
       wall: mat(surf.wall),
       floorStone: mat(surf.floor, { color: '#d9c6a8' }),
       floorSand: mat(surf.sand),
-      ceiling: mat(surf.ceiling, { side: THREE.DoubleSide }),
+      // Walls and floors face into the room and shadow maps draw faces turned
+      // away from the light, so a light inside never self-shadows them. The
+      // double-sided ceiling needs the same: only its sky side (what blocks
+      // the sun) goes into shadow maps, not the side the fires light.
+      ceiling: mat(surf.ceiling, { side: THREE.DoubleSide, shadowSide: THREE.BackSide }),
       lip: mat(surf.floor, { color: '#fff4e0' }),
     };
     const culling = new RoomCulling(level, this.scene);
@@ -710,11 +711,13 @@ export class GameRenderer {
       const first = this.currentRoom === null;
       this.currentRoom = room.id;
       if (first) this.look = cloneLook(getLook(room.look));
-      this.fitSun(room.minX, room.minZ, room.maxX, room.maxZ);
     }
     const target = getLook(room?.look ?? null);
     blendLook(this.look, target, Math.min(1, dt * 1.2));
     this.applyLook();
+    // The sun's frustum frames the skylight it shines through; a static map is redrawn when it moves.
+    if (this.shadows.update(this.currentRoom, this.look.sunDir)) this.sunShadowAge = Infinity;
+    this.shadows.updateHelpers();
 
     this.props?.update(world, this.time, dt);
     this.adoptRoomObjects();
@@ -836,22 +839,6 @@ export class GameRenderer {
     }
   }
 
-  private fitSun(minX: number, minZ: number, maxX: number, maxZ: number): void {
-    const cx = ((minX + maxX) / 2) * BLOCK;
-    const cz = ((minZ + maxZ) / 2) * BLOCK;
-    const half = (Math.max(maxX - minX, maxZ - minZ) * BLOCK) / 2 + 4;
-    const s = this.sun.shadow.camera;
-    s.left = -half;
-    s.right = half;
-    s.top = half;
-    s.bottom = -half;
-    s.near = 1;
-    s.far = 120;
-    s.updateProjectionMatrix();
-    this.sun.target.position.set(cx, 0, cz);
-    this.sunShadowAge = Infinity;
-  }
-
   /**
    * Shadow maps are the costliest part of a frame, so only those that matter
    * are re-rendered: the sun where it shines, fires that are lit and near
@@ -872,6 +859,11 @@ export class GameRenderer {
     }
     // Casters that are dark keep their last map (the scheduler moves them only while dark).
     for (const l of this.fireCasters) l.shadow.autoUpdate = l.intensity > 0;
+  }
+
+  /** The shadows' current framing, biases and casters (debug console, audit). */
+  shadowAudit(): Record<string, unknown> {
+    return this.shadows.audit(this.scene);
   }
 
   /** Depth of field follows the camera's focus shot. */
@@ -899,7 +891,9 @@ export class GameRenderer {
     }
     const h = Math.max(0, y - floor);
     blob.position.set(x, floor + 0.015, z);
-    blob.scale.setScalar(1 - Math.min(0.45, h * 0.15));
+    // Shrinks at a ledge rather than hanging in the air past it.
+    const reach = levelReach((px, pz) => world.grid.floorAt(px, pz), x, z, floor, CONTACT_RADIUS);
+    blob.scale.setScalar(Math.min(1 - Math.min(0.45, h * 0.15), reach / CONTACT_RADIUS));
     this.contactStrength.value = 0.75 * Math.max(0, 1 - h / 3);
   }
 
@@ -984,7 +978,7 @@ export class GameRenderer {
       }
       const flick =
         1 - this.look.flicker * (0.5 + 0.5 * Math.sin(t * 13 + f.phase) * Math.sin(t * 7.3 + f.phase * 1.7));
-      light.position.set(f.pos.x, f.pos.y + 0.3, f.pos.z);
+      light.position.set(f.pos.x, f.pos.y + FIRE_LIGHT_LIFT, f.pos.z);
       light.color.copy(this.look.fireColor);
       light.intensity = base * flick * level;
     };
@@ -1045,6 +1039,33 @@ export class GameRenderer {
   }
 }
 
+/** Each sun room's skylight cells and the lowest floor in the room, for the sun's shadow window. */
+function skylightWindows(
+  world: World,
+  skylights: readonly { x: number; z: number; ceil: number }[],
+): Map<string, SkylightWindow> {
+  const level = world.level;
+  const out = new Map<string, SkylightWindow>();
+  for (const cell of skylights) {
+    const room = level.roomAt(Math.floor(cell.x / BLOCK), Math.floor(cell.z / BLOCK));
+    if (!room) continue;
+    let win = out.get(room.id);
+    if (!win) {
+      let floor = Infinity;
+      for (let cx = room.minX; cx < room.maxX; cx++) {
+        for (let cz = room.minZ; cz < room.maxZ; cz++) {
+          const s = level.sector(cx, cz);
+          if (s && !s.wall) floor = Math.min(floor, ...s.floor);
+        }
+      }
+      win = { cells: [], floor: Number.isFinite(floor) ? floor : 0 };
+      out.set(room.id, win);
+    }
+    win.cells.push(cell);
+  }
+  return out;
+}
+
 /**
  * The mobile tier's contact shadow: a quad lying on the floor whose opacity
  * falls off radially, computed in the shader (textured versions drew nothing
@@ -1064,7 +1085,7 @@ function makeContactShadow(): { mesh: THREE.Mesh; strength: THREE.UniformNode<'f
   material.opacityNode = smoothstep(0.15, 1, r).oneMinus().mul(0.85).mul(strength);
   // Fog would lift the black towards the fog colour; the blob sits under Nora's feet anyway.
   material.fog = false;
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), material);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(CONTACT_RADIUS * 2, CONTACT_RADIUS * 2), material);
   mesh.rotation.x = -Math.PI / 2;
   mesh.renderOrder = 1;
   mesh.visible = false;

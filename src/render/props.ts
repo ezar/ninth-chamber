@@ -12,6 +12,7 @@ import { mechanics } from '../sim/player/tuning';
 import type { Actor } from '../sim/state';
 import type { World } from '../sim/world';
 import { surfaceParams, type SurfaceSet } from './materials';
+import { FIRE_BASE } from './fire-lights';
 import { DOOR_MODEL_HEIGHT, dressLevel, PropLibrary, type PropModel } from './prop-models';
 import { cracked } from './textures';
 import { torchModel } from './torch';
@@ -125,7 +126,7 @@ export class Props {
       b.position.set(center(cx), y, center(cz));
       this.group.add(b);
       this.brazierViews.push(b);
-      const firePos = new THREE.Vector3(center(cx), y + 1.25, center(cz));
+      const firePos = new THREE.Vector3(center(cx), y + FIRE_BASE, center(cz));
       const cold = !e.lit;
       this.fires.push({ pos: firePos, phase: this.fires.length * 1.7, id: e.id, cold, level: cold ? 0 : 1 });
       for (let k = 0; k < 4; k++) {
