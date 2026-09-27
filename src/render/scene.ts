@@ -126,6 +126,7 @@ export class GameRenderer {
   private readonly flares = new FlareView();
   private readonly waterFx: WaterFx;
   private underwaterMix = 0;
+  private readonly waterSky = new THREE.Color();
   /** 0 in the air … 1 with the camera under water (fog, grade, muffled sound). */
   get underwater(): number {
     return this.underwaterMix;
@@ -472,10 +473,16 @@ export class GameRenderer {
       m.castShadow = part.surface !== 'floorStone' && part.surface !== 'floorSand';
       m.receiveShadow = true;
       m.name = `level:${part.room}:${part.surface}`;
+      m.userData.room = part.room;
+      m.userData.surface = part.surface;
       culling.group(part.room)?.add(m);
       this.levelMeshes.push(m);
     }
-    this.water.build(world, this.levelMeshes);
+    // Water surfaces and their caustic overlays follow their rooms' culling.
+    this.water.build(world, this.levelMeshes, {
+      place: (o, room) => culling.group(room)?.add(o),
+      skylights: meshes.skylights,
+    });
     this.waterFx.build(level, world);
 
     const bronze = new THREE.MeshStandardMaterial({ color: '#5e7b68', roughness: 0.65, metalness: 0.35 });
@@ -786,11 +793,16 @@ export class GameRenderer {
       this.nora.handFrame(0, hand, new THREE.Quaternion());
     }
     this.flares.update(world, dt, hand, view, wet);
-    this.water.update(dt, view, waterLookOf(look), [
-      ...this.flares.lights,
-      ...this.fireCasters,
-      ...this.fireLights,
-    ]);
+    // The daylight through a skylight, as bright as its sky plane (buildShafts); none in dark rooms.
+    this.waterSky.copy(this.look.sunColor).multiplyScalar(3 * Math.min(1, this.look.sunIntensity / 2));
+    this.water.update(
+      dt,
+      view,
+      waterLookOf(look),
+      [...this.flares.lights, ...this.fireCasters, ...this.fireLights],
+      this.waterSky,
+      this.scene.fog as THREE.FogExp2 | null,
+    );
     this.waterFx.update(dt, world, view);
     const target = this.water.underwater ? 1 : 0;
     this.underwaterMix += (target - this.underwaterMix) * Math.min(1, dt * 14);
