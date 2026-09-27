@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 0.2.0 (2026-09-27)
+
+Three chambers to play, and a tomb that runs and sounds better on phones:
+
+- **Chambers II and III:** the Cisterns and the Temple of the Sun, with the campaign between chambers (next-chamber button, Chambers map, saved progress).
+- **Nora:** Mixamo motion made on her own mesh, pistols held in the palms and parallel when aiming, thigh holsters, and a torch that leaves one hand for a single pistol.
+- **Look:** Options → Graphics (renderer, resolution, filtering, sharpen, grain, readout), softer textures, seamless fire lights, a shadow audit (fitted sun, true fire shadows) and matching bakes.
+- **Performance:** room culling through portals, instancing, shader warm-up and a service worker. On the mobile tier the median CPU frame went from 31 to 19 ms.
+- **Sound:** an adaptive orchestral score, and mobile audio that recovers by itself. The first tap starts the music, even on the splash.
+- **Start-up:** splash, story cards while loading, a 3D app icon and a share preview.
+
 ## Shadow audit: the sun through the skylight, true fire shadows, a bake that matches
 
 - **Sun framed on the skylight** (`src/render/shadows.ts`): daylight only enters through a sun room's opening, so the sun's shadow map now covers the prism under that opening (about 5 m across) instead of the whole room plus 4 m. Texels shrink from 14–20 mm to 2.6 mm on high and from 27–39 mm to 5 mm on medium and mobile, with the same map sizes. Outside the frustum counts as under the roof: three.js treats the outside of a shadow frustum as lit, which let the sun light every neighbouring room beyond the old frustum. The frustum is snapped to texels and stays put while the camera moves; it follows the last sun room while its light fades after leaving.

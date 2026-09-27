@@ -1250,7 +1250,8 @@ body:not([data-phase='play']) #touch,
   z-index: 7;
 }
 #reader,
-#credits {
+#credits,
+#chambers {
   z-index: 8;
 }
 
