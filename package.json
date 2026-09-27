@@ -18,7 +18,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate:levels": "tsx scripts/validate-levels.ts",
-    "anim:build": "tsx scripts/anim/build-clips.ts"
+    "anim:build": "tsx scripts/anim/build-clips.ts",
+    "bench": "tsx scripts/perf/bench.ts"
   },
   "dependencies": {
     "three": "^0.186.1",
@@ -30,6 +31,7 @@
     "@types/three": "^0.186.0",
     "eslint": "^10.11.0",
     "globals": "^17.12.0",
+    "playwright": "1.56.1",
     "prettier": "^3.9.9",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",

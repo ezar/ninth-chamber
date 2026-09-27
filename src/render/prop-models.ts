@@ -32,6 +32,7 @@ export type PropModel = (typeof PROP_MODELS)[number];
 
 /** Height of the door model (m); shorter doors sink the extra into the floor. */
 export const DOOR_MODEL_HEIGHT = 5;
+const ONE = new THREE.Vector3(1, 1, 1);
 /** Height of the column capital model (m). */
 const CAPITAL_HEIGHT = 0.6;
 
@@ -71,6 +72,35 @@ export class PropLibrary {
       }
     });
     return o;
+  }
+
+  /**
+   * One InstancedMesh per mesh of a model, drawing it at every placement
+   * (world matrices of the model's root).
+   */
+  instancedParts(
+    name: PropModel,
+    placements: readonly THREE.Matrix4[],
+    castShadow: boolean,
+  ): THREE.InstancedMesh[] {
+    const src = this.scenes.get(name);
+    if (!src || !placements.length) return [];
+    src.updateMatrixWorld(true);
+    const out: THREE.InstancedMesh[] = [];
+    const m = new THREE.Matrix4();
+    src.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const inst = new THREE.InstancedMesh(o.geometry, o.material, placements.length);
+      placements.forEach((p, i) => inst.setMatrixAt(i, m.multiplyMatrices(p, o.matrixWorld)));
+      inst.instanceMatrix.needsUpdate = true;
+      inst.computeBoundingSphere();
+      inst.computeBoundingBox();
+      inst.castShadow = castShadow;
+      inst.receiveShadow = true;
+      inst.name = `${name}:${o.name}`;
+      out.push(inst);
+    });
+    return out;
   }
 
   /** The shared material of a named mesh inside a model (for glow animation). */
@@ -117,6 +147,11 @@ export function dressLevel(level: Level, lib: PropLibrary, busy: ReadonlySet<str
   const neighbour = (s: Sector, d: Dir): Sector | undefined =>
     level.sector(s.cx + DIR_VEC[d].x, s.cz + DIR_VEC[d].z);
   const isWall = (n: Sector | undefined): boolean => !n || n.wall;
+  // Placements are gathered per room and model, then drawn as one instanced mesh per model
+  // part: a room's dozens of rubble piles, pots and drifts cost a few draw calls.
+  const placements = new Map<string, { name: PropModel; castShadow: boolean; matrices: THREE.Matrix4[] }>();
+  const q = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
   const put = (
     name: PropModel,
     x: number,
@@ -124,13 +159,19 @@ export function dressLevel(level: Level, lib: PropLibrary, busy: ReadonlySet<str
     z: number,
     yaw: number,
     castShadow: boolean,
-  ): THREE.Object3D | null => {
-    const o = lib.instance(name, castShadow);
-    if (!o) return null;
-    o.position.set(x, y, z);
-    o.rotation.y = yaw;
-    g.add(o);
-    return o;
+    scale: THREE.Vector3 = ONE,
+  ): void => {
+    if (!lib.has(name)) return;
+    const room = level.sector(Math.floor(x / BLOCK), Math.floor(z / BLOCK))?.room ?? '';
+    const key = `${room}/${name}`;
+    let p = placements.get(key);
+    if (!p) {
+      p = { name, castShadow, matrices: [] };
+      placements.set(key, p);
+    }
+    p.matrices.push(
+      new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), q.setFromAxisAngle(up, yaw), scale),
+    );
   };
 
   for (const s of level.allSectors()) {
@@ -197,11 +238,21 @@ export function dressLevel(level: Level, lib: PropLibrary, busy: ReadonlySet<str
       const low = Math.min(...around.map(sectorTop), h);
       if (h - low > 0.75 && h - low < 1.25) {
         // Top 6 mm above the step and 1 % wider than the cell so it never z-fights the level mesh.
-        const o = put('altar', s.cx * BLOCK + BLOCK / 2, low, s.cz * BLOCK + BLOCK / 2, 0, true);
-        o?.scale.set(1.012, h - low + 0.006, 1.012);
+        put(
+          'altar',
+          s.cx * BLOCK + BLOCK / 2,
+          low,
+          s.cz * BLOCK + BLOCK / 2,
+          0,
+          true,
+          new THREE.Vector3(1.012, h - low + 0.006, 1.012),
+        );
       }
       around.forEach((n) => todo.push(n));
     }
+  }
+  for (const p of placements.values()) {
+    for (const mesh of lib.instancedParts(p.name, p.matrices, p.castShadow)) g.add(mesh);
   }
   return g;
 }

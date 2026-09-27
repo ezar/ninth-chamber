@@ -12,13 +12,14 @@ import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
 import { CombatView } from './combat';
 import { FireLightScheduler, type FireSpot } from './fire-lights';
-import { buildLevelMeshes } from './level-mesh';
+import { buildLevelMeshes, type Surface } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
 import type { NoraPose } from './nora';
 import { NoraRig } from './nora-scan';
 import { Props } from './props';
 import { loadSurfaces, surfaceParams, type SurfaceName, type SurfaceSet } from './materials';
 import { PostStack } from './post';
+import { RoomCulling } from './room-culling';
 import {
   QUALITY,
   anisotropyFor,
@@ -48,6 +49,8 @@ const FIRE_GAIN = 1.8;
 const CHARACTER_LAYER = 1;
 /** Seconds between refreshes of a non-live (mobile) sun shadow. */
 const STATIC_SHADOW_REFRESH = 1;
+/** Groups whose children are culled one by one (the static set dressing). */
+const DRESSING: ReadonlySet<string> = new Set(['dressing']);
 /** Film grain amplitude on the display image (art bible: subtle; lowered after phone feedback). */
 const GRAIN = 0.022;
 /** Frames between passes that bring newly loaded textures (prop models) to the filtering level. */
@@ -92,9 +95,22 @@ export class GameRenderer {
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
   private currentRoom: string | null = null;
-  private readonly shafts: { mesh: THREE.Group; dust: THREE.Points; room: string }[] = [];
-  private readonly bounces: { light: THREE.PointLight; room: string; strength: number }[] = [];
+  private readonly shafts: { mesh: THREE.Group; dust: THREE.Points; sky: THREE.Mesh; room: string }[] = [];
+  /** Where each sunlit room's floor bounce sits, and how strong it is. */
+  private readonly bounces: { at: THREE.Vector3; room: string; strength: number }[] = [];
+  /**
+   * Two bounce lights serve every sunlit room: the current room's, and the
+   * previous one's fading out. Every light costs every lit pixel, so one per
+   * room (ten) was the largest per-pixel cost on phones.
+   */
+  private readonly bounceLights = [0, 1].map(() => ({
+    light: new THREE.PointLight('#e0b27a', 0, 22, 1.6),
+    room: null as string | null,
+    strength: 0,
+  }));
   private readonly levelMeshes: THREE.Mesh[] = [];
+  /** Hides the rooms the camera cannot see (render/room-culling.ts). */
+  culling: RoomCulling | null = null;
   private time = 0;
   private surfaces: Record<SurfaceName, SurfaceSet> | null = null;
   private reducedMotion = false;
@@ -168,6 +184,7 @@ export class GameRenderer {
     // Torch shadows on the high tier only; castShadow is fixed from the tier the session starts on.
     this.torch = new TorchView(profile.tier === 'high');
     this.scene.add(this.torch.group);
+    for (const b of this.bounceLights) this.scene.add(b.light);
     // A soft fill that follows Nora so she reads against backlight (a common
     // character-lighting cheat); short range, so it barely touches the set.
     this.characterFill.position.set(0.6, 2.2, 1.6);
@@ -343,8 +360,11 @@ export class GameRenderer {
 
   /** Scene render scale from dynamic resolution (spec §14); post effects keep the output size. */
   setRenderScale(scale: number): void {
+    this.renderScale = scale;
     this.post.setRenderScale(scale);
   }
+
+  private renderScale = 1;
 
   /** Reduced motion (spec §13): no film grain. */
   setReducedMotion(on: boolean): void {
@@ -371,6 +391,10 @@ export class GameRenderer {
    * the first frames of play.
    */
   warmup(): void {
+    this.warmAll();
+    // Behind the loading screen the whole level is drawn only to compile it: at a
+    // tenth of the resolution its fill cost is negligible (pipelines do not depend on size).
+    this.post.setRenderScale(0.1);
     // Every shadow map gets created now rather than on entering its room.
     for (const l of [this.sun, ...this.fireCasters]) l.shadow.needsUpdate = true;
     this.post.dofAmount.value = this.post.hasDepthOfField ? 0.5 : 0;
@@ -379,7 +403,30 @@ export class GameRenderer {
     this.post.render(0);
     this.post.render(0);
     this.post.dofAmount.value = 0;
+    this.post.setRenderScale(this.renderScale);
+    this.warmAll(false);
   }
+
+  /**
+   * Draws every room, in or out of view, while `on` (restoring culling after):
+   * a frame drawn like this compiles the materials of rooms not yet seen, so
+   * entering them never stalls on a shader.
+   */
+  private warmAll(on = true): void {
+    this.culling?.setEnabled(!on);
+    this.scene.traverse((o) => {
+      if (on && o.frustumCulled) {
+        o.frustumCulled = false;
+        o.userData.warmCulled = true;
+      } else if (!on && o.userData.warmCulled) {
+        o.frustumCulled = true;
+        delete o.userData.warmCulled;
+      }
+    });
+  }
+
+  /** Set when late assets (the baked props) arrive: the next frame is drawn whole, for warm-up. */
+  private warmNext = false;
 
   /**
    * Builds all level geometry and props. A new World on the same level (a
@@ -403,18 +450,24 @@ export class GameRenderer {
       extra: THREE.MeshStandardMaterialParameters = {},
     ): THREE.MeshStandardMaterial =>
       new THREE.MeshStandardMaterial({ ...surfaceParams(set), vertexColors: true, ...extra });
-    const add = (geo: THREE.BufferGeometry, material: THREE.Material, cast = true): void => {
-      const m = new THREE.Mesh(geo, material);
-      m.castShadow = cast;
-      m.receiveShadow = true;
-      this.scene.add(m);
-      this.levelMeshes.push(m);
+    // One material per surface, shared by every room's mesh of it.
+    const materials: Record<Surface, THREE.MeshStandardMaterial> = {
+      wall: mat(surf.wall),
+      floorStone: mat(surf.floor, { color: '#d9c6a8' }),
+      floorSand: mat(surf.sand),
+      ceiling: mat(surf.ceiling, { side: THREE.DoubleSide }),
+      lip: mat(surf.floor, { color: '#fff4e0' }),
     };
-    add(meshes.surfaces.wall, mat(surf.wall));
-    add(meshes.surfaces.floorStone, mat(surf.floor, { color: '#d9c6a8' }), false);
-    add(meshes.surfaces.floorSand, mat(surf.sand), false);
-    add(meshes.surfaces.ceiling, mat(surf.ceiling, { side: THREE.DoubleSide }));
-    add(meshes.surfaces.lip, mat(surf.floor, { color: '#fff4e0' }));
+    const culling = new RoomCulling(level, this.scene);
+    this.culling = culling;
+    for (const part of meshes.parts) {
+      const m = new THREE.Mesh(part.geometry, materials[part.surface]);
+      m.castShadow = part.surface !== 'floorStone' && part.surface !== 'floorSand';
+      m.receiveShadow = true;
+      m.name = `level:${part.room}:${part.surface}`;
+      culling.group(part.room)?.add(m);
+      this.levelMeshes.push(m);
+    }
     this.water.build(world, this.levelMeshes);
     this.waterFx.build(level, world);
 
@@ -428,9 +481,11 @@ export class GameRenderer {
       gold: new THREE.MeshStandardMaterial({ color: '#e8b75a', roughness: 0.25, metalness: 1 }),
     });
     this.scene.add(this.props.group);
+    void this.props.modelsLoaded.then(() => (this.warmNext = true));
     this.indexFires();
 
     this.buildShafts(meshes.skylights, sunRooms);
+    this.adoptRoomObjects();
     void this.loadLightmap(level.id);
     this.applyParticleBudget();
   }
@@ -550,10 +605,11 @@ export class GameRenderer {
           .multiplyScalar(-(ceil - floor) / Math.max(0.2, dir.y))
           .setY(0),
       );
-      const bounce = new THREE.PointLight('#e0b27a', 0, 22, 1.6);
-      bounce.position.set(hit.x, floor + 1.2, hit.z);
-      this.scene.add(bounce);
-      this.bounces.push({ light: bounce, room: roomId, strength: look.sunIntensity });
+      this.bounces.push({
+        at: new THREE.Vector3(hit.x, floor + 1.2, hit.z),
+        room: roomId,
+        strength: look.sunIntensity,
+      });
 
       const n = 260;
       const pos = new Float32Array(n * 3);
@@ -581,7 +637,7 @@ export class GameRenderer {
         }),
       );
       this.scene.add(dust);
-      this.shafts.push({ mesh, dust, room: roomId });
+      this.shafts.push({ mesh, dust, sky, room: roomId });
       mesh.visible = !this.profile.godrays;
     }
   }
@@ -649,6 +705,7 @@ export class GameRenderer {
     this.applyLook();
 
     this.props?.update(world, this.time, dt);
+    this.adoptRoomObjects();
     this.updateFireLights(eye, dt);
     this.updateShafts(dt);
     this.updateContactShadow(world, px, py, pz);
@@ -656,6 +713,10 @@ export class GameRenderer {
 
     this.camera.position.copy(view);
     this.camera.lookAt(lookAt.x, lookAt.y, lookAt.z);
+    if (this.culling) {
+      this.culling.update(this.camera, this.nora.root.position);
+      this.combat.cullEnemies(this.culling.shows);
+    }
     this.updateShadowBudget(dt);
     this.updateFocus();
     this.post.grain.value = this.grainOn ? GRAIN : 0;
@@ -663,7 +724,32 @@ export class GameRenderer {
       this.filteringSweep = 0;
       this.applyAnisotropy();
     }
+    const warm = this.warmNext;
+    if (warm) {
+      this.warmNext = false;
+      this.warmAll();
+    }
     this.post.render(dt);
+    if (warm) this.warmAll(false);
+  }
+
+  /**
+   * Sorts props (views appear lazily, baked models arrive late) and the sun
+   * shafts into their rooms' groups for culling. Lights and the shared ember
+   * system stay where they are.
+   */
+  private adoptRoomObjects(): void {
+    const culling = this.culling;
+    if (!culling) return;
+    if (this.props) {
+      const embers = this.props.embers;
+      culling.adopt(this.props.group, (o) => o instanceof THREE.Light || o === embers, DRESSING);
+    }
+    for (const s of this.shafts) {
+      if (s.mesh.parent === this.scene) culling.place(s.mesh, s.room);
+      if (s.dust.parent === this.scene) culling.place(s.dust, s.room);
+      if (s.sky.parent === this.scene) culling.place(s.sky, s.room);
+    }
   }
 
   /**
@@ -898,8 +984,24 @@ export class GameRenderer {
     });
   }
 
+  /** Moves the dimmer bounce light to the current room when that room has a sun and no light yet. */
+  private assignBounce(): void {
+    const room = this.currentRoom;
+    if (this.bounceLights.some((b) => b.room === room)) return;
+    const source = this.bounces.find((b) => b.room === room);
+    if (!source) return;
+    const [a, b] = this.bounceLights;
+    if (!a || !b) return;
+    const free = a.light.intensity <= b.light.intensity ? a : b;
+    free.room = source.room;
+    free.strength = source.strength;
+    free.light.intensity = 0;
+    free.light.position.copy(source.at);
+  }
+
   private updateShafts(dt: number): void {
-    for (const b of this.bounces) {
+    this.assignBounce();
+    for (const b of this.bounceLights) {
       const target = this.currentRoom === b.room ? b.strength * 9 : 0;
       b.light.intensity += (target - b.light.intensity) * Math.min(1, dt * 1.5);
     }
@@ -909,9 +1011,13 @@ export class GameRenderer {
         const m = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
         m.opacity += (on - m.opacity) * Math.min(1, dt * 2);
       }
+      // Dust in rooms out of sight is not animated (nor uploaded) until it is seen again.
+      if (s.dust.parent && !s.dust.parent.visible) continue;
       const attr = s.dust.geometry.getAttribute('position') as THREE.BufferAttribute;
       const base = s.dust.geometry.userData.base as Float32Array;
-      for (let i = 0; i < attr.count; i++) {
+      // Only the tier's share of the particles is drawn (applyParticleBudget), so only that moves.
+      const drawn = Math.min(attr.count, s.dust.geometry.drawRange.count);
+      for (let i = 0; i < drawn; i++) {
         const ph = i * 1.3;
         attr.setXYZ(
           i,

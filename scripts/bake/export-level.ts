@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Level } from '../../src/sim/grid/level';
 import { BLOCK } from '../../src/sim/grid/units';
-import { buildLevelMeshes } from '../../src/render/level-mesh';
+import { buildLevelMeshes, mergeSurfaces } from '../../src/render/level-mesh';
 import type { LookFile } from '../../src/render/looks';
 
 const [levelPath, outPath] = process.argv.slice(2);
@@ -31,7 +31,7 @@ const ALBEDO: Record<string, string> = {
 };
 
 const surfaces = Object.fromEntries(
-  Object.entries(meshes.surfaces).map(([name, g]) => [
+  Object.entries(mergeSurfaces(meshes.parts)).map(([name, g]) => [
     name,
     {
       albedo: ALBEDO[name],

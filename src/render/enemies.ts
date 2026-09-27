@@ -871,8 +871,16 @@ export class EnemyViews {
     this.slots.get(id)?.view.flinch();
   }
 
+  /** Shows only the jackals `shown` accepts (those in rooms being drawn). */
+  cull(shown: (x: number, z: number) => boolean): void {
+    for (const s of this.slots.values()) s.view.root.visible = shown(s.pos.x, s.pos.z);
+  }
+
+  private readonly seen = new Set<string>();
+
   update(world: World, alpha: number, dt: number): void {
-    const seen = new Set<string>();
+    const seen = this.seen;
+    seen.clear();
     const p = world.state.player.pos;
     world.state.enemies.forEach((e, i) => {
       seen.add(e.id);

@@ -69,7 +69,10 @@ export class Props {
     scale: number;
     fire: number;
   }[] = [];
-  private readonly embers: THREE.Points;
+  /** Four flame layers shared by every lit brazier; a cold brazier's sprites get their own, to fade in. */
+  private readonly flameMaterials: THREE.SpriteMaterial[];
+  /** Embers of every fire in one particle system (drawn wherever the rooms are). */
+  readonly embers: THREE.Points;
   private readonly emberData: {
     origin: THREE.Vector3;
     t: number;
@@ -88,6 +91,8 @@ export class Props {
   private coals: THREE.MeshStandardMaterial | null = null;
   /** Coals of each cold brazier (their own material, dark until lit), by fire index. */
   private readonly coldCoals = new Map<number, THREE.MeshStandardMaterial>();
+  /** Settles once the baked models have replaced the stand-ins. */
+  readonly modelsLoaded: Promise<void>;
 
   constructor(
     private readonly level: Level,
@@ -97,6 +102,18 @@ export class Props {
     this.group.add(this.relicLight);
 
     const flameTex = flameTexture();
+    // Four flame layers, one material each shared by every brazier (not one per sprite).
+    this.flameMaterials = [0, 1, 2, 3].map(
+      (k) =>
+        new THREE.SpriteMaterial({
+          map: flameTex,
+          color: k === 0 ? '#ffd9a0' : '#ff8a3a',
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          transparent: true,
+          fog: false,
+        }),
+    );
     for (const e of level.entities) {
       if (e.type !== 'brazier') continue;
       const [cx, cz] = e.at;
@@ -110,15 +127,8 @@ export class Props {
       const cold = !e.lit;
       this.fires.push({ pos: firePos, phase: this.fires.length * 1.7, id: e.id, cold, level: cold ? 0 : 1 });
       for (let k = 0; k < 4; k++) {
-        const m = new THREE.SpriteMaterial({
-          map: flameTex,
-          color: k === 0 ? '#ffd9a0' : '#ff8a3a',
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-          transparent: true,
-          fog: false,
-        });
-        const s = new THREE.Sprite(m);
+        const shared = this.flameMaterials[k];
+        const s = new THREE.Sprite(cold ? shared?.clone() : shared);
         const scale = k === 0 ? 0.55 : 0.8 - k * 0.1;
         s.scale.set(scale * 0.7, scale, 1);
         const base = firePos
@@ -166,7 +176,7 @@ export class Props {
 
     this.buildSpikes();
     this.buildCrumbleTiles();
-    void PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
+    this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
   }
 
   /** Swaps the procedural stand-ins for the baked models and dresses the rooms. */
@@ -513,15 +523,25 @@ export class Props {
       const grow = 0.3 + 0.7 * lit;
       f.sprite.position.set(f.base.x + Math.sin(time * 3 + f.phase) * 0.02, f.base.y + n * 0.04, f.base.z);
       f.sprite.scale.set(f.scale * (0.62 + n * 0.08) * grow, f.scale * (1 + n * 0.18) * grow, 1);
-      (f.sprite.material as THREE.SpriteMaterial).opacity = (0.85 + n * 0.15) * lit;
+      // A cold brazier's own materials fade with its fire; the shared ones flicker below.
+      const m = f.sprite.material as THREE.SpriteMaterial;
+      if (!this.flameMaterials.includes(m)) m.opacity = (0.85 + n * 0.15) * lit;
     }
+    this.flameMaterials.forEach((m, k) => {
+      const n = Math.sin(time * 9 + k * 2.1) * 0.5 + Math.sin(time * 15.3 + k * 4.2) * 0.3;
+      m.opacity = 0.85 + n * 0.15;
+    });
     const attr = this.embers.geometry.getAttribute('position') as THREE.BufferAttribute;
-    this.emberData.forEach((e, i) => {
+    // Only the tier's share is drawn (the renderer's particle budget), so only that moves.
+    const drawn = Math.min(this.emberData.length, this.embers.geometry.drawRange.count);
+    for (let i = 0; i < drawn; i++) {
+      const e = this.emberData[i];
+      if (!e) break;
       e.t += dt * e.speed * 0.5;
       if (e.t > 1) e.t -= 1;
       if ((this.fires[e.fire]?.level ?? 1) < e.t) {
         attr.setXYZ(i, e.origin.x, -1000, e.origin.z);
-        return;
+        continue;
       }
       attr.setXYZ(
         i,
@@ -529,7 +549,7 @@ export class Props {
         e.origin.y + 0.2 + e.t * 2.2,
         e.origin.z + e.drift.y * e.t * 0.8,
       );
-    });
+    }
     attr.needsUpdate = true;
     if (this.relicMesh) {
       const m = this.relicMesh.material as THREE.MeshStandardMaterial;

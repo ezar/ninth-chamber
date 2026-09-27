@@ -41,6 +41,7 @@ import { PadEdgeReader } from './ui/nav';
 import { PAD, PadReader, focusItem, padHas } from './ui/pad';
 import { Prelude } from './ui/prelude';
 import { Reader } from './ui/reader';
+import { registerServiceWorker } from './ui/service-worker';
 import { browserStorage, defaultSettings, loadSettings, saveSettings, type Settings } from './ui/settings';
 import { TitleScreen } from './ui/title';
 
@@ -127,6 +128,8 @@ async function main(): Promise<void> {
   const loadingDone = (): void => {
     loading.ready();
     prelude.ready();
+    // Offline play and fast restarts, once the first room no longer needs the bandwidth.
+    registerServiceWorker();
   };
 
   // Quality: the stored tier, or on first run the device heuristic until the benchmark decides.

@@ -181,6 +181,9 @@ const caustic = Fn(([p, t]: [V2, F]) => {
   return clamp(pow(abs(v), 8), 0, 1.5);
 });
 
+/** Caustics projected on the level's walls and floors (see WaterView.build). */
+const WALL_CAUSTICS = false;
+
 export class WaterView {
   readonly group = new THREE.Group();
   private surfaces: Surface[] = [];
@@ -270,7 +273,11 @@ export class WaterView {
       this.group.add(mesh);
       this.surfaces.push({ room, mesh, level: levelU, fixed });
     }
-    if (this.rich) for (const m of levelMeshes) this.decorate(m);
+    // Caustics on the walls and floors swap each level mesh's material for a node
+    // copy, and those copies render black (walls and floors vanish, and in dry levels
+    // the textures and baked light go too). Off until they are rebuilt on the level's
+    // own materials.
+    if (WALL_CAUSTICS && this.rich && this.surfaces.length) for (const m of levelMeshes) this.decorate(m);
     this.update(0, new THREE.Vector3());
   }
 

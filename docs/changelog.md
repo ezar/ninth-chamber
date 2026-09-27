@@ -40,6 +40,15 @@ Play it with `?level=cisterns`, or finish the Antechamber and choose "Enter the 
 - **Ducking** is a JS-side envelope scheduled as linear ramps, so a duck can't get stuck. `cancelAndHoldAtTime` is no longer used. At most two stream elements exist at a time. A stream the browser pauses restarts on the next gesture.
 - **Splash unlock.** The first tap or key, even on the splash before the game's code loads, makes and unlocks the AudioContext (`#audio-unlock` in `index.html`, with a silent buffer for iOS). The engine adopts that context, so the title theme starts from that same tap.
 
+## Performance: room culling, instancing, lighter lights, offline start
+
+- **Room culling through portals** (`src/render/rooms.ts`, `src/render/room-culling.ts`): only the rooms the camera can see are drawn. Portals are where open sectors of two rooms touch; a room is drawn when a chain of at most three portals whose openings are in the view frustum leads to it from the camera's (or Nora's) room. Level geometry is now merged per room and surface, and props, set dressing, flames, sun shafts, dust and jackals follow their room. Warm-up frames draw every room so hidden rooms' materials compile behind the loading screen.
+- **Instanced set dressing**: rubble, pots, sand drifts, column bases and capitals and the altar are one instanced mesh per model part and room. Flame sprites share four materials instead of one each.
+- **Fewer lights**: the ten sun-bounce point lights (one per sunlit room, all evaluated by every lit pixel) are now a pool of two that follows the current room.
+- **Particles**: dust in rooms out of sight is not animated, and only the tier's share of dust and embers is updated.
+- **Loading**: three.js in its own chunk (its hash survives game deploys), Nora preloaded from the HTML, and a service worker generated per build (`scripts/vite-sw.ts`): versioned by a hash of the build, precaching the engine and the first room, network-first for pages so a deploy is never hidden, and never taking over a running game.
+- **Benchmark** (`pnpm bench`, `scripts/perf/bench.ts`) and `docs/performance.md` with the before and after numbers and how to profile.
+
 ## Splash and the story while the game loads
 
 - **Splash** (`index.html`, `src/ui/prelude.css`): from the first paint, on black, the nine-segment seal carves itself: eight segments drawn one by one with an amber stroke and a glint as the stone fills in, the ninth left as an outline that flickers once like a dying ember; then the wordmark (by locale) fades in while its letter-spacing settles, with a faint shimmer of dust. About 2.8 s, pure CSS and SVG (the seal is the identity geometry from `src/ui/seal.ts`, baked in at build time). Any tap or key skips it; with reduced motion the finished seal holds still for a second. Loading runs underneath.

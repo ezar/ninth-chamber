@@ -169,6 +169,10 @@ export class CombatView {
   readonly group = new THREE.Group();
   private readonly holsters: [THREE.Group, THREE.Group] = [holsterMesh(), holsterMesh()];
   private readonly enemies: EnemyViews;
+  /** Hides jackals standing in rooms that are not drawn (render/room-culling.ts). */
+  cullEnemies(shown: (x: number, z: number) => boolean): void {
+    this.enemies.cull(shown);
+  }
   private readonly pistols: [Pistol, Pistol];
   private readonly light = new THREE.PointLight('#ffc98a', 0, 8, 2);
   private readonly marker: THREE.Sprite;
