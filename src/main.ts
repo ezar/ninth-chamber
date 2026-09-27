@@ -29,6 +29,7 @@ import { torchInHand } from './sim/player/torch';
 import { tuning } from './sim/player/tuning';
 import { createWorld, respawn, stepWorld, type World } from './sim/world';
 import { chamberOf, nextChamber } from './ui/campaign';
+import { waterSurface } from './sim/actors/water';
 import { ChamberMap } from './ui/chamber-map';
 import { EndScreen } from './ui/end-screen';
 import { browserProgressStorage, loadReached, markReached } from './ui/progress';
@@ -688,10 +689,16 @@ async function main(): Promise<void> {
       const stride = running ? 0.85 : 0.6;
       if (stepDistance > stride) {
         stepDistance = 0;
-        const s = level.sector(Math.floor(p.pos.x / BLOCK), Math.floor(p.pos.z / BLOCK));
+        const cx = Math.floor(p.pos.x / BLOCK);
+        const cz = Math.floor(p.pos.z / BLOCK);
+        const s = level.sector(cx, cz);
         lastMaterial = s?.mat ?? lastMaterial;
-        audio.onEvent({ type: 'footstep', tick: world.tick, material: lastMaterial, run: running }, p.pos);
-        fx.footstep(p.pos, p.yaw, lastMaterial, running);
+        // Wading: her feet splash under the live surface, and leave no prints.
+        const surface = waterSurface(world, cx, cz);
+        const wading = surface !== null && p.pos.y < surface - 0.03;
+        const material = wading ? 'water' : lastMaterial;
+        audio.onEvent({ type: 'footstep', tick: world.tick, material, run: running }, p.pos);
+        if (!wading) fx.footstep(p.pos, p.yaw, lastMaterial, running);
       }
     }
   });
