@@ -1885,13 +1885,15 @@ export class NoraModel {
       const s = sd.s;
       this.rot(q, sd.clav, 0, s * 0.12 * a, s * 0.04);
       this.fk(q, sd.upper, _v3, _q2);
-      // Arms nearly straight when aiming, bent holding the pistols ready; wrists slightly toed in.
+      // Arms nearly straight when aiming, each from its own shoulder so the two
+      // pistols stay side by side (converging, the hands met and the pistols
+      // overlapped); bent and a little toed in holding them ready.
       const reach = lerp(0.38, 0.505, a);
       const inward = new THREE.Vector3().crossVectors(up, aimDir).multiplyScalar(s).normalize();
       const wrist = _v3
         .clone()
         .addScaledVector(aimDir, reach)
-        .addScaledVector(inward, 0.05 + 0.03 * a);
+        .addScaledVector(inward, lerp(0.05, 0.012, a));
       const fingers = aimDir.clone().addScaledVector(up, -0.3).normalize();
       this.armIK(q, sd, wrist, new THREE.Vector3(s * 0.9, -0.6, 0.2), fingers, inward);
       q.curl[s < 0 ? 0 : 1] = 0.95;

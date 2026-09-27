@@ -59,6 +59,16 @@ class ScannedSkin {
   private readonly hipsBindLocal = new THREE.Vector3();
   private readonly hipsParentInv = new THREE.Matrix4();
   private readonly materials: THREE.Material[] = [];
+  /**
+   * Where each visible palm is, in its hand bone's frame: the centroid of the
+   * vertices the hand bone mostly moves. The scan's hand joints sit well off
+   * the palms (about 13 cm at the wrist's edge), so things held are placed
+   * here rather than at the joint.
+   */
+  private readonly palms: ({ mesh: THREE.SkinnedMesh; bone: THREE.Bone; local: THREE.Vector3 } | null)[] = [
+    null,
+    null,
+  ];
 
   constructor(readonly scene: THREE.Object3D) {
     scene.updateMatrixWorld(true);
@@ -94,6 +104,25 @@ class ScannedSkin {
       this.hipsParentInv.copy(hips.parent.matrixWorld).invert();
     }
     if (hips) this.hipsBindLocal.copy(hips.position);
+    const meshes: THREE.SkinnedMesh[] = [];
+    scene.traverse((o) => {
+      if (o instanceof THREE.SkinnedMesh) meshes.push(o);
+    });
+    (['hand_L', 'hand_R'] as const).forEach((name, side) => {
+      this.palms[side] = palmAnchor(meshes, name);
+    });
+  }
+
+  /** World position of a visible palm (0 left, 1 right); false if the scan has no weights for it. */
+  palm(side: 0 | 1, out: THREE.Vector3): boolean {
+    const a = this.palms[side];
+    if (!a) return false;
+    a.bone.updateWorldMatrix(true, false);
+    a.mesh.updateWorldMatrix(true, false);
+    // As the skinning shader does: mesh × bindInverse × bone × (boneInverse × bind × v).
+    out.copy(a.local).applyMatrix4(a.bone.matrixWorld).applyMatrix4(a.mesh.bindMatrixInverse);
+    out.applyMatrix4(a.mesh.matrixWorld);
+    return true;
   }
 
   apply(pose: AnimPose): void {
@@ -147,6 +176,36 @@ class ScannedSkin {
       if (o instanceof THREE.Mesh) o.castShadow = a > 0.5;
     });
   }
+}
+
+/** The centroid, in the bone's bind frame, of the vertices a bone moves with weight over one half. */
+function palmAnchor(
+  meshes: readonly THREE.SkinnedMesh[],
+  boneName: string,
+): { mesh: THREE.SkinnedMesh; bone: THREE.Bone; local: THREE.Vector3 } | null {
+  let best: { mesh: THREE.SkinnedMesh; bone: THREE.Bone; local: THREE.Vector3; n: number } | null = null;
+  const v = new THREE.Vector3();
+  for (const mesh of meshes) {
+    const bones = mesh.skeleton.bones;
+    const bi = bones.findIndex((b) => b.name === boneName);
+    const bone = bones[bi];
+    const inverse = mesh.skeleton.boneInverses[bi];
+    const index = mesh.geometry.getAttribute('skinIndex');
+    const weight = mesh.geometry.getAttribute('skinWeight');
+    const position = mesh.geometry.getAttribute('position');
+    if (!bone || !inverse || !index || !weight || !position) continue;
+    const sum = new THREE.Vector3();
+    let n = 0;
+    for (let i = 0; i < position.count; i++) {
+      let w = 0;
+      for (let k = 0; k < 4; k++) if (index.getComponent(i, k) === bi) w += weight.getComponent(i, k);
+      if (w <= 0.5) continue;
+      sum.add(v.fromBufferAttribute(position, i).applyMatrix4(mesh.bindMatrix).applyMatrix4(inverse));
+      n++;
+    }
+    if (n > (best?.n ?? 0)) best = { mesh, bone, local: sum.divideScalar(n), n };
+  }
+  return best && { mesh: best.mesh, bone: best.bone, local: best.local };
 }
 
 async function loadClip(url: string): Promise<Clip> {
@@ -317,7 +376,7 @@ export class NoraRig {
    */
   /**
    * Frame for something gripped in a visible hand (0 = left, 1 = right): the
-   * wrist position and the direction the forearm points (hands stay rigid
+   * palm position and the direction the forearm points (hands stay rigid
    * with the forearm, so a held pistol's barrel follows it). False until the
    * scanned model has loaded.
    */
@@ -329,6 +388,7 @@ export class NoraRig {
     pos.setFromMatrixPosition(hand.matrixWorld);
     dir.setFromMatrixPosition(fore.matrixWorld);
     dir.subVectors(pos, dir).normalize();
+    this.skin?.palm(side, pos);
     return true;
   }
 

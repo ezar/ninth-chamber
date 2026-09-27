@@ -93,6 +93,9 @@ function pistolMesh(): { group: THREE.Group; muzzle: THREE.Vector3 } {
   return { group: g, muzzle: new THREE.Vector3(0, 0.028, -0.19) };
 }
 
+/** Height of the grip's middle under the pistol's origin (the grip's top rear). */
+const GRIP_CENTRE = 0.06;
+
 /** A leather thigh holster; origin at its mouth, -Z down the barrel, +Y towards her front. */
 function holsterMesh(): THREE.Group {
   const g = new THREE.Group();
@@ -171,6 +174,8 @@ export class CombatView {
   private readonly puffs: Puff[] = [];
   private readonly puffTexture: THREE.Texture;
   private sinceShot = Infinity;
+  /** Smoothed aiming weight, for the barrels' direction. */
+  private aimW = 0;
   private drawn = 0;
   private markerFor: string | null = null;
   private time = 0;
@@ -385,6 +390,9 @@ export class CombatView {
     // Pistols in Nora's hands while drawn.
     const armed = p.weapon.drawn && (p.mode === 'ground' || p.mode === 'air');
     this.drawn += ((armed ? 1 : 0) - this.drawn) * (1 - Math.exp(-dt * 18));
+    // Follows Nora's aiming layer (nora.ts smooths it at the same rate).
+    const aiming = armed ? this.aimPose(world).aiming : 0;
+    this.aimW += (aiming - this.aimW) * (1 - Math.exp(-dt * 14));
     this.pistols.forEach((pistol, i) => {
       const side = i as 0 | 1;
       const g = pistol.group;
@@ -404,13 +412,20 @@ export class CombatView {
         let f: THREE.Vector3;
         let u: THREE.Vector3;
         if (nora.gripFrame(side, _pos, _f)) {
-          // The visible hand: the barrel follows the forearm, the pistol stays upright around it.
+          // The visible hand: held ready the barrel follows the forearm. Aiming, the
+          // elbows flare and each forearm turns ~12° inwards, so the barrel follows
+          // the whole arm (shoulder to wrist) and the two pistols stay parallel.
           f = _f;
+          if (this.aimW > 1e-3 && nora.jointPosition(side === 0 ? 'upperArm_L' : 'upperArm_R', _x)) {
+            nora.jointPosition(side === 0 ? 'hand_L' : 'hand_R', _c);
+            _c.sub(_x).normalize();
+            f.lerp(_c, this.aimW).normalize();
+          }
           u = _u.copy(UP).addScaledVector(f, -UP.dot(f));
           if (u.lengthSq() < 1e-4) u.set(0, 0, -1);
           u.normalize();
-          // Grip in the palm: the top of the grip sits in the web of the hand, above the wrist line.
-          g.position.copy(_pos).addScaledVector(f, 0.055).addScaledVector(u, 0.02);
+          // The middle of the grip (6 cm under the pistol's origin) sits in the visible palm.
+          g.position.copy(_pos).addScaledVector(u, GRIP_CENTRE);
         } else {
           nora.handFrame(side, _pos, _q);
           // The aim layer points the fingers 0.3 below the aim: the barrel lifts them back to it.
