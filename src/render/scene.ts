@@ -87,8 +87,12 @@ export class GameRenderer {
   private neighbours = new Map<string, Set<string>>();
   private readonly characterFill = new THREE.PointLight('#ffe2c4', 1.6, 4.5, 2);
   private readonly nora = new NoraRig();
-  /** Jackals, pistols, muzzle flashes and the target marker. */
-  readonly combat = new CombatView(`${import.meta.env.BASE_URL}models/jackal.glb`);
+  /**
+   * Jackals, pistols, muzzle flashes and the target marker. No jackal model is
+   * shipped yet, so the jackals are built in code; pass
+   * `${import.meta.env.BASE_URL}models/jackal.glb` once public/models has one.
+   */
+  readonly combat = new CombatView(null);
   /** The torch Nora carries, with its own light (not one of the fire pool's). */
   private readonly torch: TorchView;
   private props: Props | null = null;

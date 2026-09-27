@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4 follow-up (2026-09-27): no request for a missing jackal model
+
+- The renderer asked for `models/jackal.glb`, which was never added, and the console showed a 404 on every start. Nothing loads it now; the jackals were already built in code as the fallback. Version unchanged: the title shows the new commit.
+
 ## Version 0.2.4 (2026-09-27): no white flash between chambers, and a secret in the seal
 
 - **Moving to another chamber** loads the page again, and for a moment the browser showed a blank white page before the stylesheet arrived. The page is now dark from its first byte (an inline style in `index.html`), and browsers that support cross-document view transitions crossfade from one chamber to the next.
