@@ -846,6 +846,20 @@ export class AudioGraph {
           chime(s, t + 0.12, [74, 81], 0.045, 0.1);
         });
         break;
+      case 'seal.note': {
+        // The title seal's easter egg: each segment it lights rings a step up a pentatonic scale.
+        const SCALE = [62, 65, 67, 69, 72, 74, 77, 79];
+        const i = typeof e.i === 'number' ? Math.max(0, Math.min(7, e.i)) : 0;
+        this.play('ui', null, (s, t) => chime(s, t, [SCALE[i] ?? 69], 0.05, 0));
+        break;
+      }
+      case 'seal.open':
+        // The ninth segment: the relic's glass shimmer and the secret chord.
+        this.play('ui', null, (s, t) => {
+          relicShimmer(s, t);
+          secretMotif(s, t + 0.35);
+        });
+        break;
       case 'secret.found':
         // The secret chord (spec §12); the director adds a sting under it.
         this.play('ui', null, (s, t) => secretMotif(s, t));

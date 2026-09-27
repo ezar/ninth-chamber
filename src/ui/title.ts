@@ -7,6 +7,7 @@ import { audioCredits, versionLabel } from './build-info';
 import { t, type StringKey } from './i18n';
 import { focusFirst, menuKey, menuPad, type PadEdges } from './nav';
 import { sealSvg } from './seal';
+import { SealEgg } from './seal-egg';
 
 const $ = (id: string): HTMLElement => {
   const el = document.getElementById(id);
@@ -35,11 +36,12 @@ export class TitleScreen {
    */
   constructor(
     private readonly onStart: () => void,
-    private readonly cue: (type: string) => void,
+    private readonly cue: (type: string, data?: Record<string, unknown>) => void,
     private readonly blocked: () => boolean = () => false,
   ) {
     // Decorative: the wordmark next to it already names the game.
     $('start-seal').innerHTML = sealSvg();
+    new SealEgg($('start-seal'), cue);
     $('version').textContent = versionLabel;
     this.buildCredits();
 
