@@ -40,6 +40,10 @@ export interface RoomInfo {
   maxZ: number;
   look: string | null;
   reverb: string | null;
+  /** Room origin height (m): room-relative clicks are measured from it. */
+  y: number;
+  /** Room-wide water surface (m) from the file, if any. */
+  water: number | null;
 }
 
 export interface Start {
@@ -79,7 +83,10 @@ export class Level {
         maxZ: oz + room.rows.length,
         look: room.look ?? null,
         reverb: room.reverb ?? null,
+        y: oy * CLICK,
+        water: room.water !== undefined ? (oy + room.water) * CLICK : null,
       });
+      const roomWater = room.water !== undefined ? (oy + room.water) * CLICK : null;
       room.rows.forEach((row, rz) => {
         [...row].forEach((ch, rx) => {
           if (ch === ' ') return;
@@ -96,12 +103,12 @@ export class Level {
             ceil: (oy + room.ceil) * CLICK,
             mat: room.mat,
             flags: new Set<SectorFlag>(),
-            water: null,
+            water: roomWater,
             pitFloor: (oy + room.pitDepth) * CLICK,
           };
           let sector: Sector;
           if (entry === 'wall') {
-            sector = { ...base, wall: true, pit: false, floor: flat((oy + room.ceil) * CLICK) };
+            sector = { ...base, wall: true, pit: false, floor: flat((oy + room.ceil) * CLICK), water: null };
           } else if (entry === 'pit') {
             sector = { ...base, wall: false, pit: true, floor: flat((oy + room.pitDepth) * CLICK) };
           } else if (typeof entry === 'number') {
@@ -115,6 +122,7 @@ export class Level {
               ceil: entry.ceil !== undefined ? (oy + entry.ceil) * CLICK : base.ceil,
               mat: entry.mat ?? base.mat,
               flags: new Set(entry.flags ?? []),
+              water: entry.water !== undefined ? (oy + entry.water) * CLICK : base.water,
             };
           }
           this.sectors.set(key(cx, cz), sector);

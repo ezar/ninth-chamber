@@ -14,6 +14,7 @@
  * Events: `torch.picked` { id }, `torch.lit` { from }, `torch.stowed` { auto },
  * `torch.drawn` { auto, lit }, `torch.out` { cause }.
  */
+import { waterSurface } from '../actors/water';
 import { BLOCK, cellCenter } from '../grid/units';
 import type { BrazierActor, PickupActor, PlayerMode, PlayerState, TorchState } from '../state';
 import type { World } from '../world';
@@ -102,9 +103,10 @@ export function stepTorch(c: Ctx): void {
       emit(c, stow ? 'torch.stowed' : 'torch.drawn', { auto: !button, lit: t.lit });
     }
     if (t.lit) {
-      const s = world.level.sector(Math.floor(p.pos.x / BLOCK), Math.floor(p.pos.z / BLOCK));
+      // The live surface: sluices and tide gates move the water.
+      const water = waterSurface(world, Math.floor(p.pos.x / BLOCK), Math.floor(p.pos.z / BLOCK));
       const flame = p.pos.y + (t.stowed ? T.beltHeight : T.handHeight);
-      if (s?.water != null && flame < s.water) extinguishTorch(world, 'water');
+      if (water != null && flame < water) extinguishTorch(world, 'water');
     }
   }
   world.state.signals[TORCH_LIT] = torchLight(p);

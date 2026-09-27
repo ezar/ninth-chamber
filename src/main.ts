@@ -1,7 +1,6 @@
 import './ui/style.css';
 import './ui/screens.css';
 import './ui/prelude.css';
-import levelJson from '../levels/antechamber.level.json';
 import { AudioEngine, type ReverbPreset } from './audio/engine';
 import { entranceShots, shotYaw, titleShot, type Shot } from './camera/cinematic';
 import { OrbitCamera, cameraTuning } from './camera/orbit';
@@ -23,16 +22,18 @@ import {
   type QualityTier,
 } from './render/quality';
 import { GameRenderer, type PlayerPose } from './render/scene';
-import { Level } from './sim/grid/level';
+import { levelFromQuery, levelIds, levelUrl, loadPlayableLevel } from './levels';
 import type { NoteStyle } from './sim/grid/schema';
 import { BLOCK } from './sim/grid/units';
 import { torchInHand } from './sim/player/torch';
 import { tuning } from './sim/player/tuning';
 import { createWorld, respawn, stepWorld, type World } from './sim/world';
-import { chamberOf } from './ui/campaign';
+import { chamberOf, nextChamber } from './ui/campaign';
+import { ChamberMap } from './ui/chamber-map';
 import { EndScreen } from './ui/end-screen';
+import { browserProgressStorage, loadReached, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
-import { applyStaticStrings, pickLocale, setLocale, type StringKey } from './ui/i18n';
+import { applyStaticStrings, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
 import { Intro } from './ui/intro';
 import { LoadingScreen } from './ui/loading';
 import { Menu } from './ui/menu';
@@ -83,8 +84,22 @@ async function main(): Promise<void> {
   const stats = $('#hud-stats');
   const startButton = $<HTMLButtonElement>('#start-button');
 
-  const level = Level.parse(levelJson);
+  // The chamber asked for in the URL (?level=<id>), or the first one if it is unknown or broken.
+  const level = await loadPlayableLevel(levelFromQuery(location.search));
   const chamber = chamberOf(level.id);
+  const progress = browserProgressStorage();
+  markReached(progress, level.id);
+  const playable = new Set(levelIds());
+  // The title's kicker and the pause menu name the chamber being played.
+  const kicker = document.querySelector<HTMLElement>('.title-block .kicker');
+  if (kicker && chamber?.kicker) {
+    kicker.dataset.i18n = chamber.kicker;
+    kicker.textContent = t(chamber.kicker);
+  }
+  for (const el of document.querySelectorAll<HTMLElement>('.menu-kicker[data-i18n^="level."]')) {
+    el.dataset.i18n = level.name;
+    el.textContent = t(level.name as StringKey);
+  }
 
   // Audio exists before the renderer loads: the first tap or key, even during the
   // splash and the story cards, unlocks it and brings in the title theme softly.
@@ -133,7 +148,7 @@ async function main(): Promise<void> {
 
   audio.setEmitters(
     level.entities
-      .filter((e) => e.type === 'brazier' || e.type === 'relic')
+      .filter((e) => (e.type === 'brazier' && e.lit) || e.type === 'relic')
       .map((e) => {
         const x = e.at[0] * BLOCK + BLOCK / 2;
         const z = e.at[1] * BLOCK + BLOCK / 2;
@@ -352,7 +367,15 @@ async function main(): Promise<void> {
   }
 
   const start = (): void => {
-    if (phase !== 'title' || starting || !loading.isReady || prelude.running || menu.isOpen) return;
+    if (
+      phase !== 'title' ||
+      starting ||
+      !loading.isReady ||
+      prelude.running ||
+      menu.isOpen ||
+      chambers.isOpen
+    )
+      return;
     starting = true;
     // Audio and fullscreen must be requested inside the gesture itself.
     void audio.unlock();
@@ -387,8 +410,11 @@ async function main(): Promise<void> {
   const title = new TitleScreen(
     start,
     (type) => cue(type),
-    () => menu.isOpen || !loading.isReady || prelude.running,
+    () => menu.isOpen || chambers.isOpen || !loading.isReady || prelude.running,
   );
+  $('#start-chambers').addEventListener('click', () => {
+    if (!menu.isOpen && !prelude.running) chambers.open(loadReached(progress), playable);
+  });
   $('#start-options').addEventListener('click', () => {
     if (!menu.isOpen) menu.open('title');
   });
@@ -457,7 +483,19 @@ async function main(): Promise<void> {
     title.show();
     focusItem(startButton);
   };
-  const endScreen = new EndScreen(restart, quitToTitle, cue);
+  /**
+   * Another chamber: the page loads again with its id, which releases every
+   * GPU resource of this one (the WebGPU device goes with the page).
+   */
+  const goToLevel = (id: string): void => {
+    if (id === level.id && phase === 'title') return;
+    markReached(progress, id);
+    audio.ui('confirm');
+    curtain.classList.add('in');
+    window.setTimeout(() => location.assign(levelUrl(location.href, id)), 480);
+  };
+  const chambers = new ChamberMap(goToLevel, level.id, (type) => cue(type));
+  const endScreen = new EndScreen(restart, quitToTitle, cue, goToLevel);
 
   const reader = new Reader(
     (note) => {
@@ -540,6 +578,7 @@ async function main(): Promise<void> {
     }
     hud.onEvent(e, world);
     renderer.combat.onEvent(e, world);
+    renderer.onEvent(e);
     if (e.type === 'camera.focus') {
       const at = renderer.entityPosition(String(e.target));
       if (at) camera.focusOn(at, Number(e.duration) || 2);
@@ -563,7 +602,10 @@ async function main(): Promise<void> {
       setPhase('end');
       // The page owns the keyboard again (Tab, Enter on the end screen's buttons).
       keyboard.setEnabled(false);
-      endScreen.show(world, (id) => id === level.id);
+      // The next chamber is reached: the map opens it, and the end screen offers it.
+      const next = nextChamber(level.id)?.level;
+      if (next && playable.has(next)) markReached(progress, next);
+      endScreen.show(world, (id) => playable.has(id));
     }
   };
   bus.on('*', onEvent);
@@ -761,7 +803,8 @@ async function main(): Promise<void> {
     if (!menuOwnsPad) {
       if (phase === 'title' && prelude.running) {
         if (pad.any) prelude.skip();
-      } else if (phase === 'title') title.pad(pad);
+      } else if (phase === 'title' && chambers.isOpen) chambers.pad(pad);
+      else if (phase === 'title') title.pad(pad);
       else if (phase === 'intro' && pad.any) intro.skip();
       else if (phase === 'end') endScreen.pad(pad);
       else reader.pad(pad);
@@ -779,6 +822,7 @@ async function main(): Promise<void> {
     redraw = false;
     if (phase === 'play') hud.update(world, dt);
     audio.setHealth(world.state.player.health / tuning.maxHealth);
+    audio.setUnderwater(renderer.underwater);
 
     const p = world.state.player.pos;
     const r = level.roomAt(Math.floor(p.x / BLOCK), Math.floor(p.z / BLOCK));

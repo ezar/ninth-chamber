@@ -1,0 +1,18 @@
+{
+  "id": "cistern_tide",
+  "background": "#040607",
+  "exposure": 1.0,
+  "hemi": { "sky": "#2d4148", "ground": "#07090a", "intensity": 0.1 },
+  "fog": { "color": "#16222a", "density": 0.03 },
+  "sun": { "color": "#b9d4e6", "intensity": 1.6, "direction": [-0.12, 0.98, 0.1] },
+  "fire": { "color": "#ff9e4e", "intensity": 40, "flicker": 0.22 },
+  "bloom": { "strength": 0.9, "radius": 0.6, "threshold": 0.72 },
+  "grade": { "tint": "#d4e4ea", "saturation": 0.92, "contrast": 1.18, "vignette": 0.52 },
+  "water": {
+    "deep": "#041317",
+    "tint": "#58a3a4",
+    "sky": "#1a2a32",
+    "caustics": 0.8,
+    "fog": { "color": "#0a2a30", "density": 0.13 }
+  }
+}

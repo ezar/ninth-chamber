@@ -285,6 +285,7 @@ body:not([data-phase='play']) #touch,
 
 /* ── Credits ──────────────────────────────────────────────────────────────── */
 
+#chambers,
 #credits {
   position: fixed;
   inset: 0;
@@ -297,12 +298,133 @@ body:not([data-phase='play']) #touch,
   transition: opacity 0.35s;
 }
 
+#chambers.show,
 #credits.show {
   opacity: 1;
 }
 
+#chambers[hidden],
 #credits[hidden] {
   display: none;
+}
+
+/* ── Chamber map: the nine chambers, in order ─────────────────────────────── */
+
+.chambers-lead {
+  margin: -6px 0 18px;
+  color: var(--ui-dust);
+  font: italic 400 17px / 1.4 var(--font-display);
+}
+
+#chambers-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chamber > button,
+.chamber:not(:has(> button)) {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  min-height: 56px;
+  padding: 9px 12px 9px 4px;
+  border: 0;
+  border-top: 1px solid var(--ui-line);
+  background: none;
+  color: var(--ui-bone);
+  font: inherit;
+  text-align: left;
+}
+
+.chamber > button {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chamber > button:hover,
+.chamber > button:focus {
+  background: rgba(232, 163, 61, 0.12);
+  outline: none;
+}
+
+.chamber > button:focus-visible {
+  outline: 1px solid var(--ui-amber);
+  outline-offset: -1px;
+}
+
+.chamber-numeral {
+  color: var(--ui-amber);
+  font: 500 26px / 1 var(--font-display);
+  text-align: center;
+}
+
+.chamber-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chamber-name {
+  font: 500 20px / 1.15 var(--font-display);
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+}
+
+.chamber-line {
+  color: var(--ui-dust);
+  font: 400 13px / 1.4 var(--font-ui);
+}
+
+.chamber-state {
+  color: var(--ui-dust);
+  font: 500 10px / 1.4 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chamber.open .chamber-state {
+  color: var(--ui-amber);
+}
+
+.chamber.current .chamber-name::after {
+  content: ' ·';
+  color: var(--ui-amber);
+}
+
+.chamber.locked,
+.chamber.soon,
+.chamber.sealed {
+  opacity: 0.62;
+}
+
+.chamber.sealed .chamber-numeral,
+.chamber.locked .chamber-numeral,
+.chamber.soon .chamber-numeral {
+  color: var(--ui-dust);
+}
+
+.chamber.unknown .chamber-numeral {
+  color: var(--ui-ember);
+}
+
+.chamber.unknown .chamber-name {
+  letter-spacing: 0.3em;
+}
+
+@media (max-width: 560px) {
+  .chamber > button,
+  .chamber:not(:has(> button)) {
+    grid-template-columns: 38px 1fr;
+  }
+
+  .chamber-state {
+    grid-column: 2;
+  }
 }
 
 .credits-panel {
@@ -952,9 +1074,20 @@ body:not([data-phase='play']) #touch,
   gap: 12px;
 }
 
-.end-actions #end-restart {
+.end-actions #end-restart,
+.end-actions #end-next {
   border-color: var(--ui-amber);
   background: rgba(232, 163, 61, 0.1);
+}
+
+/* With a next chamber open, it is the primary action and Play again steps back. */
+.end-actions #end-next:not([hidden]) ~ #end-restart {
+  border-color: var(--ui-line);
+  background: rgba(236, 227, 208, 0.04);
+}
+
+.end-actions button[hidden] {
+  display: none;
 }
 
 /* Staged entrance: the relic first, the record after; any input shows everything. */

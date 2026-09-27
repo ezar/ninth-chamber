@@ -6,11 +6,13 @@ import { die, emit, faceDir, setMode, turnTowardsWish, wishAlong, type Ctx } fro
 import { tryLightTorch } from '../torch';
 import { tuning } from '../tuning';
 import { startHang } from './hang';
+import { floatInDeepWater, wadeSpeed, walkTop } from './swim';
 
 export function ground(c: Ctx): void {
   const { p, q, dt } = c;
   const walk = c.held('walk');
   const action = c.held('action');
+  if (floatInDeepWater(c)) return;
 
   if (c.pressed('action') && tryInteract(c)) return;
   if (action && tryGrabBlock(c)) return;
@@ -21,7 +23,7 @@ export function ground(c: Ctx): void {
     return;
   }
 
-  const speed = walk ? tuning.walkSpeed : tuning.runSpeed;
+  const speed = wadeSpeed(c, walk ? tuning.walkSpeed : tuning.runSpeed, walk);
   const k = Math.min(1, tuning.accel * dt);
   p.vel.x += (c.wish.x * speed - p.vel.x) * k;
   p.vel.z += (c.wish.z * speed - p.vel.z) * k;
@@ -32,9 +34,9 @@ export function ground(c: Ctx): void {
   p.runTime = !walk && hspeed > tuning.runSpeed * 0.8 ? p.runTime + dt : 0;
 
   const feet = p.pos.y;
-  // Walking never drops off an edge higher than one click.
+  // Walking never drops off an edge higher than one click (it slips into water that close, though).
   const canEnter = walk
-    ? (cx: number, cz: number): boolean => q.cellFloor(cx, cz) >= feet - 0.5 - 1e-3
+    ? (cx: number, cz: number): boolean => walkTop(c, cx, cz) >= feet - 0.5 - 1e-3
     : undefined;
   const res = sweep(
     q,
@@ -49,7 +51,7 @@ export function ground(c: Ctx): void {
   if (walk) {
     // The box may already overhang a drop (e.g. after a landing); the centre still never crosses it.
     const drop = (x: number, z: number): boolean =>
-      q.cellFloor(Math.floor(x / BLOCK), Math.floor(z / BLOCK)) < feet - 0.5 - 1e-3;
+      walkTop(c, Math.floor(x / BLOCK), Math.floor(z / BLOCK)) < feet - 0.5 - 1e-3;
     if (drop(res.x, p.pos.z)) {
       res.x = p.pos.x;
       p.vel.x = 0;

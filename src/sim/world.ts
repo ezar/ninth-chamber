@@ -13,9 +13,11 @@ import { BLOCK, DIR_YAW, cellCenter } from './grid/units';
 import { compileRules, runLogic, type CompiledRule } from './logic/rules';
 import { createEnemies, resetEnemies, updateEnemies } from './actors/enemies';
 import { updateActors } from './actors/update';
+import { updateFlares } from './actors/flares';
+import { createRoomWater, createWaterGates, updateWater } from './actors/water';
 import { stepPlayer } from './player/controller';
 import { newTorch } from './player/torch';
-import { mechanics, tuning } from './player/tuning';
+import { flares, mechanics, swimming, tuning } from './player/tuning';
 import type { Actor, BlockActor, DoorActor, DynamicState, PlayerState, Stats } from './state';
 
 export type { Vec3 } from './state';
@@ -76,6 +78,9 @@ function createActors(level: Level): Actor[] {
       case 'note':
         actors.push({ kind: 'note', id: e.id, cx, cz });
         break;
+      case 'flares':
+        actors.push({ kind: 'flares', id: e.id, cx, cz, count: e.count ?? flares.perPickup, taken: false });
+        break;
       case 'zone':
         actors.push({ kind: 'zone', id: e.id, cx, cz, w: e.size[0], h: e.size[1], inside: false });
         break;
@@ -85,10 +90,12 @@ function createActors(level: Level): Actor[] {
       case 'torch':
         actors.push({ kind: 'torch', id: e.id, cx, cz, taken: false, variant: e.lit ? 'lit' : 'unlit' });
         break;
+      case 'watergate':
       case 'enemy':
         break;
     }
   }
+  actors.push(...createWaterGates(level));
   return actors;
 }
 
@@ -116,13 +123,15 @@ function createPlayer(level: Level): PlayerState {
     dir: null,
     weapon: { drawn: false, busy: 0, cooldown: 0, target: null, hand: 1 },
     torch: newTorch(),
+    swim: { air: swimming.airMax, pitch: 0, roll: 0, stroke: 0, drown: 0 },
   };
 }
 
 export function createWorld(level: Level, seed = 1): World {
+  const actors = createActors(level);
   const state: DynamicState = {
     player: createPlayer(level),
-    actors: createActors(level),
+    actors,
     enemies: createEnemies(level),
     tiles: {},
     signals: {},
@@ -130,6 +139,8 @@ export function createWorld(level: Level, seed = 1): World {
     fired: [],
     pending: [],
     inventory: {},
+    water: createRoomWater(actors),
+    flares: [],
   };
   const world: World = {
     tick: 0,
@@ -270,6 +281,7 @@ export function respawn(world: World): void {
   p.weapon.target = null;
   p.weapon.cooldown = 0;
   p.weapon.busy = 0;
+  p.swim = { air: swimming.airMax, pitch: 0, roll: 0, stroke: 0, drown: 0 };
   resetEnemies(world);
   // Secrets found since the checkpoint stay found (they count once, like journal notes).
   for (const a of world.state.actors) {
@@ -288,6 +300,8 @@ export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
     stepPlayer(world, input, dt);
     updateActors(world, dt);
     updateEnemies(world, dt);
+    updateWater(world, dt);
+    updateFlares(world, dt);
     runLogic(world, dt);
     const p = world.state.player.pos;
     world.stats.distance += Math.hypot(p.x - before.x, p.z - before.z);

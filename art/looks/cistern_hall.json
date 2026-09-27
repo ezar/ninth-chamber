@@ -1,0 +1,18 @@
+{
+  "id": "cistern_hall",
+  "background": "#070a0c",
+  "exposure": 1.1,
+  "hemi": { "sky": "#6e8a96", "ground": "#10181a", "intensity": 0.26 },
+  "fog": { "color": "#3a4d52", "density": 0.03 },
+  "sun": { "color": "#cfe4ee", "intensity": 3.2, "direction": [0.18, 0.97, 0.12] },
+  "fire": { "color": "#ff9c4e", "intensity": 42, "flicker": 0.25 },
+  "bloom": { "strength": 0.55, "radius": 0.55, "threshold": 0.8 },
+  "grade": { "tint": "#d4e2e4", "saturation": 0.86, "contrast": 1.14, "vignette": 0.42 },
+  "water": {
+    "deep": "#07191c",
+    "tint": "#5f9e97",
+    "sky": "#2a3c42",
+    "caustics": 0.75,
+    "fog": { "color": "#0f3033", "density": 0.14 }
+  }
+}

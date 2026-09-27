@@ -24,9 +24,16 @@ const SIGNALS: Record<string, string[]> = {
   relic: ['taken'],
   enemy: ['dead'],
   torch: ['taken'],
+  watergate: ['high', 'low'],
+  brazier: ['lit'],
+  flares: ['taken'],
 };
 
-const ACTIONS_ON: Record<string, string[]> = { door: ['open', 'close', 'toggle'], block: ['reset'] };
+const ACTIONS_ON: Record<string, string[]> = {
+  door: ['open', 'close', 'toggle'],
+  block: ['reset'],
+  watergate: ['raise', 'lower', 'toggle'],
+};
 
 export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): ValidationResult {
   const errors: string[] = [];
@@ -82,6 +89,13 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
         if (i18nKeys && !i18nKeys.has(key)) errors.push(`note '${e.id}': missing i18n key '${key}'`);
       }
     }
+    if (e.type === 'watergate') {
+      for (const r of e.rooms ?? [e.room]) {
+        if (!level.rooms.some((x) => x.id === r))
+          errors.push(`watergate '${e.id}' floods unknown room '${r}'`);
+      }
+      if (e.low >= e.high) errors.push(`watergate '${e.id}' has low >= high`);
+    }
   }
 
   const start = level.sector(level.start.x, level.start.z);
@@ -110,6 +124,11 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
       if (verb === 'hint') {
         if (i18nKeys && args[0] && !i18nKeys.has(args[0]))
           errors.push(`rule ${i}: missing i18n key '${args[0]}'`);
+        continue;
+      }
+      if (verb === 'water.set') {
+        if (!file.rooms.some((r) => r.id === args[0]) || !Number.isInteger(Number(args[1])))
+          errors.push(`rule ${i}: bad action '${action}'`);
         continue;
       }
       if (verb === 'camera.focus') {

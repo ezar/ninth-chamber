@@ -1,0 +1,11 @@
+{
+  "id": "cistern_landing",
+  "background": "#0a0806",
+  "exposure": 1.05,
+  "hemi": { "sky": "#4a3e30", "ground": "#140e09", "intensity": 0.16 },
+  "fog": { "color": "#2f2821", "density": 0.034 },
+  "sun": null,
+  "fire": { "color": "#ffa65c", "intensity": 42, "flicker": 0.26 },
+  "bloom": { "strength": 0.65, "radius": 0.5, "threshold": 0.76 },
+  "grade": { "tint": "#ffecd6", "saturation": 0.94, "contrast": 1.12, "vignette": 0.45 }
+}

@@ -29,8 +29,10 @@ export interface NoraPose {
   /** Aim direction relative to the body: yaw (player convention, + = to her left) and pitch (+ = up), rad. */
   aimYaw: number;
   aimPitch: number;
-  /** The torch in her left hand: 1 held, 0 on her belt or none. */
-  torch: number;
+  /** The torch in her left hand: 1 held, 0 (or absent) on her belt or none. */
+  torch?: number;
+  /** Swimming and diving: body pitch along the swim direction (rad, + = head up). */
+  pitch?: number;
 }
 
 // ---------------------------------------------------------------------------------------------

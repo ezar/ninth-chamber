@@ -22,6 +22,8 @@ export interface FireSpot {
   z: number;
   /** Room the brazier stands in. */
   room: string | null;
+  /** A cold brazier (not lit yet): it gets no light, and its light fades in once lit. */
+  off?: boolean;
 }
 
 export interface FirePoolSize {
@@ -105,7 +107,7 @@ export class FireLightScheduler {
       score.push(d - (f.room !== null && preferred.has(f.room) ? ROOM_BONUS : 0));
     }
     const ranked = [...Array(n).keys()]
-      .filter((i) => (dist[i] ?? Infinity) < FIRE_REACH)
+      .filter((i) => (dist[i] ?? Infinity) < FIRE_REACH && !fires[i]?.off)
       .sort((a, b) => (score[a] ?? 0) - (score[b] ?? 0));
     const lit = new Set(ranked.slice(0, Math.min(active, this.plainOwner.length)));
 

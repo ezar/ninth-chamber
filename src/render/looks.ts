@@ -16,6 +16,14 @@ export interface LookFile {
   grade: { tint: string; saturation: number; contrast: number; vignette: number };
   /** Scale on the baked bounce light while in this room (default 1): a room gone dark dims what was baked with its fires. */
   lightmap?: number;
+  /** Rooms with water: its colours, caustics and the fog under the surface (render/water.ts). */
+  water?: {
+    deep: string;
+    tint: string;
+    sky: string;
+    caustics: number;
+    fog: { color: string; density: number };
+  };
 }
 
 /** A look with colours parsed, ready to blend. */

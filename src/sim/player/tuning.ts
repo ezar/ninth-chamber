@@ -112,6 +112,94 @@ export const mechanics = {
   blockHeight: 2,
   /** Block fall speed when pushed over a drop (m/s). */
   blockFallSpeed: 9,
+  /** Water gates raise or lower a room's water at this rate (m/s): a click a second. */
+  waterSpeed: 0.5,
+};
+
+/**
+ * Water (spec §5.10 "Agua"): wading, surface swimming, diving with a 60 s
+ * air bar, safe falls into deep water and climbing out onto low edges.
+ */
+export const swimming = {
+  /** Water at least this deep (m) is swum, not waded: 3 clicks. */
+  swimDepth: 1.5,
+  /** A fall into water at least this deep (m) does no damage, from any height: 2 clicks. */
+  safeDepth: 1,
+  /** Wading: water this deep (m) or more slows Nora down. */
+  wadeDepth: 0.3,
+  /** Wading speeds (m/s): running and walking through water. */
+  wadeSpeed: 3.2,
+  wadeWalkSpeed: 1.6,
+
+  /** At the surface the feet reference sits this far under the water (head and shoulders out) (m). */
+  surfaceSink: 1.45,
+  /** Surface swimming speed (m/s), acceleration (1/s) and turn rate (rad/s). */
+  swimSpeed: 1.8,
+  swimAccel: 3,
+  swimTurn: 5,
+  /** Underwater speed (m/s) and acceleration (1/s). */
+  diveSpeed: 2.4,
+  diveAccel: 2.5,
+  /** With no input a diver drifts up this fast (m/s). */
+  buoyancy: 0.2,
+  /** Duck dive from the surface: initial downward speed (m/s). */
+  duckDive: 1.6,
+  /** Falling faster than this (m/s) into deep water goes under before surfacing. */
+  plunge: 7,
+  /** Underwater body: a box from bodyLow to bodyHigh above the feet reference (m). */
+  bodyLow: 0.95,
+  bodyHigh: 1.75,
+
+  /** Climbing out onto an edge up to 1 click above the water (m) (spec §5). */
+  climbOutAbove: 0.5,
+  /** Edges this close under the surface (m) are climbed onto too: the water is too shallow to swim there. */
+  climbOutBelow: 0.5,
+  /** Reach from the body to the edge (m) and duration of the climb out (s). */
+  climbOutReach: 0.45,
+  climbOutTime: 1.1,
+
+  /** Air bar (s), refilled at this rate at the surface and on land (s per s). */
+  airMax: 60,
+  airRefill: 15,
+  /** With no air left: this much damage every interval (s) (spec: 10 per second). */
+  drownDamage: 10,
+  drownInterval: 1,
+  /** Surfacing with less than this fraction of air left, Nora gasps. */
+  gaspBelow: 0.6,
+  /** A roll in the water: a 180° turn (spec §5.6) over this long (s). */
+  rollTime: 0.45,
+  /** A swim stroke every this many metres (for sound and animation). */
+  strokeDistance: 1.1,
+};
+
+/** Flares (spec §7 "Bengalas"): they light for 30 s in an 8 m radius. */
+export const flares = {
+  /** Burn time (s). */
+  life: 30,
+  /** Light radius (m). */
+  radius: 8,
+  /** Most burning flares at once; lighting another puts out the oldest on the ground. */
+  max: 4,
+  /** Flares in a pickup when the level does not say. */
+  perPickup: 2,
+  /** Throw: forward and upward speed (m/s). */
+  throwSpeed: 7,
+  throwLift: 3.5,
+  /** A dropped flare falls from the hand (m/s forward). */
+  dropSpeed: 0.6,
+  gravity: 18,
+  /** Speed kept after a bounce on the floor, and horizontal friction on it (1/s). */
+  bounce: 0.3,
+  friction: 4,
+  /** In water: drag (1/s) and sinking speed (m/s). */
+  waterDrag: 3,
+  sinkSpeed: 0.5,
+  /** A burning flare lights a cold brazier within this distance of its bowl (m). */
+  igniteRange: 1.4,
+  /** Height of a brazier's bowl above its floor (m). */
+  brazierBowl: 1.15,
+  /** Where Nora holds a lit flare, relative to her feet: right, up, forward (m). */
+  hand: { right: -0.28, up: 1.0, forward: 0.3 },
 };
 
 export type Tuning = typeof tuning;

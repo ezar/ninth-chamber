@@ -6,6 +6,7 @@ import type { RuleFile } from '../grid/schema';
 import { extinguishTorch } from '../player/torch';
 import { findActor, resetBlock, saveCheckpoint, type World } from '../world';
 import { evalExpr, parseExpr, parseSeconds, type Expr } from './expr';
+import { runWaterAction } from '../actors/water';
 
 export interface CompiledRule {
   index: number;
@@ -109,6 +110,7 @@ function runAction(world: World, verb: string, args: string[]): void {
   if (dot > 0) {
     const id = verb.slice(0, dot);
     const op = verb.slice(dot + 1);
+    if (runWaterAction(world, id, op, args)) return;
     const door = findActor(world, id, 'door');
     if (door) {
       const target =

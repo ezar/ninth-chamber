@@ -11,6 +11,11 @@
  * - block and push: pushing, one cycle per push; pull: pulling a heavy object;
  * - pickup: picking up, fitted to the pickup time;
  * - dead: dying;
+ * - swim and dive: treading water when still, swimming (cadence matched to
+ *   her speed) when moving, the body pitched along the dive; surfacing and
+ *   diving cross-fade more slowly than land moves;
+ * - climbing out of the water: reaching for the edge (Swimming To Edge),
+ *   then the climb, timed to the simulation's climb-out;
  * - hurt: a hit reaction over the upper body when health drops.
  *
  * The procedural rig (nora.ts) keeps the mode no clip fits (lever) and
@@ -21,7 +26,7 @@
  * may edit the pose after the clips and before the leg pass.
  */
 import * as THREE from 'three/webgpu';
-import { tuning } from '../../sim/player/tuning';
+import { swimming, tuning } from '../../sim/player/tuning';
 import type { NoraPose, RetargetJoint } from '../nora';
 import { relaxArms, type ArmRelax } from './arms';
 import type { Clip } from './clip';
@@ -63,9 +68,9 @@ export type ClipName = (typeof CLIP_NAMES)[number];
 export type ClipLibrary = Partial<Record<ClipName, Clip>>;
 
 /**
- * Water clips, ready for the swim and dive modes that arrive with level 2:
- * treading water at the surface, swimming (speed-matched like the gait) and
- * climbing out at an edge (a timed move, like the climb).
+ * Water clips for the swim and dive modes: treading water when still,
+ * swimming (cadence matched to her speed) and reaching for an edge before
+ * climbing out (a timed move, like the climb).
  */
 export const WATER_CLIPS: Readonly<Record<'surface' | 'swim' | 'exit', ClipName>> = {
   surface: 'tread',
@@ -104,6 +109,26 @@ const SHIMMY_FULL = 0.3;
 /** Hit reaction: playback rate and upper-body weight. */
 const HIT_RATE = 1.4;
 const HIT_WEIGHT = 0.7;
+/** Cross-fade time between water modes and into or out of the water (s): surfacing, diving, splashing in. */
+const WATER_FADE = 0.45;
+/**
+ * Hips height over the root in the water (m). At the surface the root sits
+ * `surfaceSink` under the water: treading keeps the head out, and swimming
+ * lies along the surface. Under water the body is centred on the collision
+ * cylinder.
+ */
+const TREAD_HIPS = swimming.surfaceSink - 0.45;
+const SWIM_HIPS = swimming.surfaceSink - 0.14;
+const DIVE_HIPS = tuning.height / 2;
+/** Swim cadence: clip playback rate at rest and at full swimming speed. */
+const SWIM_RATE_MIN = 0.55;
+const SWIM_RATE_MAX = 1.25;
+/** Speed (m/s) over which treading gives way to swimming. */
+const SWIM_BLEND: [number, number] = [0.25, 1.1];
+/** Swimming To Edge: the reach for the edge and the pull (s into the clip), played over the climb's start. */
+const EDGE_REACH: [number, number] = [2.0, 3.3];
+/** Share of the climb-out spent reaching; the climb clip takes over from there. */
+const EDGE_SHARE = 0.3;
 /** Arms: the Mixamo clips are natural already; only a touch of relaxing. */
 const ARMS: ArmRelax = { elbow: 0.85, wrist: 0.5, abduction: 0.85 };
 
@@ -116,9 +141,25 @@ const ease = (u: number): number => {
   return t * t * (3 - 2 * t);
 };
 const UP = new THREE.Vector3(0, 1, 0);
+const AXIS_X = new THREE.Vector3(1, 0, 0);
+const WATER_MODES: ReadonlySet<NoraPose['mode']> = new Set(['swim', 'dive']);
 const UPPER = UPPER_BODY.map((j) => JOINT_INDEX[j]);
 
 type AirKind = 'stand' | 'run' | 'fall';
+
+/** A still pose in the water, for a climb-out whose climb clip is missing. */
+const NO_POSE: NoraPose = {
+  mode: 'swim',
+  modeTime: 0,
+  speed: 0,
+  vy: 0,
+  climbT: 0,
+  health: 100,
+  weapons: 0,
+  aiming: 0,
+  aimYaw: 0,
+  aimPitch: 0,
+};
 
 export class NoraAnimator {
   /** Extra layers applied to clip poses, in order. */
@@ -151,6 +192,14 @@ export class NoraAnimator {
   private shimmyW = 0;
   private shimmyDir = 1;
   private lastHealth = Number.NaN;
+  /** Cross-fade time of the current mode change (s). */
+  private fadeTime = FADE;
+  /** The current climb started in the water. */
+  private waterClimb = false;
+  private swimPhase = 0;
+  private swimW = 0;
+  private swimPitch = 0;
+  private readonly _pitch = new THREE.Quaternion();
   private hitT = Number.POSITIVE_INFINITY;
   private readonly legInput: LegInput = {
     rootPos: new THREE.Vector3(),
@@ -208,11 +257,14 @@ export class NoraAnimator {
       if (mode === 'air')
         this.airKind = pose.vy > 1 ? (pose.speed > RUN_JUMP_SPEED && c.jump_run ? 'run' : 'stand') : 'fall';
       if (mode === 'hang' && this.mode !== 'hang') this.hangT = 0;
+      const wasWet = this.mode !== null && WATER_MODES.has(this.mode);
+      if (mode === 'climb') this.waterClimb = wasWet;
+      this.fadeTime = wasWet || WATER_MODES.has(mode) ? WATER_FADE : FADE;
       this.mode = mode;
       this.modeT = 0;
     }
     this.modeT += dt;
-    this.fade = Math.min(1, this.fade + dt / FADE);
+    this.fade = Math.min(1, this.fade + dt / this.fadeTime);
     if (mode === 'air') this.lastAirVy = pose.vy;
     if (pose.health < this.lastHealth - 0.5 && mode !== 'dead' && c.hit) this.hitT = 0;
     this.lastHealth = pose.health;
@@ -254,7 +306,11 @@ export class NoraAnimator {
         clipDriven = this.hang(p, dt);
         break;
       case 'climb':
-        clipDriven = this.climb(p, pose.climbT);
+        clipDriven = this.waterClimb ? this.climbOut(p, pose.climbT) : this.climb(p, pose.climbT);
+        break;
+      case 'swim':
+      case 'dive':
+        clipDriven = this.swim(p, dt, pose, mode === 'dive');
         break;
       case 'block':
       case 'push':
@@ -386,6 +442,64 @@ export class NoraAnimator {
       p.hips.x -= end.x * fwd;
       p.hips.y -= end.y * lift;
       p.hips.z -= end.z * fwd;
+    }
+    return true;
+  }
+
+  /**
+   * Swimming and diving: treading water when still, swimming when moving
+   * (the cadence follows her speed), lifted to lie along the surface or
+   * centred under water, and pitched with the dive (head up rising, down
+   * diving).
+   */
+  private swim(p: AnimPose, dt: number, pose: NoraPose, under: boolean): boolean {
+    const c = this.clips;
+    const tread = c.tread;
+    const swim = c.swim;
+    if (!tread && !swim) return false;
+    const speed = under ? Math.hypot(pose.speed, pose.vy) : pose.speed;
+    const target = swim ? (tread ? ease((speed - SWIM_BLEND[0]) / (SWIM_BLEND[1] - SWIM_BLEND[0])) : 1) : 0;
+    this.swimW += (target - this.swimW) * (1 - Math.exp(-dt / 0.2));
+    const full = under ? swimming.diveSpeed : swimming.swimSpeed;
+    const rate = SWIM_RATE_MIN + (SWIM_RATE_MAX - SWIM_RATE_MIN) * Math.min(1, speed / full);
+    if (swim) this.swimPhase = (this.swimPhase + (dt * rate) / swim.duration) % 1;
+    const w = this.swimW;
+    if (tread) {
+      tread.sample(this.modeT, p.rot, p.hips);
+      p.hips.y = under ? DIVE_HIPS : TREAD_HIPS;
+    }
+    if (swim && w > 0.001) {
+      const into = tread ? this.tmp : p;
+      swim.samplePhase(this.swimPhase, into.rot, into.hips);
+      into.hips.y = under ? DIVE_HIPS : SWIM_HIPS;
+      if (tread) p.blend(p, this.tmp, w);
+    }
+    // Pitch along the dive, turning the whole body about the hips (model-space rotations).
+    const pitch = under ? (pose.pitch ?? 0) * Math.max(w, 0.35) : 0;
+    this.swimPitch += (pitch - this.swimPitch) * (1 - Math.exp(-dt / 0.15));
+    if (Math.abs(this.swimPitch) > 1e-3) {
+      this._pitch.setFromAxisAngle(AXIS_X, this.swimPitch);
+      for (const q of p.rot) q.premultiply(this._pitch);
+    }
+    return true;
+  }
+
+  /**
+   * Climbing out of the water: the reach for the edge from Swimming To Edge,
+   * then the climb clip for the pull up, timed to the simulation's move.
+   */
+  private climbOut(p: AnimPose, u: number): boolean {
+    const edge = this.clips.swim_to_edge;
+    const climb = this.clips.climb;
+    if (!climb) return this.swim(p, 0, { ...NO_POSE }, false);
+    const k = Math.min(1, Math.max(0, (u - EDGE_SHARE) / (1 - EDGE_SHARE)));
+    this.climb(p, k * 0.999);
+    if (edge) {
+      const reach = smoother(u / EDGE_SHARE);
+      edge.sample(EDGE_REACH[0] + (EDGE_REACH[1] - EDGE_REACH[0]) * reach, this.tmp.rot, this.tmp.hips);
+      // The climb clip's own start: hands on the edge, hips under it.
+      this.tmp.hips.set(p.hips.x, TREAD_HIPS, p.hips.z);
+      p.blend(this.tmp, p, smoother((u - EDGE_SHARE * 0.6) / (EDGE_SHARE * 0.8)));
     }
     return true;
   }

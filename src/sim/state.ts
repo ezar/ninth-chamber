@@ -12,7 +12,19 @@ export interface Vec3 {
 }
 
 export type PlayerMode =
-  'ground' | 'air' | 'hang' | 'climb' | 'block' | 'push' | 'pull' | 'lever' | 'pickup' | 'dead';
+  | 'ground'
+  | 'air'
+  | 'hang'
+  | 'climb'
+  | 'block'
+  | 'push'
+  | 'pull'
+  | 'lever'
+  | 'pickup'
+  | 'dead'
+  // Water (spec §5.10): at the surface, and underwater.
+  | 'swim'
+  | 'dive';
 
 export interface Ledge {
   dir: Dir;
@@ -58,6 +70,20 @@ export interface TorchState {
   away: boolean;
 }
 
+/** Nora in the water (spec §5.10). */
+export interface SwimState {
+  /** Air left (s); refills at the surface and on land. */
+  air: number;
+  /** Body pitch while diving (rad, + = head up), from the swim velocity. */
+  pitch: number;
+  /** Seconds left of a roll (a 180° turn in the water), 0 when not rolling. */
+  roll: number;
+  /** Distance swum since the last stroke (m). */
+  stroke: number;
+  /** Seconds without air: drowning damage every interval. */
+  drown: number;
+}
+
 export interface PlayerState {
   pos: Vec3;
   vel: Vec3;
@@ -89,6 +115,7 @@ export interface PlayerState {
   dir: Dir | null;
   weapon: WeaponState;
   torch: TorchState;
+  swim: SwimState;
 }
 
 export interface BlockActor {
@@ -177,8 +204,61 @@ export interface NoteActor {
   cz: number;
 }
 
+/** A sluice that raises or lowers the water of one or more rooms (spec §8 "Compuerta de agua"). */
+export interface WaterGateActor {
+  kind: 'watergate';
+  id: string;
+  cx: number;
+  cz: number;
+  rooms: string[];
+  /** Water surface when lowered and raised (m). */
+  low: number;
+  high: number;
+  raised: boolean;
+}
+
+/** A pack of flares on the floor, picked up by walking or swimming over it. */
+export interface FlarePackActor {
+  kind: 'flares';
+  id: string;
+  cx: number;
+  cz: number;
+  count: number;
+  taken: boolean;
+}
+
 export type Actor =
-  BlockActor | DoorActor | LeverActor | PlateActor | PickupActor | ZoneActor | NoteActor | BrazierActor;
+  | BlockActor
+  | DoorActor
+  | LeverActor
+  | PlateActor
+  | PickupActor
+  | ZoneActor
+  | NoteActor
+  | WaterGateActor
+  | BrazierActor
+  | FlarePackActor;
+
+/** A burning flare (spec §7): held in Nora's hand, or thrown and lying where it fell. */
+export interface FlareState {
+  /** Tick it was lit on (unique). */
+  id: number;
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  /** Seconds since it was lit. */
+  age: number;
+  held: boolean;
+}
+
+/** A room's water surface while a gate controls it (m). */
+export interface RoomWater {
+  y: number;
+  target: number;
+}
 
 /** Enemy behaviour states (spec §7 "Comportamiento"). */
 export type EnemyMode = 'idle' | 'alert' | 'chase' | 'attack' | 'hurt' | 'flee' | 'dead';
@@ -268,6 +348,9 @@ export interface DynamicState {
   fired: number[];
   pending: PendingActions[];
   inventory: Record<string, number>;
+  /** Water surfaces of rooms controlled by gates, by room id. */
+  water: Record<string, RoomWater>;
+  flares: FlareState[];
 }
 
 export interface Checkpoint {

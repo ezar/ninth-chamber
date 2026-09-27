@@ -111,7 +111,9 @@
         if (still) d.classList.add('reduce-motion');
         if (matchMedia('(pointer: coarse)').matches) d.classList.add('coarse');
         var sch = has(lang) ? P[lang] : null;
-        if (!sch) return;
+        // The story cards are the Antechamber's: another chamber tells its own in the intro.
+        var other = /[?&]level=(?!antechamber(&|$))/.test(location.search);
+        if (!sch || other) return;
         for (var k = 0; k < sch.cards.length; k++) {
           var c = sch.cards[k];
           d.style.setProperty('--card' + (k + 1) + '-at', c.at + 's');
@@ -253,6 +255,7 @@
             <p id="end-next-soon" class="teaser-soon" data-i18n="end.soon"></p>
           </div>
           <div id="end-actions" class="end-actions">
+            <button id="end-next" type="button" data-nav data-i18n="end.continue" hidden></button>
             <button id="end-restart" type="button" data-nav data-i18n="end.restart"></button>
             <button id="end-menu" type="button" data-nav data-i18n="end.menu"></button>
           </div>
@@ -308,6 +311,9 @@
           >
             %tt:start.play%
           </button>
+          <button id="start-chambers" type="button" class="fallback" data-nav data-i18n="start.chambers">
+            %tt:start.chambers%
+          </button>
           <button id="start-options" type="button" class="fallback" data-nav data-i18n="start.options">
             %tt:start.options%
           </button>
@@ -341,6 +347,17 @@
         <p class="credits-foot">
           <a href="./credits.txt" target="_blank" rel="noopener" data-i18n="credits.full"></a>
           <button id="credits-back" type="button" data-i18n="credits.back"></button>
+        </p>
+      </div>
+    </div>
+
+    <div id="chambers" hidden role="dialog" aria-modal="true" aria-labelledby="chambers-title">
+      <div class="credits-panel chambers-panel">
+        <h2 id="chambers-title" data-i18n="chambers.title"></h2>
+        <p class="chambers-lead" data-i18n="chambers.lead"></p>
+        <ol id="chambers-list"></ol>
+        <p class="credits-foot">
+          <button id="chambers-back" type="button" data-nav data-i18n="credits.back"></button>
         </p>
       </div>
     </div>

@@ -376,7 +376,7 @@ export class NoraRig {
       const armed = upright ? pose.weapons * pose.aiming : 0;
       const ready = upright ? pose.weapons * (1 - pose.aiming) : 0;
       this.readyW += (ready - this.readyW) * (1 - Math.exp(-Math.max(0, dt) * 10));
-      this.torchW += (pose.torch - this.torchW) * (1 - Math.exp(-Math.max(0, dt) * 9));
+      this.torchW += ((pose.torch ?? 0) - this.torchW) * (1 - Math.exp(-Math.max(0, dt) * 9));
       this.aimW += (armed - this.aimW) * (1 - Math.exp(-Math.max(0, dt) * 14));
       if (this.aimW > 1e-3)
         this.animator.setProceduralOverride(Math.max(this.aimW, this.override.weight), AIM_JOINTS);

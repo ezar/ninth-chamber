@@ -18,6 +18,7 @@ import { enemyTypes, noise, tuning, weapons, type EnemyStats } from '../player/t
 import type { EnemyMode, EnemyState, Vec3 } from '../state';
 import type { World } from '../world';
 import { findPath, walkable, type NavGrid, type Walker } from './pathfind';
+import { waterDepth } from './water';
 
 const EPS = 1e-6;
 
@@ -33,7 +34,9 @@ const walkerOf = (s: EnemyStats): Walker => ({
 function navOf(world: World): NavGrid {
   return {
     q: world.grid,
-    forbidden: (cx, cz) => world.level.sector(cx, cz)?.flags.has('death') === true,
+    // Jackals do not swim: water over their backs is as good as a wall.
+    forbidden: (cx, cz) =>
+      world.level.sector(cx, cz)?.flags.has('death') === true || waterDepth(world, cx, cz) > 0.5,
   };
 }
 

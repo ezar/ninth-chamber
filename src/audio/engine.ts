@@ -288,6 +288,11 @@ export class AudioEngine {
     this.graph?.mixer.setBusVolume(bus, clamped);
   }
 
+  /** The camera under water (0..1): the whole mix goes dull. */
+  setUnderwater(v: number): void {
+    this.graph?.mixer.setUnderwater(v);
+  }
+
   setMuted(muted: boolean): void {
     this.muted = muted;
     this.graph?.mixer.setMuted(muted);

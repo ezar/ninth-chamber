@@ -20,6 +20,8 @@ import {
   pow,
   rand,
   renderOutput,
+  sin,
+  cos,
   rtt,
   screenUV,
   smoothstep,
@@ -82,6 +84,10 @@ export class PostStack {
   // Sun shafts: colour and strength follow the room's sun.
   readonly raysColor = uniform(new THREE.Color('#ffffff'));
   readonly raysStrength = uniform(0);
+  // Under water (render/water.ts): 0..1, and the hue the view takes.
+  readonly underwater = uniform(0);
+  readonly waterTint = uniform(new THREE.Color('#4fb5b0'));
+  private readonly waterClock = uniform(0);
 
   private readonly grainSeed = uniform(0);
   private readonly aspect = uniform(16 / 9);
@@ -156,7 +162,12 @@ export class PostStack {
     const color = scenePass.getTextureNode('output');
     const depth = scenePass.getTextureNode('depth');
 
-    let hdr = color.rgb;
+    // Under water the view wobbles gently, as if seen through moving water.
+    const wobble = vec2(
+      sin(screenUV.y.mul(31).add(this.waterClock.mul(2.3))),
+      cos(screenUV.x.mul(23).add(this.waterClock.mul(1.9))),
+    ).mul(this.underwater.mul(0.0032));
+    let hdr = color.sample(screenUV.add(wobble)).rgb;
     let occlusionView: THREE.Node<'float'> | null = null;
     let raysView: THREE.Node<'float'> | null = null;
 
@@ -233,7 +244,12 @@ export class PostStack {
     const saturated = mix(vec3(luminance(hdr)), hdr, this.saturation);
     const tinted = saturated.mul(mix(vec3(1, 1, 1), this.tint, 0.5));
     const lum = max(luminance(tinted), 1e-5);
-    const contrasted = tinted.mul(pow(lum.div(CONTRAST_PIVOT), this.contrast).mul(CONTRAST_PIVOT).div(lum));
+    let contrasted = tinted.mul(pow(lum.div(CONTRAST_PIVOT), this.contrast).mul(CONTRAST_PIVOT).div(lum));
+    // Under water: colour drains towards the water's hue and the highlights soften.
+    const drowned = mix(vec3(luminance(contrasted)), contrasted, 0.55)
+      .mul(this.waterTint)
+      .mul(1.15);
+    contrasted = mix(contrasted, drowned, this.underwater.mul(0.85));
 
     // AgX and sRGB (from the renderer's tone mapping and exposure), then AA on the display image.
     const display = renderOutput(vec4(contrasted, 1));
@@ -314,6 +330,7 @@ export class PostStack {
   render(dt: number): void {
     if (!this.pipeline) return;
     this.grainClock += dt;
+    this.waterClock.value = (this.waterClock.value + dt) % 1000;
     const frame = Math.floor(this.grainClock * GRAIN_FPS);
     this.grainSeed.value = frame % 997;
     if (this.dof) this.dof.active = this.dofAmount.value > 0.005;

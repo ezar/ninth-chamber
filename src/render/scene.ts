@@ -28,6 +28,10 @@ import {
   type TextureFiltering,
 } from './quality';
 import { TorchView } from './torch';
+import { FlareView } from './flares';
+import { WaterFx } from './water-fx';
+import { WaterView, waterLookOf } from './water';
+import type { SimEvent } from '../core/events';
 
 export interface PlayerPose {
   pos: Vec3;
@@ -98,6 +102,15 @@ export class GameRenderer {
   private readonly contactShadow: THREE.Mesh;
   private readonly contactStrength: THREE.UniformNode<'float', number>;
   private focus: { at: THREE.Vector3; amount: number } | null = null;
+  /** Water surfaces and caustics, flares, splashes and drips (level 2, the Cisterns). */
+  readonly water: WaterView;
+  private readonly flares = new FlareView();
+  private readonly waterFx: WaterFx;
+  private underwaterMix = 0;
+  /** 0 in the air … 1 with the camera under water (fog, grade, muffled sound). */
+  get underwater(): number {
+    return this.underwaterMix;
+  }
   private resolution: ResolutionMode = 'auto';
   /** Pixel ratio cap in the automatic mode; null uses the tier's. */
   private autoCap: number | null = null;
@@ -163,6 +176,9 @@ export class GameRenderer {
     this.contactShadow = contact.mesh;
     this.contactStrength = contact.strength;
     this.scene.add(this.contactShadow);
+    this.water = new WaterView(profile);
+    this.waterFx = new WaterFx((x, z) => this.water.surfaceAt(x, z));
+    this.scene.add(this.water.group, this.flares.group, this.waterFx.root);
     this.applyProfile(false);
   }
 
@@ -264,6 +280,8 @@ export class GameRenderer {
     this.sunShadowAge = Infinity;
     this.contactShadow.visible = p.contactShadow;
     this.torch.setQuality(p);
+    this.water?.setQuality(p);
+    if (this.waterFx) this.waterFx.budget = p.particles;
 
     this.configurePost();
     // Volumetric shafts replace the modelled cones; the dust stays.
@@ -371,6 +389,7 @@ export class GameRenderer {
     const sameLevel = this.world?.level === world.level;
     this.world = world;
     this.currentRoom = null;
+    this.water.setWorld(world);
     if (sameLevel) return;
     const level = world.level;
 
@@ -396,6 +415,8 @@ export class GameRenderer {
     add(meshes.surfaces.floorSand, mat(surf.sand), false);
     add(meshes.surfaces.ceiling, mat(surf.ceiling, { side: THREE.DoubleSide }));
     add(meshes.surfaces.lip, mat(surf.floor, { color: '#fff4e0' }));
+    this.water.build(world, this.levelMeshes);
+    this.waterFx.build(level, world);
 
     const bronze = new THREE.MeshStandardMaterial({ color: '#5e7b68', roughness: 0.65, metalness: 0.35 });
     this.props = new Props(level, {
@@ -609,7 +630,8 @@ export class GameRenderer {
     if (dy > Math.PI) dy -= 2 * Math.PI;
     if (dy < -Math.PI) dy += 2 * Math.PI;
     this.nora.root.rotation.y = prev.yaw + dy * alpha;
-    this.nora.update(pose, dt);
+    // Swimming and diving: the body pitches with the simulation's swim direction.
+    this.nora.update({ ...pose, pitch: world.state.player.swim.pitch }, dt);
     this.combat.update(world, this.nora, alpha, dt);
     this.torch.update(world, this.nora, this.time, dt);
     this.nora.setOpacity(Math.min(1, Math.max(0.15, (cameraDistance - 0.6) / 0.8)));
@@ -630,8 +652,9 @@ export class GameRenderer {
     this.updateFireLights(eye, dt);
     this.updateShafts(dt);
     this.updateContactShadow(world, px, py, pz);
+    const view = this.updateWater(world, room?.look ?? null, eye, dt);
 
-    this.camera.position.set(eye.x, eye.y, eye.z);
+    this.camera.position.copy(view);
     this.camera.lookAt(lookAt.x, lookAt.y, lookAt.z);
     this.updateShadowBudget(dt);
     this.updateFocus();
@@ -641,6 +664,76 @@ export class GameRenderer {
       this.applyAnisotropy();
     }
     this.post.render(dt);
+  }
+
+  /**
+   * Water, flares and splashes for this frame; returns the camera position,
+   * kept off the water plane. Under the surface the fog turns to water.
+   */
+  private updateWater(world: World, look: string | null, eye: Vec3, dt: number): THREE.Vector3 {
+    const view = new THREE.Vector3(eye.x, eye.y, eye.z);
+    this.water.clearEye(view);
+    const wet = (x: number, y: number, z: number): boolean => {
+      const s = this.water.surfaceAt(x, z);
+      return s !== null && y < s;
+    };
+    let hand: THREE.Vector3 | null = null;
+    if (world.state.flares.some((f) => f.held)) {
+      hand = new THREE.Vector3();
+      this.nora.handFrame(0, hand, new THREE.Quaternion());
+    }
+    this.flares.update(world, dt, hand, view, wet);
+    this.water.update(dt, view, waterLookOf(look), [
+      ...this.flares.lights,
+      ...this.fireCasters,
+      ...this.fireLights,
+    ]);
+    this.waterFx.update(dt, world, view);
+    const target = this.water.underwater ? 1 : 0;
+    this.underwaterMix += (target - this.underwaterMix) * Math.min(1, dt * 14);
+    if (this.underwaterMix > 0.001) {
+      const fog = this.scene.fog as THREE.FogExp2;
+      const w = this.water.fog;
+      fog.color.lerp(w.color, this.underwaterMix);
+      fog.density += (w.density - fog.density) * this.underwaterMix;
+      (this.scene.background as THREE.Color).lerp(w.color, this.underwaterMix);
+    }
+    this.post.underwater.value = this.underwaterMix;
+    const tint = this.post.waterTint.value.copy(this.water.fog.color);
+    tint.multiplyScalar(1 / Math.max(1e-4, tint.r, tint.g, tint.b));
+    return view;
+  }
+
+  /** Splashes and rings from the simulation's water events. */
+  onEvent(e: SimEvent): void {
+    const n = (k: string, d = 0): number => (typeof e[k] === 'number' ? (e[k] as number) : d);
+    const p = this.world?.state.player;
+    if (!p) return;
+    switch (e.type) {
+      case 'player.splash':
+        this.waterFx.splash(n('x', p.pos.x), n('y', p.pos.y), n('z', p.pos.z), n('speed', 3));
+        break;
+      case 'player.stroke': {
+        const s = this.water.surfaceAt(p.pos.x, p.pos.z);
+        if (s !== null && e.under !== true) this.waterFx.ring(p.pos.x, s, p.pos.z, 0.9, 1.4, 0.35);
+        else if (s !== null) this.waterFx.bubble(p.pos.x, p.pos.y + 1.5, p.pos.z, 2);
+        break;
+      }
+      case 'player.surfaced':
+      case 'player.dived': {
+        const s = this.water.surfaceAt(p.pos.x, p.pos.z);
+        if (s !== null) this.waterFx.splash(p.pos.x, s, p.pos.z, e.type === 'player.dived' ? 2.5 : 1.5);
+        break;
+      }
+      case 'player.climbing':
+        if (e.water === true) {
+          const s = this.water.surfaceAt(p.pos.x, p.pos.z);
+          if (s !== null) this.waterFx.ring(p.pos.x, s, p.pos.z, 1.2, 1.2, 0.4);
+        }
+        break;
+      default:
+        break;
+    }
   }
 
   private fitSun(minX: number, minZ: number, maxX: number, maxZ: number): void {
@@ -753,6 +846,7 @@ export class GameRenderer {
       y: f.pos.y,
       z: f.pos.z,
       room: level.roomAt(Math.floor(f.pos.x / BLOCK), Math.floor(f.pos.z / BLOCK))?.id ?? null,
+      off: f.level <= 0,
     }));
     this.neighbours = new Map();
     for (const a of level.rooms) {
@@ -773,6 +867,8 @@ export class GameRenderer {
   private updateFireLights(eye: Vec3, dt: number): void {
     const fires = this.props?.fires ?? [];
     if (this.fireSpots.length !== fires.length) this.indexFires();
+    // Cold braziers (the Cisterns' dark hall) get a light once a flare lights them.
+    this.fireSpots.forEach((spot, i) => (spot.off = (fires[i]?.level ?? 1) <= 0));
     const p = this.profile;
     const preferred = this.neighbours.get(this.currentRoom ?? '') ?? new Set<string>();
     // Single-shadow tiers give the budget to the sun where it shines.

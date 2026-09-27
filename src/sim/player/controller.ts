@@ -11,6 +11,8 @@ import { ground } from './modes/ground';
 import { climb, hang } from './modes/hang';
 import { block, dead, lever, moveBlock, pickup } from './modes/interact';
 import { stepTorch } from './torch';
+import { breathe, dive, swim } from './modes/swim';
+import { stepFlare } from './flare';
 import { stepMedkit, stepWeapons } from './weapons';
 
 const MODES: Record<PlayerMode, (c: Ctx) => void> = {
@@ -24,6 +26,8 @@ const MODES: Record<PlayerMode, (c: Ctx) => void> = {
   lever,
   pickup,
   dead,
+  swim,
+  dive,
 };
 
 export function stepPlayer(world: World, input: InputFrame, dt: number): void {
@@ -43,4 +47,6 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
   stepTorch(c);
   stepWeapons(c);
   stepMedkit(c);
+  breathe(c);
+  stepFlare(c);
 }
