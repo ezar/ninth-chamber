@@ -38,6 +38,8 @@ export interface RoomInfo {
   minZ: number;
   maxX: number;
   maxZ: number;
+  /** Height of the room origin (m): entity heights in clicks count from it, like the legend. */
+  originY: number;
   look: string | null;
   reverb: string | null;
   /** Room origin height (m): room-relative clicks are measured from it. */
@@ -81,6 +83,7 @@ export class Level {
         minZ: oz,
         maxX: ox + width,
         maxZ: oz + room.rows.length,
+        originY: oy * CLICK,
         look: room.look ?? null,
         reverb: room.reverb ?? null,
         y: oy * CLICK,

@@ -1,0 +1,976 @@
+{
+  "schema": 1,
+  "id": "sun_temple",
+  "name": "level.sun_temple",
+  "par": 840,
+  "start": {
+    "room": "sun_court",
+    "at": [7, 12],
+    "face": "N"
+  },
+  "rooms": [
+    {
+      "id": "sun_court",
+      "origin": [0, 0, 0],
+      "ceil": 32,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "S": 0,
+        "4": 4,
+        "8": 8,
+        "w": {
+          "floor": 20,
+          "ceil": 23
+        }
+      },
+      "rows": [
+        "#######w######",
+        "#...........8#",
+        "#...........8#",
+        "#...........4#",
+        "#..#......#..#",
+        "#............#",
+        "#............#",
+        "#............#",
+        ".............#",
+        "#............#",
+        "#..#......#..#",
+        "#............#",
+        "#......S.....#",
+        "##############"
+      ],
+      "look": "sun_court",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "mirror_hall",
+      "origin": [-14, 2, 0],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": [
+        "##.###########",
+        "#..#..#......#",
+        "#.....#......#",
+        "#.....#......#",
+        "#.....#......#",
+        "#............#",
+        "#.....#.......",
+        "#.....#......#",
+        "#.....#......#",
+        "#.....#......#",
+        "#.....#......#",
+        "##############"
+      ],
+      "look": "mirror_hall",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "lift_well",
+      "origin": [-14, -10, 0],
+      "ceil": 24,
+      "pitDepth": -2,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "G": 12,
+        "L": "pit",
+        "~": -3,
+        "J": 6
+      },
+      "rows": [
+        "##############",
+        "GGGGGGGG######",
+        "#GGGGGGG######",
+        "######L#######",
+        "#............#",
+        "#............#",
+        "#~~~~~~~~~~~~#",
+        "#~~~~~~~~~J~~#",
+        "#~~~~~~~~~~~~#",
+        "#............#",
+        "#............#",
+        "##.###########"
+      ],
+      "look": "lift_well",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "ray_vault",
+      "origin": [-24, -12, 12],
+      "ceil": 14,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": [
+        "####.#####",
+        "#........#",
+        "#........#",
+        "#.........",
+        "#........#",
+        "#........#",
+        "#........#",
+        "##########"
+      ],
+      "look": "ray_vault",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "boulder_run",
+      "origin": [-22, -27, 8],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "4": 4
+      },
+      "rows": [
+        "#.##",
+        "#.##",
+        "#..#",
+        "##.#",
+        "##1#",
+        "##1#",
+        "##.#",
+        "##2#",
+        "##2#",
+        "##.#",
+        "##3#",
+        "##3#",
+        "##.#",
+        "##4#",
+        "##4#"
+      ],
+      "overrides": [
+        {
+          "at": [2, 3],
+          "floor": [0, 0, 1, 1]
+        },
+        {
+          "at": [2, 6],
+          "floor": [1, 1, 2, 2]
+        },
+        {
+          "at": [2, 9],
+          "floor": [2, 2, 3, 3]
+        },
+        {
+          "at": [2, 12],
+          "floor": [3, 3, 4, 4]
+        }
+      ],
+      "look": "boulder_run",
+      "reverb": "stone_small"
+    },
+    {
+      "id": "blade_hall",
+      "origin": [-23, -42, 8],
+      "ceil": 20,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": [
+        "########",
+        "#......#",
+        "#.......",
+        "##.#####",
+        "##.#####",
+        "##.#####",
+        "##.#####",
+        "##.#####",
+        "##.#####",
+        "##.#####",
+        "#......#",
+        "#......#",
+        "#......#",
+        "##.#####",
+        "##.#####"
+      ],
+      "look": "blade_hall",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "ember_court",
+      "origin": [-15, -50, 8],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "F": {
+          "floor": 0,
+          "mat": "metal"
+        }
+      },
+      "rows": [
+        "###############",
+        "#...FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "....FF.FF.FF..#",
+        "#...FF.FF.FF..#",
+        "##.############"
+      ],
+      "look": "ember_court",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "ray_court",
+      "origin": [-15, -37, 8],
+      "ceil": 24,
+      "pitDepth": -24,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "_": "pit"
+      },
+      "rows": [
+        "##.############",
+        "#.._________..#",
+        "#.._________..#",
+        "#..___________#",
+        "#..___________#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________...",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "#.._________..#",
+        "###############"
+      ],
+      "look": "ray_court",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "guardian_hall",
+      "origin": [0, -30, 8],
+      "ceil": 24,
+      "pitDepth": -16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "_": "pit",
+        "s": 4,
+        "B": 8,
+        "x": 8
+      },
+      "rows": [
+        "##############",
+        "#............#",
+        "#............#",
+        ".............#",
+        "#............#",
+        "#............#",
+        "#............#",
+        "#____________#",
+        "#____________#",
+        "#............#",
+        "#............#",
+        "#.s..........#",
+        "#BBBBBBBBBBBB#",
+        "######x#######"
+      ],
+      "look": "guardian_hall",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "sanctuary",
+      "origin": [3, -16, 16],
+      "ceil": 20,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "a": 2,
+        "w": {
+          "floor": 4,
+          "ceil": 7
+        }
+      },
+      "rows": [
+        "###.####",
+        "#......#",
+        "#......#",
+        "#.#..#.#",
+        "#......#",
+        "#......#",
+        "#.#..#.#",
+        "#......#",
+        "#......#",
+        "#.#..#.#",
+        "#......#",
+        "#..aa..#",
+        "#..aa..#",
+        "#......#",
+        "#......#",
+        "####w###"
+      ],
+      "look": "sanctuary",
+      "reverb": "hall_large"
+    }
+  ],
+  "entities": [
+    {
+      "id": "z_court",
+      "type": "zone",
+      "room": "sun_court",
+      "at": [1, 9],
+      "size": [12, 4]
+    },
+    {
+      "id": "idol_gold",
+      "type": "secret",
+      "room": "sun_court",
+      "at": [12, 1],
+      "idol": "gold"
+    },
+    {
+      "id": "medkit_court",
+      "type": "medkit",
+      "room": "sun_court",
+      "at": [1, 12],
+      "size": "small"
+    },
+    {
+      "id": "z_mirrors",
+      "type": "zone",
+      "room": "mirror_hall",
+      "at": [7, 5],
+      "size": [6, 3]
+    },
+    {
+      "id": "z_mirrors_west",
+      "type": "zone",
+      "room": "mirror_hall",
+      "at": [1, 4],
+      "size": [5, 3]
+    },
+    {
+      "id": "sun_a",
+      "type": "sunbeam",
+      "room": "mirror_hall",
+      "at": [10, 1],
+      "dir": "S",
+      "y": 3
+    },
+    {
+      "id": "mirror_a",
+      "type": "mirror",
+      "room": "mirror_hall",
+      "at": [10, 4],
+      "facing": "NE"
+    },
+    {
+      "id": "disc_a",
+      "type": "receiver",
+      "room": "mirror_hall",
+      "at": [6, 4],
+      "face": "E"
+    },
+    {
+      "id": "gate_a",
+      "type": "door",
+      "room": "mirror_hall",
+      "at": [6, 5],
+      "height": 8
+    },
+    {
+      "id": "sun_b",
+      "type": "sunbeam",
+      "room": "mirror_hall",
+      "at": [1, 10],
+      "dir": "E",
+      "y": 3,
+      "from": "sky"
+    },
+    {
+      "id": "mirror_b",
+      "type": "mirror",
+      "room": "mirror_hall",
+      "at": [4, 10],
+      "facing": "SE"
+    },
+    {
+      "id": "mirror_c",
+      "type": "mirror",
+      "room": "mirror_hall",
+      "at": [4, 2],
+      "facing": "NE"
+    },
+    {
+      "id": "disc_b",
+      "type": "receiver",
+      "room": "mirror_hall",
+      "at": [0, 2],
+      "face": "E"
+    },
+    {
+      "id": "gate_b",
+      "type": "door",
+      "room": "mirror_hall",
+      "at": [2, 0],
+      "height": 8
+    },
+    {
+      "id": "note_plinth",
+      "type": "note",
+      "room": "mirror_hall",
+      "at": [11, 4],
+      "text": "journal.sun_temple.1",
+      "style": "carving"
+    },
+    {
+      "id": "note_letter",
+      "type": "note",
+      "room": "mirror_hall",
+      "at": [4, 1],
+      "text": "journal.sun_temple.3",
+      "style": "letter",
+      "wall": "N"
+    },
+    {
+      "id": "z_lift",
+      "type": "zone",
+      "room": "lift_well",
+      "at": [1, 9],
+      "size": [12, 2]
+    },
+    {
+      "id": "ferry",
+      "type": "platform",
+      "room": "lift_well",
+      "at": [9, 8],
+      "path": [
+        [9, 8, 0],
+        [9, 7, 0],
+        [9, 6, 0]
+      ],
+      "speed": 1.2,
+      "pause": 2,
+      "running": true
+    },
+    {
+      "id": "lift",
+      "type": "platform",
+      "room": "lift_well",
+      "at": [6, 3],
+      "path": [
+        [6, 3, 0],
+        [6, 3, 12]
+      ],
+      "speed": 1.5,
+      "pause": 2.5,
+      "running": true
+    },
+    {
+      "id": "idol_jade",
+      "type": "secret",
+      "room": "lift_well",
+      "at": [10, 7],
+      "idol": "jade"
+    },
+    {
+      "id": "z_gallery",
+      "type": "zone",
+      "room": "lift_well",
+      "at": [1, 1],
+      "size": [7, 2]
+    },
+    {
+      "id": "bronze_ray",
+      "type": "item",
+      "room": "ray_vault",
+      "at": [4, 4],
+      "item": "bronze_ray"
+    },
+    {
+      "id": "medkit_vault",
+      "type": "medkit",
+      "room": "ray_vault",
+      "at": [1, 6],
+      "size": "small"
+    },
+    {
+      "id": "z_vault_exit",
+      "type": "zone",
+      "room": "ray_vault",
+      "at": [3, 1],
+      "size": [3, 1]
+    },
+    {
+      "id": "boulder",
+      "type": "boulder",
+      "room": "boulder_run",
+      "at": [2, 14],
+      "path": [
+        [2, 14],
+        [2, 2]
+      ]
+    },
+    {
+      "id": "z_boulder",
+      "type": "zone",
+      "room": "boulder_run",
+      "at": [2, 12]
+    },
+    {
+      "id": "z_blades",
+      "type": "zone",
+      "room": "blade_hall",
+      "at": [1, 10],
+      "size": [6, 3]
+    },
+    {
+      "id": "blade_1",
+      "type": "blade",
+      "room": "blade_hall",
+      "at": [2, 8],
+      "axis": "x",
+      "phase": 0
+    },
+    {
+      "id": "blade_2",
+      "type": "blade",
+      "room": "blade_hall",
+      "at": [2, 6],
+      "axis": "x",
+      "phase": 0.33
+    },
+    {
+      "id": "blade_3",
+      "type": "blade",
+      "room": "blade_hall",
+      "at": [2, 4],
+      "axis": "x",
+      "phase": 0.66
+    },
+    {
+      "id": "medkit_blades",
+      "type": "medkit",
+      "room": "blade_hall",
+      "at": [5, 1],
+      "size": "large"
+    },
+    {
+      "id": "z_embers",
+      "type": "zone",
+      "room": "ember_court",
+      "at": [1, 9],
+      "size": [3, 3]
+    },
+    {
+      "id": "z_embers_east",
+      "type": "zone",
+      "room": "ember_court",
+      "at": [12, 1],
+      "size": [2, 11]
+    },
+    {
+      "id": "fire_1",
+      "type": "fire",
+      "room": "ember_court",
+      "at": [4, 1],
+      "size": [2, 11],
+      "period": 3.2,
+      "burn": 1.4,
+      "offset": 0
+    },
+    {
+      "id": "fire_2",
+      "type": "fire",
+      "room": "ember_court",
+      "at": [7, 1],
+      "size": [2, 11],
+      "period": 3.2,
+      "burn": 1.4,
+      "offset": 1.07
+    },
+    {
+      "id": "fire_3",
+      "type": "fire",
+      "room": "ember_court",
+      "at": [10, 1],
+      "size": [2, 11],
+      "period": 3.2,
+      "burn": 1.4,
+      "offset": 2.13
+    },
+    {
+      "id": "slot_sun",
+      "type": "slot",
+      "room": "ember_court",
+      "at": [13, 6],
+      "wall": "E",
+      "accepts": "bronze_ray"
+    },
+    {
+      "id": "sun_door",
+      "type": "door",
+      "room": "ember_court",
+      "at": [2, 12],
+      "height": 8
+    },
+    {
+      "id": "medkit_embers",
+      "type": "medkit",
+      "room": "ember_court",
+      "at": [13, 1],
+      "size": "small"
+    },
+    {
+      "id": "z_rays",
+      "type": "zone",
+      "room": "ray_court",
+      "at": [1, 1],
+      "size": [2, 3]
+    },
+    {
+      "id": "shuttle",
+      "type": "platform",
+      "room": "ray_court",
+      "at": [3, 10],
+      "path": [
+        [3, 10, 0],
+        [6, 10, 0],
+        [9, 10, 0],
+        [11, 10, 0]
+      ],
+      "speed": 1.5,
+      "pause": 4,
+      "running": true
+    },
+    {
+      "id": "sun_north",
+      "type": "sunbeam",
+      "room": "ray_court",
+      "at": [6, 1],
+      "dir": "S",
+      "y": 3
+    },
+    {
+      "id": "sun_south",
+      "type": "sunbeam",
+      "room": "ray_court",
+      "at": [9, 18],
+      "dir": "N",
+      "y": 3
+    },
+    {
+      "id": "mirror_north",
+      "type": "mirror",
+      "room": "ray_court",
+      "at": [6, 9],
+      "facing": "NW"
+    },
+    {
+      "id": "mirror_south",
+      "type": "mirror",
+      "room": "ray_court",
+      "at": [9, 11],
+      "facing": "SW"
+    },
+    {
+      "id": "disc_north",
+      "type": "receiver",
+      "room": "ray_court",
+      "at": [14, 9],
+      "face": "W"
+    },
+    {
+      "id": "disc_south",
+      "type": "receiver",
+      "room": "ray_court",
+      "at": [14, 11],
+      "face": "W"
+    },
+    {
+      "id": "gate_rays",
+      "type": "door",
+      "room": "ray_court",
+      "at": [14, 10],
+      "height": 8
+    },
+    {
+      "id": "idol_stone",
+      "type": "secret",
+      "room": "ray_court",
+      "at": [13, 1],
+      "idol": "stone"
+    },
+    {
+      "id": "medkit_rays",
+      "type": "medkit",
+      "room": "ray_court",
+      "at": [13, 16],
+      "size": "small"
+    },
+    {
+      "id": "z_rays_gate",
+      "type": "zone",
+      "room": "ray_court",
+      "at": [14, 10]
+    },
+    {
+      "id": "guardian",
+      "type": "guardian",
+      "room": "guardian_hall",
+      "at": [6, 10],
+      "face": "N",
+      "arena": [1, 1, 12, 12]
+    },
+    {
+      "id": "note_pedestal",
+      "type": "note",
+      "room": "guardian_hall",
+      "at": [6, 10],
+      "text": "journal.sun_temple.2",
+      "style": "carving"
+    },
+    {
+      "id": "bridge",
+      "type": "trapdoor",
+      "room": "guardian_hall",
+      "at": [1, 7],
+      "size": [1, 2],
+      "h": 0
+    },
+    {
+      "id": "lever_bridge",
+      "type": "lever",
+      "room": "guardian_hall",
+      "at": [1, 6],
+      "wall": "W",
+      "spring": true
+    },
+    {
+      "id": "gate_sanctum",
+      "type": "door",
+      "room": "guardian_hall",
+      "at": [6, 13],
+      "height": 8
+    },
+    {
+      "id": "medkit_guardian",
+      "type": "medkit",
+      "room": "guardian_hall",
+      "at": [12, 1],
+      "size": "large"
+    },
+    {
+      "id": "z_sanctuary",
+      "type": "zone",
+      "room": "sanctuary",
+      "at": [1, 1],
+      "size": [6, 2]
+    },
+    {
+      "id": "brazier_mirrors_w",
+      "type": "brazier",
+      "room": "mirror_hall",
+      "at": [1, 8]
+    },
+    {
+      "id": "brazier_mirrors_e",
+      "type": "brazier",
+      "room": "mirror_hall",
+      "at": [12, 9]
+    },
+    {
+      "id": "brazier_vault_w",
+      "type": "brazier",
+      "room": "ray_vault",
+      "at": [1, 1]
+    },
+    {
+      "id": "brazier_vault_e",
+      "type": "brazier",
+      "room": "ray_vault",
+      "at": [8, 6]
+    },
+    {
+      "id": "brazier_blades_w",
+      "type": "brazier",
+      "room": "blade_hall",
+      "at": [1, 12]
+    },
+    {
+      "id": "brazier_blades_e",
+      "type": "brazier",
+      "room": "blade_hall",
+      "at": [6, 12]
+    },
+    {
+      "id": "brazier_blades_top",
+      "type": "brazier",
+      "room": "blade_hall",
+      "at": [1, 1]
+    },
+    {
+      "id": "brazier_embers_w",
+      "type": "brazier",
+      "room": "ember_court",
+      "at": [1, 1]
+    },
+    {
+      "id": "brazier_embers_e",
+      "type": "brazier",
+      "room": "ember_court",
+      "at": [13, 11]
+    },
+    {
+      "id": "brazier_guardian_w",
+      "type": "brazier",
+      "room": "guardian_hall",
+      "at": [1, 1]
+    },
+    {
+      "id": "brazier_guardian_e",
+      "type": "brazier",
+      "room": "guardian_hall",
+      "at": [12, 10]
+    },
+    {
+      "id": "brazier_altar_w",
+      "type": "brazier",
+      "room": "sanctuary",
+      "at": [1, 11]
+    },
+    {
+      "id": "brazier_altar_e",
+      "type": "brazier",
+      "room": "sanctuary",
+      "at": [6, 11]
+    },
+    {
+      "id": "sun_disc",
+      "type": "relic",
+      "room": "sanctuary",
+      "at": [3, 11]
+    }
+  ],
+  "logic": [
+    {
+      "when": "z_court.entered",
+      "do": ["hint hint.temple.court"]
+    },
+    {
+      "when": "z_mirrors.entered",
+      "do": ["checkpoint", "music vista", "hint hint.temple.mirror"]
+    },
+    {
+      "when": "disc_a.lit",
+      "do": ["gate_a.open", "camera.focus gate_a 2s", "sfx rumble"]
+    },
+    {
+      "when": "z_mirrors_west.entered",
+      "do": ["hint hint.temple.twoMirrors"]
+    },
+    {
+      "when": "disc_b.lit",
+      "do": ["gate_b.open", "camera.focus gate_b 3s", "sfx rumble"]
+    },
+    {
+      "when": "z_lift.entered",
+      "do": ["checkpoint", "hint hint.temple.platform"]
+    },
+    {
+      "when": "z_gallery.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "bronze_ray.taken",
+      "do": ["hint hint.temple.ray"]
+    },
+    {
+      "when": "z_vault_exit.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "z_boulder.entered",
+      "do": ["boulder.release", "music chase", "hint hint.temple.run"]
+    },
+    {
+      "when": "boulder.done",
+      "do": ["music calm"]
+    },
+    {
+      "when": "z_blades.entered",
+      "do": ["checkpoint", "music tension", "hint hint.temple.blades"]
+    },
+    {
+      "when": "z_embers.entered",
+      "do": ["checkpoint", "music tension", "hint hint.temple.fire"]
+    },
+    {
+      "when": "z_embers_east.entered",
+      "do": ["checkpoint", "hint hint.temple.slot"]
+    },
+    {
+      "when": "slot_sun.filled",
+      "do": ["sun_door.open", "camera.focus sun_door 3s", "sfx rumble"]
+    },
+    {
+      "when": "z_rays.entered",
+      "do": ["checkpoint", "music calm", "hint hint.temple.rays"]
+    },
+    {
+      "when": "disc_north.lit and disc_south.lit",
+      "do": ["gate_rays.open", "camera.focus gate_rays 3s", "sfx rumble"]
+    },
+    {
+      "when": "z_rays_gate.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "lever_bridge.used",
+      "do": ["bridge.open 3s"],
+      "once": false
+    },
+    {
+      "when": "guardian.awake",
+      "do": ["gate_rays.close", "camera.focus guardian 2s", "music boss", "hint hint.temple.guardian"]
+    },
+    {
+      "when": "guardian.phase2",
+      "do": ["checkpoint", "hint hint.temple.guardian2"]
+    },
+    {
+      "when": "guardian.defeated",
+      "do": [
+        "gate_sanctum.open",
+        "gate_rays.open",
+        "camera.focus gate_sanctum 3s",
+        "music calm",
+        "music hall"
+      ]
+    },
+    {
+      "when": "z_sanctuary.entered",
+      "do": ["checkpoint", "music relic"]
+    },
+    {
+      "when": "sun_disc.taken",
+      "do": ["camera.focus sun_disc 3s", "music fanfare", "wait 3s", "level.end"]
+    }
+  ]
+}

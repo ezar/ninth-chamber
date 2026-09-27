@@ -33,6 +33,14 @@ export interface NoraPose {
   torch?: number;
   /** Swimming and diving: body pitch along the swim direction (rad, + = head up). */
   pitch?: number;
+  /**
+   * What a 'lever' use is working (the temple's mechanisms reuse the lever
+   * mode): turning a mirror drum or setting an item in a wall slot are
+   * shoves, played with the push clip; absent for a real lever.
+   */
+  use?: 'mirror' | 'slot' | null;
+  /** Standing on a moving platform: her planted feet travel with it. */
+  riding?: boolean;
 }
 
 // ---------------------------------------------------------------------------------------------

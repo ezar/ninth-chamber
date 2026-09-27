@@ -1,6 +1,7 @@
 /** Ground mode: run, walk, step up and down, start jumps and interactions. */
 import { distanceToEdge, supportHeight, sweep } from '../../grid/collision';
 import { BLOCK, DIR_VEC, OPPOSITE, cellCenter, yawToDir, yawVec } from '../../grid/units';
+import { useMechanism } from '../../mechanisms';
 import { blockAt } from '../../world';
 import { die, emit, faceDir, setMode, turnTowardsWish, wishAlong, type Ctx } from '../context';
 import { tryLightTorch } from '../torch';
@@ -14,7 +15,7 @@ export function ground(c: Ctx): void {
   const action = c.held('action');
   if (floatInDeepWater(c)) return;
 
-  if (c.pressed('action') && tryInteract(c)) return;
+  if (c.pressed('action') && (tryInteract(c) || useMechanism(c))) return;
   if (action && tryGrabBlock(c)) return;
   if (walk && action && tryDropToHang(c)) return;
 

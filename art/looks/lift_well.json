@@ -1,0 +1,12 @@
+{
+  "id": "lift_well",
+  "background": "#0f0a06",
+  "exposure": 1.06,
+  "hemi": { "sky": "#d6ad7c", "ground": "#2c1d12", "intensity": 0.28 },
+  "fog": { "color": "#8d6a48", "density": 0.024 },
+  "sun": { "color": "#ffd9a4", "intensity": 5.0, "direction": [0.2, 0.95, 0.15] },
+  "fire": { "color": "#ff9a48", "intensity": 30, "flicker": 0.22 },
+  "bloom": { "strength": 0.6, "radius": 0.58, "threshold": 0.8 },
+  "grade": { "tint": "#fbe6c8", "saturation": 1.0, "contrast": 1.1, "vignette": 0.38 },
+  "trim": { "friezeHeight": 5.2 }
+}

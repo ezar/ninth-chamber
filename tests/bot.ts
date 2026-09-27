@@ -139,6 +139,33 @@ export class Bot {
     this.waitMode('ground');
   }
 
+  /** Waits (no input) until `done`, like a player watching for the right moment. */
+  waitFor(done: () => boolean, label: string, max = 1500): void {
+    for (let i = 0; i < max && !done(); i++) this.tick();
+    expect(done(), `waiting for ${label} at ${this.where()}`).toBe(true);
+  }
+
+  /** Whether a level signal or flag is up. */
+  on(name: string): boolean {
+    return this.w.state.signals[name] === true || this.w.state.flags.includes(name);
+  }
+
+  /** Presses against the mirror drum in `dir` and turns it `times` quarter turns with Action. */
+  turnMirror(dir: Dir, times: number): void {
+    const v = DIRS[dir];
+    // Walk up against the drum (it is solid), wherever in the cell she stands.
+    for (let i = 0; i < 40; i++) {
+      const before = { ...this.p.pos };
+      this.tick(frame({ x: v.x, y: v.y, held: ['walk'] }));
+      if (i > 5 && Math.hypot(this.p.pos.x - before.x, this.p.pos.z - before.z) < 1e-3) break;
+    }
+    for (let n = 0; n < times; n++) {
+      this.tick(frame({ pressed: ['action'] }));
+      expect(this.p.mode, `turning a mirror at ${this.where()}`).toBe('lever');
+      this.waitMode('ground');
+    }
+  }
+
   /** Backs off the edge in `dir` with Walk and Action into a hang (spec §5.5), then lets go. */
   lowerAndDrop(dir: Dir): void {
     const v = DIRS[dir];

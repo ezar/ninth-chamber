@@ -16,6 +16,7 @@ import { buildLevelMeshes, type Surface } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
 import type { NoraPose } from './nora';
 import { NoraRig } from './nora-scan';
+import { GuardianView } from './guardian';
 import { Props } from './props';
 import { loadSurfaces, surfaceParams, type SurfaceName, type SurfaceSet } from './materials';
 import { PostStack } from './post';
@@ -33,6 +34,7 @@ import { FlareView } from './flares';
 import { WaterFx } from './water-fx';
 import { WaterView, waterLookOf } from './water';
 import type { SimEvent } from '../core/events';
+import { TempleView } from './temple';
 
 export interface PlayerPose {
   pos: Vec3;
@@ -92,6 +94,9 @@ export class GameRenderer {
   /** The torch Nora carries, with its own light (not one of the fire pool's). */
   private readonly torch: TorchView;
   private props: Props | null = null;
+  /** The Temple of the Sun's mechanisms and its guardian (empty for levels without them). */
+  private temple: TempleView | null = null;
+  private guardians: GuardianView | null = null;
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
   private currentRoom: string | null = null;
@@ -303,6 +308,7 @@ export class GameRenderer {
     this.configurePost();
     // Volumetric shafts replace the modelled cones; the dust stays.
     for (const s of this.shafts) s.mesh.visible = !p.godrays;
+    this.temple?.setQuality(p);
     this.applyParticleBudget();
     if (anisotropyChanged) this.applyAnisotropy();
     this.resize();
@@ -472,16 +478,22 @@ export class GameRenderer {
     this.waterFx.build(level, world);
 
     const bronze = new THREE.MeshStandardMaterial({ color: '#5e7b68', roughness: 0.65, metalness: 0.35 });
-    this.props = new Props(level, {
+    const propMats = {
       stone: surf.wall,
       floor: surf.floor,
       block: surf.block,
       bronze,
       darkMetal: new THREE.MeshStandardMaterial({ color: '#2b2622', roughness: 0.5, metalness: 0.7 }),
       gold: new THREE.MeshStandardMaterial({ color: '#e8b75a', roughness: 0.25, metalness: 1 }),
-    });
+    };
+    this.props = new Props(level, propMats);
     this.scene.add(this.props.group);
     void this.props.modelsLoaded.then(() => (this.warmNext = true));
+    this.temple = new TempleView(level, propMats);
+    this.temple.setQuality(this.profile);
+    for (const id of this.temple.replacedActors) this.props.hidden.add(id);
+    this.guardians = new GuardianView(world, surf.wall);
+    this.scene.add(this.temple.group, this.guardians.group);
     this.indexFires();
 
     this.buildShafts(meshes.skylights, sunRooms);
@@ -706,6 +718,8 @@ export class GameRenderer {
 
     this.props?.update(world, this.time, dt);
     this.adoptRoomObjects();
+    this.temple?.update(world, this.time, dt, eye);
+    this.guardians?.update(world, this.time, dt, eye);
     this.updateFireLights(eye, dt);
     this.updateShafts(dt);
     this.updateContactShadow(world, px, py, pz);

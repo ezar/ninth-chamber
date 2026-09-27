@@ -179,6 +179,7 @@ export class NoraAnimator {
   /** Smoothed root velocity in the character's frame: x = to her right, z = backwards. */
   private readonly vel = new THREE.Vector3();
   private readonly _d = new THREE.Vector3();
+  private readonly _carry = new THREE.Vector3();
   private mode: NoraPose['mode'] | null = null;
   private modeT = 0;
   private speed = 0;
@@ -277,7 +278,9 @@ export class NoraAnimator {
       this.stepOffset = 0;
       this.vel.set(0, 0, 0);
     } else if (dt > 0) {
-      if (mode === 'ground' && Math.abs(rootPos.y - this.lastRoot.y) > STEP_SNAP)
+      // Riding still: the root's motion is the platform's.
+      if (pose.riding && pose.speed < 0.3) this.ik.carry(this._carry.subVectors(rootPos, this.lastRoot));
+      else if (mode === 'ground' && Math.abs(rootPos.y - this.lastRoot.y) > STEP_SNAP)
         this.stepOffset -= rootPos.y - this.lastRoot.y;
       const d = this._d.subVectors(rootPos, this.lastRoot).divideScalar(dt).applyAxisAngle(UP, -rootYaw);
       d.y = 0;
@@ -319,6 +322,10 @@ export class NoraAnimator {
       case 'pull':
         // One pulling cycle per pull.
         clipDriven = this.playLoop(p, this.clips.pull, pose.climbT);
+        break;
+      case 'lever':
+        // Mirror drums and wall slots are shoved round or pressed in: one push cycle per use.
+        clipDriven = pose.use ? this.push(p, Math.min(0.999, this.modeT / tuning.leverTime)) : false;
         break;
       case 'pickup':
         clipDriven = this.playFitted(p, c.pickup, this.modeT / tuning.pickupTime);

@@ -1,5 +1,20 @@
 # Changelog
 
+## The Temple of the Sun (chamber III)
+
+Play it with `?level=sun_temple` (registered in `src/levels.ts`).
+
+- **Ten rooms** (`levels/sun_temple.level.json`): the Sun Court, the Hall of Mirrors, the lift well with its ferry and lift, the vault of the bronze ray, the boulder run, the blade hall, the fire court with the Sun Door, the Court of Rays over its chasm, the guardian's hall and the sanctuary of the Sun Disc. Three secrets, three journal notes (`journal.sun_temple.1–3`; Elena's 1989 letter is tucked behind the last mirror drum of the Hall of Mirrors) and the relic, the Sun Disc.
+- **Mechanisms and traps in the simulation** (`src/sim/mechanisms/`, spec §8): moving platforms that carry Nora, rotating mirrors and traced sun beams, sun-disc receivers, item slots, trapdoors, the rolling boulder, pendulum blades (2.4 s cycle, 40 damage and a shove) and fire floors with a readable warning. All reset at a checkpoint respawn.
+- **The stone guardian** (`src/sim/actors/guardian.ts`, spec §7): immune to pistols; it falls only into a pit (lured onto the lever-dropped bridge) or to a blow on its core from above while its fists are buried after a slam. Two blows defeat it.
+- **Score and checkpoints**: `music vista` at the first sight of the mirrors, `music chase` while the boulder rolls and `music calm` once it crashes, `music tension` from the blade hall through the fire court (calm in the Court of Rays), `music boss` when the guardian wakes and `music calm` when it falls apart. A checkpoint comes before the boulder, the blades, the fire and the boss; the walkthrough test checks the cue order.
+- **Looks** (`art/looks/<room>.json`): golden, sunlit rooms with skylight shafts (the court, the lift well, the Court of Rays, the guardian hall, and a shaft falling on the Sun Disc's altar), dim warm halls where the beams are the light, gilded friezes and painted reliefs. Thirteen braziers light the dark rooms through the shared fire-light pool.
+- **Lightmap**: baked with Blender Cycles at 64 spp (`public/levels/sun_temple.lightmap.*`); the renderer loads the current level's bake by id.
+- **Visuals on a budget** (`src/render/temple.ts`, `src/render/guardian.ts`, `src/render/merge.ts`): static mechanism parts merge into one mesh per material; each sun beam is a fixed set of meshes (a core and a view-facing glow per segment, mirror flares, a hot spot and a splash of light where it lands, drifting dust) relaid only when a mirror turns; receivers flare when first lit and keep a breathing corona; fire flames are one instanced draw of camera-facing cards and the grates breathe faster before each burst; blades trail a motion smear; the boulder has a carved sun band, grit rains from its niche and dust follows its roll. The temple adds a fixed pool of three plain lights that fade between the nearest beam hot spots and burning grates (no shadow maps are created or resized at runtime). Nothing is allocated per frame. The mobile tier drops the beam glow, the smears and the boulder dust.
+- **The guardian's body**: a carved figure with a crest of sun rays, amber eyes and the amber core in its back; a procedural heavy walk, a wind-up telegraphed by a ring filling in on the floor where the fists will land, the slam with a shockwave and dust, the stunned reel, the fall and climb out of the pit, and a collapse whose pieces tumble away.
+- **Nora**: turning a mirror drum or setting the bronze ray in its slot plays one push cycle of the Mixamo push clip; standing on a moving platform, her planted feet ride with the deck.
+- **Sound**: blade whooshes, fire hiss and bursts, drum grinds, a chime when a sun disc lights, the boulder's rumble and crash, and the guardian's steps, wind-up, slams, fall and collapse.
+
 ## The Cisterns (chamber II) and the campaign
 
 Play it with `?level=cisterns`, or finish the Antechamber and choose "Enter the next chamber".

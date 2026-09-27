@@ -24,6 +24,8 @@ export interface LookFile {
     caustics: number;
     fog: { color: string; density: number };
   };
+  /** Architectural dressing: a gilded frieze round the walls (height above the floor, m) and painted relief panels. */
+  trim?: { friezeHeight?: number; reliefs?: boolean };
 }
 
 /** A look with colours parsed, ready to blend. */

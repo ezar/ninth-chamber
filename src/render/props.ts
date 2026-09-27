@@ -60,6 +60,8 @@ export class Props {
   readonly fires: FireSource[] = [];
   readonly relicLight: THREE.PointLight;
   private readonly actorViews = new Map<string, THREE.Object3D>();
+  /** Actors another view draws instead (e.g. a level's own relic model). */
+  readonly hidden = new Set<string>();
   private readonly actors = new Map<string, Actor>();
   private readonly tileViews = new Map<string, THREE.Mesh>();
   private readonly flames: {
@@ -481,6 +483,7 @@ export class Props {
         default:
           break;
       }
+      if (this.hidden.has(a.id)) v.visible = false;
     }
 
     // Collapsing tiles shake while cracked and drop once fallen.

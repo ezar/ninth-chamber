@@ -3,6 +3,8 @@
  * saved, restored at checkpoints and hashed for replays.
  */
 import type { Dir } from './grid/units';
+import type { GuardianState } from './actors/guardian-types';
+import type { MechanismState } from './mechanisms/types';
 import type { EnemyType } from './player/tuning';
 
 export interface Vec3 {
@@ -351,6 +353,10 @@ export interface DynamicState {
   /** Water surfaces of rooms controlled by gates, by room id. */
   water: Record<string, RoomWater>;
   flares: FlareState[];
+  /** Platforms, trapdoors, sun beams, key items and traps (sim/mechanisms). */
+  mechanisms: MechanismState;
+  /** Stone guardians (sim/actors/guardian.ts). */
+  guardians: GuardianState[];
 }
 
 export interface Checkpoint {

@@ -3,7 +3,10 @@
  * tests. Reachability search is a later milestone; this checks structure,
  * references and placement.
  */
+import { GUARDIAN_ACTIONS, GUARDIAN_SIGNALS } from '../actors/guardian-schema';
 import { exprNames, parseExpr } from '../logic/expr';
+import { MECHANISM_ACTIONS, isMechanismSignal } from '../mechanisms/schema';
+import { validateMechanisms } from '../mechanisms/validate';
 import { enemyTypes } from '../player/tuning';
 import { Level } from './level';
 import { levelSchema } from './schema';
@@ -67,7 +70,8 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
       errors.push(`entity '${e.id}' is outside every room`);
       continue;
     }
-    if (s.wall && e.type !== 'zone') errors.push(`entity '${e.id}' is inside a wall`);
+    if (s.wall && e.type !== 'zone' && e.type !== 'receiver')
+      errors.push(`entity '${e.id}' is inside a wall`);
     if (e.type === 'enemy') {
       const stats = enemyTypes[e.enemy];
       if (s.pit || s.flags.has('death')) errors.push(`enemy '${e.id}' starts on a pit or a deadly sector`);
@@ -106,7 +110,9 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
     const dot = name.lastIndexOf('.');
     if (dot < 0) return true; // flags
     const type = ids.get(name.slice(0, dot));
-    return type !== undefined && (SIGNALS[type] ?? []).includes(name.slice(dot + 1));
+    const suffix = name.slice(dot + 1);
+    if (type === 'guardian') return GUARDIAN_SIGNALS.includes(suffix);
+    return type !== undefined && ((SIGNALS[type] ?? []).includes(suffix) || isMechanismSignal(type, suffix));
   };
 
   file.logic.forEach((rule, i) => {
@@ -138,11 +144,18 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
       }
       const dot = verb.lastIndexOf('.');
       const type = dot > 0 ? ids.get(verb.slice(0, dot)) : undefined;
-      if (!type || !(ACTIONS_ON[type] ?? []).includes(verb.slice(dot + 1))) {
+      const allowed = [
+        ...(ACTIONS_ON[type ?? ''] ?? []),
+        ...(MECHANISM_ACTIONS[type ?? ''] ?? []),
+        ...(type === 'guardian' ? GUARDIAN_ACTIONS : []),
+      ];
+      if (!type || !allowed.includes(verb.slice(dot + 1))) {
         errors.push(`rule ${i}: unknown action '${action}'`);
       }
     }
   });
+
+  validateMechanisms(level, i18nKeys, errors, warnings);
 
   const packs = new Map<string, number>();
   for (const e of file.entities)

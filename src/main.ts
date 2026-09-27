@@ -56,6 +56,32 @@ const nextFrame = (): Promise<void> => new Promise((r) => requestAnimationFrame(
 /** Title screen → intro → play (the pause menu and the note reader stop it) → end of the level. */
 type Phase = 'title' | 'intro' | 'play' | 'end';
 
+/** Which temple mechanism a 'lever' use is working, for Nora's animation (see NoraPose.use). */
+function useKind(world: World): 'mirror' | 'slot' | null {
+  const use = world.state.mechanisms.use;
+  const p = world.state.player;
+  if (!use || p.mode !== 'lever') return null;
+  const m = world.state.mechanisms;
+  if (m.mirrors.some((x) => x.id === use.id)) return 'mirror';
+  if (m.slots.some((x) => x.id === use.id)) return 'slot';
+  return null;
+}
+
+/** Whether Nora stands on a moving platform's deck (her planted feet ride with it). */
+function riding(world: World): boolean {
+  const p = world.state.player;
+  if (p.mode !== 'ground') return false;
+  for (const pl of world.state.mechanisms.platforms) {
+    if (
+      Math.abs(pl.pos.x - p.pos.x) <= 1.1 &&
+      Math.abs(pl.pos.z - p.pos.z) <= 1.1 &&
+      Math.abs(pl.pos.y - p.pos.y) < 0.1
+    )
+      return true;
+  }
+  return false;
+}
+
 function deviceHints(): DeviceHints {
   const nav = navigator as Navigator & { deviceMemory?: number };
   return {
@@ -731,6 +757,8 @@ async function main(): Promise<void> {
         climbT: p.move ? Math.min(1, p.modeTime / p.move.duration) : 0,
         health: p.health,
         torch: torchInHand(p) ? 1 : 0,
+        use: useKind(world),
+        riding: riding(world),
         ...renderer.combat.aimPose(world),
       },
       view.eye,

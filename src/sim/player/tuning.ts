@@ -202,6 +202,113 @@ export const flares = {
   hand: { right: -0.28, up: 1.0, forward: 0.3 },
 };
 
+/** The Temple of the Sun's mechanisms (spec §8 "Mecanismos"): platforms, trapdoors, sun beams, key items. */
+export const devices = {
+  /** Thickness of a moving platform's slab under its top (m). */
+  platformThickness: 0.5,
+  /** Trapdoor open / close speed (fraction per second): fast, it is a trap. */
+  trapdoorSpeed: 4,
+  /** A trapdoor stops holding weight once this open. */
+  trapdoorGives: 0.3,
+  /** Longest sun-beam trace, in cells (a guard against mirror loops). */
+  beamMaxCells: 160,
+  /** Nora reaches a mirror's drum from this far off its face (m, from her centre). */
+  mirrorReach: 0.8,
+};
+
+/** Traps (spec §8 "Trampas"): each warns before it acts and resets at checkpoints. */
+export const traps = {
+  boulder: {
+    /** Radius of the stone ball (m); it fills a one-block corridor. */
+    radius: 0.95,
+    /** Rumble between the trigger and the roll (s). */
+    warning: 1.1,
+    /** Acceleration (m/s²) up to the top speed (m/s): a little faster than Nora runs. */
+    accel: 3.2,
+    maxSpeed: 6.2,
+  },
+  blade: {
+    /** Full swing cycle (s): the blade crosses the corridor twice per cycle. */
+    period: 2.4,
+    damage: 40,
+    /** Knock-back speed along the swing (m/s) and upwards (m/s). */
+    push: 4.5,
+    lift: 2.5,
+    /** Swing amplitude (rad) about the pivot under the ceiling. */
+    amplitude: 0.62,
+    /** Half-width of the crescent blade, its height and its thickness (m). */
+    halfWidth: 0.55,
+    height: 0.9,
+    thickness: 0.08,
+    /** Gap between the blade's lowest point and the floor (m). */
+    clearance: 0.45,
+    /** A blade hits at most once per this many seconds. */
+    cooldown: 0.9,
+  },
+  fire: {
+    /** Embers and a hiss before each burst (s): the readable warning. */
+    warning: 0.9,
+  },
+};
+
+/** The stone guardian (spec §7): immune to everything but traps and a blow to its core from above. */
+export const guardianTuning = {
+  /** Body radius (m) for pushing Nora away and for landing on it; hulking, wider than a sector. */
+  bodyRadius: 1.15,
+  /** Collision half-size against the grid (m): it still fits a one-block bridge. */
+  radius: 0.8,
+  /** Standing height (m). */
+  height: 2.8,
+  /** Top of its hunched back while it recovers from a slam: where the core is struck (m). */
+  coreTop: 1.9,
+  /** Walking speed per phase (m/s). */
+  speed: [1.45, 2.0],
+  accel: 4,
+  /** Turn rate per phase (rad/s). */
+  turnSpeed: [1.7, 2.4],
+  /** One click up or down per step; it never jumps (m). */
+  climb: 0.5,
+  maxDrop: 0.5,
+  /** A stride, for step events and camera shake (m). */
+  stride: 1.25,
+  /** Winds up when Nora, on its level, is this close (m, centre to centre). */
+  slamRange: 2.7,
+  /** Pounds the wall below a Nora out of reach this close (m). */
+  poundRange: 3.3,
+  /** The slam hurts within this radius (m)… */
+  slamRadius: 3.0,
+  /** …when Nora's feet are at most this far above its floor: a jump dodges it (m). */
+  slamReach: 0.9,
+  slamDamage: 60,
+  /** Knock-back from a slam (m/s, outwards and up). */
+  slamPush: 5.5,
+  slamLift: 3.5,
+  /** Readable wind-up per phase (s). */
+  windup: [1.1, 0.85],
+  /** Hit window after a slam, fists buried and core bared, per phase (s). */
+  recover: [2.0, 1.5],
+  /** Rest after recovering before the next wind-up (s). */
+  cooldown: 0.8,
+  /** A fall onto the core must start at least this high above the core (m). */
+  strikeDrop: 2,
+  /** Nora bounces off its back (m/s up, m/s outwards). */
+  bounceUp: 4.5,
+  bounceOut: 2.8,
+  /** Stagger after a core strike (s). */
+  stunTime: 2.4,
+  /** Fall speed limit and gravity in a pit (m/s, m/s²). */
+  gravity: 24,
+  /** Lies stunned at the bottom of a pit (s), then drags itself out (s). */
+  fallenTime: 2.2,
+  climbOutTime: 3,
+  /** Path search: minimum interval (s) and node budget. */
+  repathTime: 0.5,
+  searchLimit: 1200,
+  /** Shrugging off a Nora who lands on it outside the window (m/s out, m/s up). */
+  shrugPush: 3.5,
+  shrugLift: 3,
+};
+
 export type Tuning = typeof tuning;
 
 /** Weapons and aiming (spec §7 "Armas" and "Reglas de apuntado"). */

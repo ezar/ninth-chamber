@@ -5,6 +5,8 @@
  * and diff-friendly. Exceptions (slopes, flags, materials) go in `overrides`.
  */
 import { z } from 'zod';
+import { guardianEntity } from '../actors/guardian-schema';
+import { mechanismEntities } from '../mechanisms/schema';
 import { ENEMY_TYPES } from '../player/tuning';
 
 export const MATERIALS = ['sand', 'stone', 'metal', 'wood', 'water'] as const;
@@ -163,6 +165,8 @@ const entity = z.discriminatedUnion('type', [
       size: cell.default([1, 1]),
     })
     .strict(),
+  ...mechanismEntities,
+  guardianEntity,
 ]);
 
 const rule = z

@@ -188,6 +188,26 @@ export class OrbitCamera {
       case 'enemy.bite':
         this.shake(0.2);
         break;
+      // The temple: the guardian's tread and blows, the boulder, heavy slabs coming to rest.
+      case 'guardian.step':
+      case 'guardian.slam':
+      case 'guardian.fell':
+      case 'guardian.defeated':
+      case 'boulder.rolling':
+      case 'boulder.crashed': {
+        const d = Math.hypot(Number(e.x) - player.x, Number(e.z) - player.z);
+        const k = Math.max(0, 1 - (Number.isFinite(d) ? d : 99) / 22);
+        const amount: Record<string, number> = {
+          'guardian.step': 0.14,
+          'guardian.slam': 0.75,
+          'guardian.fell': 0.6,
+          'guardian.defeated': 0.55,
+          'boulder.rolling': 0.35,
+          'boulder.crashed': 0.65,
+        };
+        this.shake((amount[e.type] ?? 0) * k);
+        break;
+      }
     }
   }
 

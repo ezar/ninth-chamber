@@ -1,0 +1,11 @@
+{
+  "id": "boulder_run",
+  "background": "#070403",
+  "exposure": 1.1,
+  "hemi": { "sky": "#8a6040", "ground": "#1c1008", "intensity": 0.36 },
+  "fog": { "color": "#2e1c12", "density": 0.045 },
+  "sun": null,
+  "fire": { "color": "#ff8a3a", "intensity": 40, "flicker": 0.3 },
+  "bloom": { "strength": 0.7, "radius": 0.5, "threshold": 0.75 },
+  "grade": { "tint": "#ffd9b0", "saturation": 0.94, "contrast": 1.2, "vignette": 0.55 }
+}

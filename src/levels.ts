@@ -10,6 +10,7 @@ import { Level } from './sim/grid/level';
 const LEVELS: Record<string, () => Promise<unknown>> = {
   antechamber: () => import('../levels/antechamber.level.json').then((m) => m.default),
   cisterns: () => import('../levels/cisterns.level.json').then((m) => m.default),
+  sun_temple: () => import('../levels/sun_temple.level.json').then((m) => m.default),
 };
 
 export const DEFAULT_LEVEL = 'antechamber';
