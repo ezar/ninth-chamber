@@ -17,6 +17,7 @@ import {
   TierBenchmark,
   dynamicResolutionFor,
   heuristicTier,
+  autoFloor,
   lowerTier,
   type DeviceHints,
   type QualityTier,
@@ -96,9 +97,13 @@ function deviceHints(): DeviceHints {
 
 async function main(): Promise<void> {
   const storage = browserStorage();
+  const hints = deviceHints();
+  // The lowest tier the game picks by itself: computers stop at medium.
+  const floor = autoFloor(hints);
   const settings: Settings = loadSettings(
     storage,
     defaultSettings(matchMedia('(prefers-reduced-motion: reduce)').matches),
+    floor === 'medium',
   );
   setLocale(settings.language ?? pickLocale(navigator.languages));
   applyStaticStrings();
@@ -160,7 +165,6 @@ async function main(): Promise<void> {
   };
 
   // Quality: the stored tier, or on first run the device heuristic until the benchmark decides.
-  const hints = deviceHints();
   let tier: QualityTier = settings.quality ?? heuristicTier(hints);
   // Options → Renderer: WebGL 2 on request; otherwise WebGPU where the browser has it (three.js
   // falls back to WebGL 2 by itself when WebGPU is missing or fails to start).
@@ -802,7 +806,7 @@ async function main(): Promise<void> {
   }
 
   const finishBenchmark = (b: TierBenchmark): void => {
-    const chosen = b.result() ?? heuristicTier(hints);
+    const chosen = b.result(floor) ?? heuristicTier(hints);
     settings.quality = chosen;
     settings.qualitySource = 'auto';
     if (b.measured === 'mobile') settings.mobilePixelRatio = b.pixelRatio() ?? MOBILE_DEFAULT_PIXEL_RATIO;
@@ -880,8 +884,13 @@ async function main(): Promise<void> {
     } else if (dynamicResolutionFor(settings.resolution)) {
       const change = drs.update(rawDt);
       if (change === 'down' || change === 'up') renderer.setRenderScale(drs.scale);
-      else if (change === 'floor' && settings.qualitySource === 'auto' && tier !== 'mobile') {
-        settings.quality = lowerTier(tier);
+      else if (
+        change === 'floor' &&
+        settings.qualitySource === 'auto' &&
+        tier !== floor &&
+        tier !== 'mobile'
+      ) {
+        settings.quality = lowerTier(tier, floor);
         saveSettings(storage, settings);
         applyTier(settings.quality);
         menu.refresh();
