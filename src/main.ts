@@ -439,7 +439,7 @@ async function main(): Promise<void> {
   };
   const title = new TitleScreen(
     start,
-    (type) => cue(type),
+    (type, data) => cue(type, data),
     () => menu.isOpen || chambers.isOpen || !loading.isReady || prelude.running,
   );
   $('#start-chambers').addEventListener('click', () => {

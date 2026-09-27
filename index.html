@@ -2,6 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Dark from the first byte, before any stylesheet: moving to another chamber loads
+         the page again, and a blank page flashed white in between. Where supported, the
+         browser also crossfades from the old page to the new one. -->
+    <style>
+      html,
+      body {
+        background: %splash-black%;
+        color-scheme: dark;
+      }
+      @view-transition {
+        navigation: auto;
+      }
+    </style>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"

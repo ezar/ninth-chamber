@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.2.4 (2026-09-27): no white flash between chambers, and a secret in the seal
+
+- **Moving to another chamber** loads the page again, and for a moment the browser showed a blank white page before the stylesheet arrived. The page is now dark from its first byte (an inline style in `index.html`), and browsers that support cross-document view transitions crossfade from one chamber to the next.
+- **The title seal hides an easter egg** (`src/ui/seal-egg.ts`): each tap (or Enter) lights the next carved segment with a rising pentatonic note and turns the ring a little; the ninth tap fills the missing segment, the ring opens and glows with the relic's shimmer and the secret chord, and a line appears under it. It closes by itself after a few seconds, and taps far apart start over.
+
 ## Version 0.2.3 (2026-09-27): wading and walking into the water
 
 - The simulation only reported falls into water, so walking in or out by the steps and wading through the shallows showed and sounded nothing. The water effects now read Nora's feet against the live surface (`src/render/water-fx.ts`): stepping in or out splashes a little, every stride leaves a soft ring behind her and kicks droplets ahead, and standing in the water makes a faint ring now and then.

@@ -301,5 +301,7 @@
   "hint.cisterns.tide": "El Cristal de las Mareas descansa donde el agua no llega. En algún lugar, abajo, se puede cambiar la marea.",
   "hud.air": "Aire",
   "hud.flares": "Bengalas: {count}",
-  "touch.flare": "Bengala"
+  "touch.flare": "Bengala",
+  "seal.label": "El sello de nueve segmentos",
+  "seal.whisper": "Ocho están tallados. El noveno se escribe con luz."
 }
