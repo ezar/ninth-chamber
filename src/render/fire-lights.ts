@@ -39,6 +39,17 @@ export interface FireLevels {
   casters: { fire: number; level: number }[];
 }
 
+/**
+ * Fire light intensity per unit of the look's brazier candela (the lights
+ * also stand in for bounce). Shared with the lightmap bake
+ * (scripts/bake/export-level.ts) so baked and realtime fire agree.
+ */
+export const FIRE_GAIN = 1.8;
+/** Height of a brazier's light above its flame's base (m); shared with the bake. */
+export const FIRE_LIGHT_LIFT = 0.3;
+/** Height of a brazier's flame base above its floor (m, the bowl's coals); shared with the bake. */
+export const FIRE_BASE = 1.25;
+
 /** Distance (m) inside which a brazier's light is at full weight, and where it has faded out. */
 export const FIRE_FULL = 14;
 export const FIRE_REACH = 24;
