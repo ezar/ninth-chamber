@@ -52,7 +52,7 @@ export interface Settings {
 }
 
 export const SETTINGS_KEY = 'nc.settings';
-export const SETTINGS_VERSION = 2;
+export const SETTINGS_VERSION = 3;
 
 export const SENSITIVITY_RANGE = { min: 0.25, max: 2, step: 0.25 } as const;
 
@@ -91,20 +91,29 @@ const optionalBool = (v: unknown, fallback: boolean | null): boolean | null =>
  * Brings what an older build stored up to date. Version 1 (no `version`
  * field) sent phones straight to a 1.25 pixel-ratio mobile tier without
  * measuring them: an automatically chosen mobile tier is forgotten so the
- * new first-run benchmark can measure the phone once.
+ * new first-run benchmark can measure the phone once. `desktop` says the
+ * device is a computer (see version 3 below).
  */
-export function migrateSettings(raw: Record<string, unknown>): Record<string, unknown> {
+export function migrateSettings(raw: Record<string, unknown>, desktop = false): Record<string, unknown> {
   const out = { ...raw };
   const version = typeof out.version === 'number' ? out.version : 1;
-  if (version < 2) {
-    if (out.quality === 'mobile' && out.qualitySource !== 'user') out.quality = null;
-  }
+  const autoMobile = out.quality === 'mobile' && out.qualitySource !== 'user';
+  if (version < 2 && autoMobile) out.quality = null;
+  // Version 3: computers stop at the medium tier on their own; one that an
+  // earlier build lowered to mobile by itself (a slow first run, a stall of
+  // errors) is measured again.
+  if (version < 3 && desktop && autoMobile) out.quality = null;
   out.version = SETTINGS_VERSION;
   return out;
 }
 
 /** Reads settings, falling back field by field to the defaults on anything invalid. */
-export function loadSettings(storage: StorageLike | null, defaults = defaultSettings()): Settings {
+export function loadSettings(
+  storage: StorageLike | null,
+  defaults = defaultSettings(),
+  /** The device is a computer: an automatic mobile tier from older builds is measured again. */
+  desktop = false,
+): Settings {
   let raw: unknown;
   try {
     const text = storage?.getItem(SETTINGS_KEY);
@@ -113,7 +122,7 @@ export function loadSettings(storage: StorageLike | null, defaults = defaultSett
     raw = null;
   }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { ...defaults };
-  const r = migrateSettings(raw as Record<string, unknown>);
+  const r = migrateSettings(raw as Record<string, unknown>, desktop);
   return {
     version: SETTINGS_VERSION,
     quality: isQualityTier(r.quality) ? r.quality : defaults.quality,

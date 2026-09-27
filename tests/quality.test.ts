@@ -6,6 +6,7 @@ import {
   TierBenchmark,
   MOBILE_DEFAULT_PIXEL_RATIO,
   anisotropyFor,
+  autoFloor,
   dynamicResolutionFor,
   heuristicTier,
   lowerTier,
@@ -121,9 +122,30 @@ describe('first-run benchmark', () => {
     expect(tierFromFrameTimes(frames(16.7), 'high')).toBe('high');
     expect(tierFromFrameTimes(frames(8.3), 'high')).toBe('high');
     expect(tierFromFrameTimes(frames(25), 'high')).toBe('medium');
-    expect(tierFromFrameTimes(frames(50), 'high')).toBe('mobile');
+    // One step at most: a slow first run never jumps from high straight to mobile.
+    expect(tierFromFrameTimes(frames(50), 'high')).toBe('medium');
     expect(tierFromFrameTimes(frames(25), 'medium')).toBe('mobile');
     expect(tierFromFrameTimes(frames(90), 'mobile')).toBe('mobile');
+  });
+
+  it('never takes a computer below medium by itself', () => {
+    const frames = (ms: number): number[] => Array.from({ length: 180 }, () => ms);
+    expect(tierFromFrameTimes(frames(50), 'medium', 'medium')).toBe('medium');
+    expect(lowerTier('medium', 'medium')).toBe('medium');
+    expect(lowerTier('high', 'medium')).toBe('medium');
+    expect(lowerTier('medium')).toBe('mobile');
+    const desktop = {
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      coarsePointer: false,
+      finePointer: true,
+    };
+    const phone = {
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',
+      coarsePointer: true,
+      finePointer: false,
+    };
+    expect(autoFloor(desktop)).toBe('medium');
+    expect(autoFloor(phone)).toBe('mobile');
   });
 
   it('is not fooled by a few slow frames', () => {
@@ -131,13 +153,13 @@ describe('first-run benchmark', () => {
     expect(tierFromFrameTimes(frames, 'high')).toBe('high');
   });
 
-  it('runs about 3 s after a warm-up and ignores stalls', () => {
+  it('runs about 3 s after a 2 s warm-up of real frames and ignores stalls', () => {
     const b = new TierBenchmark('high');
-    b.add(2); // a compile stall during warm-up
+    b.add(2); // a compile stall does not count as warm-up
     let frames = 0;
     while (!b.add(1 / 60)) frames++;
-    expect(frames).toBeGreaterThan(100);
-    expect(frames).toBeLessThan(250);
+    expect(frames).toBeGreaterThan(250);
+    expect(frames).toBeLessThan(350);
     expect(b.result()).toBe('high');
   });
 

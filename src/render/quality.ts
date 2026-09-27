@@ -186,9 +186,20 @@ export function mobilePixelRatioFromFrameTimes(frameMs: readonly number[]): numb
   return 1.25;
 }
 
-/** The tier one step below (mobile stays mobile). */
-export function lowerTier(t: QualityTier): QualityTier {
-  return t === 'high' ? 'medium' : 'mobile';
+/** The tier one step below, never under `floor` (mobile stays mobile). */
+export function lowerTier(t: QualityTier, floor: QualityTier = 'mobile'): QualityTier {
+  const lower: QualityTier = t === 'high' ? 'medium' : 'mobile';
+  return floor === 'medium' && lower === 'mobile' ? 'medium' : lower;
+}
+
+/**
+ * The lowest tier the game may pick by itself: phones and tablets go down to
+ * mobile, computers stop at medium (their mobile tier only by the player's
+ * choice). A slow start or a stall of errors once took desktops to the mobile
+ * tier and saved it for good.
+ */
+export function autoFloor(h: DeviceHints): QualityTier {
+  return heuristicTier(h) === 'mobile' ? 'mobile' : 'medium';
 }
 
 // ───────────────────────────── First-run detection ─────────────────────────────
@@ -225,14 +236,19 @@ const percentile = (sorted: readonly number[], p: number): number =>
  * cannot hold it steps down, and a frame time up to about twice the budget
  * means the next tier (roughly half the GPU cost) will.
  */
-export function tierFromFrameTimes(frameMs: readonly number[], measured: QualityTier): QualityTier {
+export function tierFromFrameTimes(
+  frameMs: readonly number[],
+  measured: QualityTier,
+  floor: QualityTier = 'mobile',
+): QualityTier {
   if (measured === 'mobile' || frameMs.length === 0) return measured;
   const sorted = [...frameMs].sort((a, b) => a - b);
   const median = percentile(sorted, 0.5);
   const p90 = percentile(sorted, 0.9);
   if (median <= 18.5 && p90 <= 28) return measured;
-  if (measured === 'high' && median <= 34) return 'medium';
-  return 'mobile';
+  // One step at most: a slow first run (compiles, downloads) must not jump from high to
+  // mobile; dynamic resolution steps further later if the frames stay slow.
+  return lowerTier(measured, floor);
 }
 
 /**
@@ -247,8 +263,8 @@ export class TierBenchmark {
 
   constructor(
     readonly measured: QualityTier,
-    /** Seconds discarded at the start (shader compilation, texture uploads). */
-    private readonly warmup = 0.6,
+    /** Seconds discarded at the start (shader compilation, texture uploads, late props). */
+    private readonly warmup = 2,
     private readonly duration = 3,
     /** Seconds of stalls (a hidden or throttled tab) after which it gives up. */
     private readonly patience = 5,
@@ -257,14 +273,15 @@ export class TierBenchmark {
   /** Feeds one frame interval (s). Returns true once the benchmark is complete. */
   add(dt: number): boolean {
     if (this.done) return true;
-    if (this.warm < this.warmup) {
-      this.warm += dt;
-    } else if (dt > 0 && dt < 0.25) {
+    if (dt >= 0.25) {
+      // Intervals over 0.25 s are stalls (tab switch, late compile), not frame cost.
+      // They count toward the patience even during the warm-up, so a throttled tab gives up.
+      this.stalled += dt;
+    } else if (this.warm < this.warmup) {
+      this.warm += Math.max(0, dt);
+    } else if (dt > 0) {
       this.measuredTime += dt;
       this.samples.push(dt * 1000);
-    } else {
-      // Intervals over 0.25 s are stalls (tab switch, late compile), not frame cost.
-      this.stalled += Math.max(0, dt);
     }
     return this.done;
   }
@@ -288,9 +305,9 @@ export class TierBenchmark {
     return mobilePixelRatioFromFrameTimes(this.samples);
   }
 
-  result(): QualityTier | null {
+  result(floor: QualityTier = 'mobile'): QualityTier | null {
     if (this.samples.length < 20) return null;
-    return tierFromFrameTimes(this.samples, this.measured);
+    return tierFromFrameTimes(this.samples, this.measured, floor);
   }
 }
 

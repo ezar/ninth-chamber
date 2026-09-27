@@ -150,6 +150,19 @@ describe('settings migration', () => {
     expect(loadSettings(memoryStorage(v1({ qualitySource: 'user' }))).quality).toBe('mobile');
   });
 
+  it('measures again a computer an older build lowered to mobile by itself', () => {
+    const stored = {
+      [SETTINGS_KEY]: JSON.stringify({ quality: 'mobile', qualitySource: 'auto', version: 2 }),
+    };
+    expect(loadSettings(memoryStorage(stored), defaultSettings(), true).quality).toBeNull();
+    // A phone keeps its measured mobile tier, and a computer keeps one the player chose.
+    expect(loadSettings(memoryStorage(stored), defaultSettings(), false).quality).toBe('mobile');
+    const chosen = {
+      [SETTINGS_KEY]: JSON.stringify({ quality: 'mobile', qualitySource: 'user', version: 2 }),
+    };
+    expect(loadSettings(memoryStorage(chosen), defaultSettings(), true).quality).toBe('mobile');
+  });
+
   it('does not migrate twice', () => {
     const migrated = migrateSettings({ quality: 'mobile', qualitySource: 'auto', version: 2 });
     expect(migrated.quality).toBe('mobile');

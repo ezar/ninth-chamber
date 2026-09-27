@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.4 follow-up (2026-09-27): computers no longer end up on the mobile tier
+
+The owner's PC was on the mobile tier without anyone choosing it. The first-run benchmark could drop two tiers at once from a slow start (shaders still compiling), and dynamic resolution at its floor lowered the tier again; both were saved for good.
+
+- **The benchmark drops one tier at most** and measures only after a 2 s warm-up of real frames (stalls over 0.25 s never count as warm-up, and a throttled tab still gives up).
+- **Computers stop at medium**: neither the benchmark nor dynamic resolution takes a desktop below medium by itself (`autoFloor` in `src/render/quality.ts`). Phones and touch-only screens can still go to mobile, and anyone can pick mobile in Options.
+- **Settings layout 3**: a computer that an older build lowered to mobile automatically is measured again on the next start. A tier chosen by hand is kept.
+
 ## 0.2.4 follow-up (2026-09-27): no request for a missing jackal model
 
 - The renderer asked for `models/jackal.glb`, which was never added, and the console showed a 404 on every start. Nothing loads it now; the jackals were already built in code as the fallback. Version unchanged: the title shows the new commit.
