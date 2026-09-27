@@ -14,6 +14,7 @@ import type { World } from '../sim/world';
 import { surfaceParams, type SurfaceSet } from './materials';
 import { DOOR_MODEL_HEIGHT, dressLevel, PropLibrary, type PropModel } from './prop-models';
 import { cracked } from './textures';
+import { torchModel } from './torch';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
 
@@ -50,6 +51,8 @@ export class Props {
   /** Baked models once loaded (see prop-models.ts); null while the stand-ins show. */
   private lib: PropLibrary | null = null;
   private readonly brazierViews: THREE.Group[] = [];
+  /** Braziers the level leaves cold: no flame, no light, dark coals. */
+  private readonly coldViews = new Set<THREE.Group>();
   private coals: THREE.MeshStandardMaterial | null = null;
 
   constructor(
@@ -69,6 +72,10 @@ export class Props {
       b.position.set(center(cx), y, center(cz));
       this.group.add(b);
       this.brazierViews.push(b);
+      if (!e.lit) {
+        this.coldViews.add(b);
+        continue;
+      }
       const firePos = new THREE.Vector3(center(cx), y + 1.25, center(cz));
       this.fires.push({ pos: firePos, phase: this.fires.length * 1.7 });
       for (let k = 0; k < 4; k++) {
@@ -127,11 +134,21 @@ export class Props {
   private useModels(lib: PropLibrary): void {
     this.lib = lib;
     this.coals = lib.material('brazier', 'coals');
+    let cold: THREE.MeshStandardMaterial | null = null;
     for (const b of this.brazierViews) {
       const m = lib.instance('brazier');
       if (!m) break;
       b.clear();
       b.add(m);
+      if (!this.coldViews.has(b)) continue;
+      // Dead ash in a cold bowl: the coals' material without its glow.
+      m.traverse((o) => {
+        if (!(o instanceof THREE.Mesh) || o.material !== this.coals || !this.coals) return;
+        cold ??= this.coals.clone();
+        cold.emissiveIntensity = 0;
+        cold.color.set('#2a2622');
+        o.material = cold;
+      });
     }
     for (const [id, holder] of this.actorViews) {
       const a = this.actors.get(id);
@@ -272,6 +289,14 @@ export class Props {
       case 'medkit':
         obj = medkit();
         break;
+      case 'torch': {
+        // Lying on the floor, the head towards +X raised on its binding (see TorchView.placeOnFloor).
+        const t = torchModel().group;
+        t.rotation.z = -Math.PI / 2 + 0.12;
+        t.position.set(-0.08, 0.06, 0);
+        obj = new THREE.Group().add(t);
+        break;
+      }
       case 'note': {
         const e = this.level.entities.find((x) => x.id === a.id);
         if (e?.type !== 'note') return null;
@@ -290,6 +315,7 @@ export class Props {
         break;
       }
       case 'zone':
+      case 'brazier':
         return null;
     }
     if (!obj) return null;
@@ -355,6 +381,7 @@ export class Props {
           break;
         case 'secret':
         case 'medkit':
+        case 'torch':
           v.visible = !a.taken;
           v.position.set(center(a.cx), floorY + (a.kind === 'secret' ? 0.05 : 0), center(a.cz));
           if (a.kind === 'secret') v.rotation.y = time * 0.6;
@@ -432,7 +459,8 @@ export class Props {
   }
 }
 
-function flameTexture(): THREE.Texture {
+/** A flame's soft teardrop, for additive sprites (braziers and the torch). */
+export function flameTexture(): THREE.Texture {
   const c = document.createElement('canvas');
   c.width = 64;
   c.height = 128;

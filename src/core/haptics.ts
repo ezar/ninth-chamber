@@ -150,6 +150,10 @@ export class Haptics {
       case 'pickup':
         this.play({ phone: [15, 60, 15], strong: 0.1, weak: 0.4, ms: 110 });
         break;
+      case 'torch.lit':
+        // A small tick as the pitch catches.
+        this.play({ phone: [12], strong: 0, weak: 0.3, ms: 60 });
+        break;
       case 'relic.taken':
         this.play({ phone: [40, 80, 40, 80, 160], strong: 0.6, weak: 0.6, ms: 900 });
         break;

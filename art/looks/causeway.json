@@ -1,11 +1,12 @@
 {
   "id": "causeway",
-  "background": "#07090b",
+  "background": "#020203",
   "exposure": 1.0,
-  "hemi": { "sky": "#44525e", "ground": "#0b0e11", "intensity": 0.14 },
-  "fog": { "color": "#2e3a44", "density": 0.04 },
+  "hemi": { "sky": "#1c2228", "ground": "#050607", "intensity": 0.015 },
+  "fog": { "color": "#050607", "density": 0.06 },
   "sun": null,
-  "fire": { "color": "#ff8a3d", "intensity": 52, "flicker": 0.3 },
+  "fire": { "color": "#ff8a3d", "intensity": 20, "flicker": 0.3 },
   "bloom": { "strength": 0.7, "radius": 0.5, "threshold": 0.76 },
-  "grade": { "tint": "#dfe2e6", "saturation": 0.9, "contrast": 1.2, "vignette": 0.5 }
+  "grade": { "tint": "#e6dccc", "saturation": 0.85, "contrast": 1.25, "vignette": 0.6 },
+  "lightmap": 0.06
 }

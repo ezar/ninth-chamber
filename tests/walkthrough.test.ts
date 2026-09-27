@@ -115,8 +115,14 @@ function playAntechamber(): Bot {
   bot.standingJump('N');
   bot.goTo(-4, -25, { walk: true });
 
-  // The terrace high above the Hall of Weights, to the doorway.
+  // The terrace high above the Hall of Weights: a torch by the last brazier, lit there for the dark causeway.
   bot.goTo(-2, -25, { walk: true });
+  bot.goTo(6, -25);
+  bot.action();
+  expect(w.state.player.torch).toMatchObject({ has: true, lit: false });
+  bot.goTo(7, -25);
+  bot.action();
+  expect(w.state.signals.torchLit).toBe(true);
   bot.goTo(9, -25);
   bot.goTo(9, -26, { walk: true });
   bot.goTo(9, -27, { walk: true });
@@ -196,6 +202,9 @@ describe('The Antechamber', () => {
     expect(w.ended).toBe(true);
     expect(w.stats.deaths).toBe(0);
     expect(w.stats.secrets).toBe(3);
+    // The torch lit the Sunken Causeway, so its carving was seen; it burned to the end.
+    expect(w.state.flags).toContain('carving_seen');
+    expect(w.state.player.torch).toMatchObject({ has: true, lit: true });
     expect([...bot.rooms].sort()).toEqual(w.level.rooms.map((r) => r.id).sort());
     // The scripted route is ~3.7 minutes of game time; people take about four times longer.
     expect(w.tick).toBeGreaterThan(12000);

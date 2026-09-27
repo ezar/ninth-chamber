@@ -11,12 +11,17 @@
  * rolls world.rng against the hit chance. With no target Nora fires ahead
  * with no effect. Nora keeps running while she shoots (the arms and torso
  * aim); standing still, she turns towards the target.
+ *
+ * While the torch fills her left hand only the right pistol is drawn and
+ * fired, every `oneHandCadence` seconds (each hand's own rate, so half the
+ * rate of both). With the torch on her belt or put away, both come back.
  */
 import { alertEnemy, clearLine, damageEnemy, enemyCenter, findEnemy, makeNoise } from '../actors/enemies';
 import { wrapAngle } from '../grid/units';
 import type { EnemyState, PlayerState } from '../state';
 import type { World } from '../world';
 import { emit, type Ctx } from './context';
+import { torchInHand } from './torch';
 import { medkits, noise, tuning, weapons } from './tuning';
 
 const ARMED_MODES: ReadonlySet<PlayerState['mode']> = new Set(['ground', 'air']);
@@ -102,8 +107,10 @@ export function stepWeapons(c: Ctx): void {
     w.cooldown = Math.max(0, w.cooldown);
     return;
   }
-  fire(c, target ?? null);
-  w.cooldown = Math.max(w.cooldown, -dt) + weapons.pistols.cadence;
+  const oneHand = torchInHand(p);
+  fire(c, target ?? null, oneHand);
+  w.cooldown =
+    Math.max(w.cooldown, -dt) + (oneHand ? weapons.pistols.oneHandCadence : weapons.pistols.cadence);
 }
 
 function draw(c: Ctx): void {
@@ -111,7 +118,7 @@ function draw(c: Ctx): void {
   w.drawn = true;
   w.busy = weapons.drawTime;
   w.cooldown = Math.max(0, w.cooldown);
-  emit(c, 'weapons.drawn');
+  emit(c, 'weapons.drawn', { pistols: torchInHand(c.p) ? 1 : 2 });
 }
 
 function holster(c: Ctx, auto: boolean): void {
@@ -122,10 +129,11 @@ function holster(c: Ctx, auto: boolean): void {
   if (c.p.mode !== 'dead') emit(c, 'weapons.holstered', { auto });
 }
 
-function fire(c: Ctx, target: EnemyState | null): void {
+function fire(c: Ctx, target: EnemyState | null, oneHand: boolean): void {
   const { p, world } = c;
   const w = p.weapon;
-  const hand = w.hand;
+  // One pistol: always the right; the left fires next once both are free again.
+  const hand = oneHand ? 1 : w.hand;
   w.hand = hand === 0 ? 1 : 0;
   world.stats.shots++;
   // Only shots at a target roll the RNG: the hit chance needs line of sight, which canTarget ensured.

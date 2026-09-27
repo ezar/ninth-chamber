@@ -7,6 +7,7 @@
 import type { SimEvent } from '../core/events';
 import { BLOCK, DIR_VEC, yawToDir } from '../sim/grid/units';
 import { blockAt, type World } from '../sim/world';
+import { brazierInReach } from '../sim/player/torch';
 import { chamberOf } from './campaign';
 import { t, type StringKey } from './i18n';
 
@@ -30,6 +31,8 @@ export class Hud {
   private readonly hurtFlash = document.createElement('div');
   private readonly weaponsButton = document.querySelector<HTMLElement>('#touch [data-button="weapons"]');
   private weaponsDrawn = false;
+  private readonly torchButton = document.querySelector<HTMLElement>('#touch [data-button="torch"]');
+  private torchShown = '';
   private healthShownFor = 0;
   private noticeTimer = 0;
   private hintTimer = 0;
@@ -140,6 +143,14 @@ export class Hud {
       if (label) label.textContent = t(this.weaponsDrawn ? 'touch.holster' : 'touch.draw');
     }
 
+    // The torch button appears once she carries one and glows while it burns in her hand.
+    const torchKey = `${p.torch.has}|${p.torch.has && p.torch.lit && !p.torch.stowed}`;
+    if (torchKey !== this.torchShown) {
+      this.torchShown = torchKey;
+      document.body.classList.toggle('has-torch', p.torch.has);
+      this.torchButton?.classList.toggle('lit', p.torch.has && p.torch.lit && !p.torch.stowed);
+    }
+
     this.noticeTimer -= dt;
     if (this.noticeTimer <= 0) this.notice.classList.remove('show');
     this.hintTimer -= dt;
@@ -166,7 +177,9 @@ export class Hud {
       if (a.kind === 'lever' && !a.used) return 'prompt.lever';
       if ((a.kind === 'secret' || a.kind === 'relic') && !a.taken) return 'prompt.pickup';
       if (a.kind === 'note') return 'prompt.read';
+      if (a.kind === 'torch' && !a.taken) return 'prompt.pickup';
     }
+    if (brazierInReach(world)) return 'prompt.lightTorch';
     const v = DIR_VEC[yawToDir(p.yaw)];
     const b = blockAt(world, cx + v.x, cz + v.z);
     if (b && Math.abs(b.y - p.pos.y) < 0.05) {

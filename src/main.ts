@@ -26,6 +26,7 @@ import { GameRenderer, type PlayerPose } from './render/scene';
 import { Level } from './sim/grid/level';
 import type { NoteStyle } from './sim/grid/schema';
 import { BLOCK } from './sim/grid/units';
+import { torchInHand } from './sim/player/torch';
 import { tuning } from './sim/player/tuning';
 import { createWorld, respawn, stepWorld, type World } from './sim/world';
 import { chamberOf } from './ui/campaign';
@@ -428,6 +429,8 @@ async function main(): Promise<void> {
     audio.ui('confirm');
     world = createWorld(level, 1);
     renderer.resetWorld(world);
+    // A fresh world carries no torch: its crackle stops.
+    audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
     prev = pose();
     hud.reset();
     endScreen.hide();
@@ -442,6 +445,8 @@ async function main(): Promise<void> {
     document.body.classList.remove('paused');
     world = createWorld(level, 1);
     renderer.resetWorld(world);
+    // A fresh world carries no torch: its crackle stops.
+    audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
     prev = pose();
     shots = entranceShots(level, world.state.player.pos, world.state.player.yaw);
     hud.reset();
@@ -528,6 +533,11 @@ async function main(): Promise<void> {
   const onEvent = (e: SimEvent): void => {
     const p = world.state.player.pos;
     audio.onEvent(e, soundAt(e));
+    if (e.type === 'player.respawned') {
+      // The checkpoint may bring back a torch in another state: the crackle follows it.
+      const t = world.state.player.torch;
+      audio.onEvent({ type: 'torch.state', tick: e.tick, lit: t.has && t.lit, hand: !t.stowed }, p);
+    }
     hud.onEvent(e, world);
     renderer.combat.onEvent(e, world);
     if (e.type === 'camera.focus') {
@@ -675,6 +685,7 @@ async function main(): Promise<void> {
         vy: p.vel.y,
         climbT: p.move ? Math.min(1, p.modeTime / p.move.duration) : 0,
         health: p.health,
+        torch: torchInHand(p) ? 1 : 0,
         ...renderer.combat.aimPose(world),
       },
       view.eye,

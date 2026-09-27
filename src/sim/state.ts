@@ -43,6 +43,21 @@ export interface WeaponState {
   hand: 0 | 1;
 }
 
+/**
+ * The torch Nora carries (owner's request). In her left hand it lights the way
+ * and leaves only the right pistol free; on her belt it keeps burning.
+ */
+export interface TorchState {
+  /** She carries a torch. */
+  has: boolean;
+  /** Its flame burns. */
+  lit: boolean;
+  /** On her belt: put away, or stowed for a move that needs both hands. */
+  stowed: boolean;
+  /** Put away with the torch button: it stays on her belt until taken out again. */
+  away: boolean;
+}
+
 export interface PlayerState {
   pos: Vec3;
   vel: Vec3;
@@ -73,6 +88,7 @@ export interface PlayerState {
   /** Direction of the current interaction. */
   dir: Dir | null;
   weapon: WeaponState;
+  torch: TorchState;
 }
 
 export interface BlockActor {
@@ -123,7 +139,8 @@ export interface PlateActor {
 }
 
 export interface PickupActor {
-  kind: 'secret' | 'relic' | 'medkit';
+  /** A torch's variant is 'lit' or 'unlit'. */
+  kind: 'secret' | 'relic' | 'medkit' | 'torch';
   id: string;
   cx: number;
   cz: number;
@@ -141,6 +158,17 @@ export interface ZoneActor {
   inside: boolean;
 }
 
+/** A fire bowl: a burning one lights a carried torch (Action next to it). */
+export interface BrazierActor {
+  kind: 'brazier';
+  id: string;
+  cx: number;
+  cz: number;
+  /** Floor height under it (m). */
+  y: number;
+  lit: boolean;
+}
+
 /** A journal note: read with Action and never consumed, so it can be read again (see Stats.notes). */
 export interface NoteActor {
   kind: 'note';
@@ -149,7 +177,8 @@ export interface NoteActor {
   cz: number;
 }
 
-export type Actor = BlockActor | DoorActor | LeverActor | PlateActor | PickupActor | ZoneActor | NoteActor;
+export type Actor =
+  BlockActor | DoorActor | LeverActor | PlateActor | PickupActor | ZoneActor | NoteActor | BrazierActor;
 
 /** Enemy behaviour states (spec §7 "Comportamiento"). */
 export type EnemyMode = 'idle' | 'alert' | 'chase' | 'attack' | 'hurt' | 'flee' | 'dead';

@@ -27,6 +27,7 @@ import {
   type ResolutionMode,
   type TextureFiltering,
 } from './quality';
+import { TorchView } from './torch';
 
 export interface PlayerPose {
   pos: Vec3;
@@ -81,6 +82,8 @@ export class GameRenderer {
   private readonly nora = new NoraRig();
   /** Jackals, pistols, muzzle flashes and the target marker. */
   readonly combat = new CombatView(`${import.meta.env.BASE_URL}models/jackal.glb`);
+  /** The torch Nora carries, with its own light (not one of the fire pool's). */
+  private readonly torch: TorchView;
   private props: Props | null = null;
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
@@ -149,6 +152,9 @@ export class GameRenderer {
       casters: this.fireCasters.length,
     });
     this.scene.add(this.nora.root, this.combat.group);
+    // Torch shadows on the high tier only; castShadow is fixed from the tier the session starts on.
+    this.torch = new TorchView(profile.tier === 'high');
+    this.scene.add(this.torch.group);
     // A soft fill that follows Nora so she reads against backlight (a common
     // character-lighting cheat); short range, so it barely touches the set.
     this.characterFill.position.set(0.6, 2.2, 1.6);
@@ -257,6 +263,7 @@ export class GameRenderer {
     sun.autoUpdate = p.sun.live;
     this.sunShadowAge = Infinity;
     this.contactShadow.visible = p.contactShadow;
+    this.torch.setQuality(p);
 
     this.configurePost();
     // Volumetric shafts replace the modelled cones; the dust stays.
@@ -437,6 +444,8 @@ export class GameRenderer {
         mat.lightMapIntensity = intensity;
         mat.needsUpdate = true;
       }
+      this.lightmapIntensity = intensity;
+      this.lightmapScale = 1;
       this.hasLightmap = true;
     } catch {
       this.hasLightmap = false;
@@ -446,6 +455,9 @@ export class GameRenderer {
   /** Artistic gain on the baked bounce light. */
   static LIGHTMAP_GAIN = 1;
   private hasLightmap = false;
+  private lightmapIntensity = 0;
+  /** The look's scale on the baked light last applied (dark rooms dim what was baked with their fires). */
+  private lightmapScale = 1;
 
   /** A soft volumetric-looking beam and dust under each skylight. */
   private buildShafts(skylights: { x: number; z: number; ceil: number }[], rooms: Set<string>): void {
@@ -599,6 +611,7 @@ export class GameRenderer {
     this.nora.root.rotation.y = prev.yaw + dy * alpha;
     this.nora.update(pose, dt);
     this.combat.update(world, this.nora, alpha, dt);
+    this.torch.update(world, this.nora, this.time, dt);
     this.nora.setOpacity(Math.min(1, Math.max(0.15, (cameraDistance - 0.6) / 0.8)));
 
     // Room look.
@@ -707,6 +720,11 @@ export class GameRenderer {
     this.hemi.color.copy(l.hemiSky);
     this.hemi.groundColor.copy(l.hemiGround);
     this.hemi.intensity = l.hemiIntensity * (this.hasLightmap ? 0.6 : 1);
+    if (this.hasLightmap && Math.abs(l.lightmap - this.lightmapScale) > 1e-3) {
+      this.lightmapScale = l.lightmap;
+      for (const m of this.levelMeshes)
+        (m.material as THREE.MeshStandardMaterial).lightMapIntensity = this.lightmapIntensity * l.lightmap;
+    }
     this.sun.color.copy(l.sunColor);
     this.sun.intensity = l.sunIntensity;
     const t = this.sun.target.position;

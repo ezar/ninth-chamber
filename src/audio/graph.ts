@@ -886,6 +886,19 @@ export class AudioGraph {
         if (target && e.hit !== true) this.play('sfx', target, (s, t) => sfx.ricochet(s, t + 0.02));
         break;
       }
+      case 'torch.lit':
+      case 'torch.drawn':
+      case 'torch.stowed':
+      case 'torch.out':
+      case 'torch.state': {
+        // A whoosh as the pitch catches or the torch swings; a hiss as it dies. The crackle follows.
+        const lit = e.type === 'torch.lit' || (e.type !== 'torch.out' && e.lit === true);
+        const inHand =
+          e.type === 'torch.lit' || e.type === 'torch.drawn' || (e.type === 'torch.state' && e.hand === true);
+        if (e.type !== 'torch.state') this.play('sfx', at, (s, t) => sfx.torch(s, t, e.type));
+        this.emitters.torch(lit ? (inHand ? 1 : 0.5) : 0);
+        break;
+      }
       case 'weapons.drawn':
       case 'weapons.holstered': {
         const drawing = e.type === 'weapons.drawn';

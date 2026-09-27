@@ -13,5 +13,6 @@ One JSON file per key room (`<room>.json`), loaded as-is by the renderer. The va
 | `fire`       | `{ color, intensity, flicker }`             | Template for fire PointLights (decay 2). `intensity` is in candela (braziers 20–60); `flicker` is the 0–1 amplitude of the intensity noise. In `relic` it drives the Amber Heart's glow, with a slow pulse. |
 | `bloom`      | `{ strength, radius, threshold }`           | Bloom pass. Keep the threshold high so only fire and relics bloom.                                                                                                                                          |
 | `grade`      | `{ tint, saturation, contrast, vignette }`  | Final grade: multiplicative tint, saturation and contrast (1 = neutral), vignette strength 0–1.                                                                                                             |
+| `lightmap`   | number (optional, default 1)                | Scale on the baked bounce light while in this room. A room whose fires went out (the Sunken Causeway) dims what the bake still holds from them, without a re-bake.                                          |
 
 All colors are sRGB hex strings; every number is a plain JSON number.

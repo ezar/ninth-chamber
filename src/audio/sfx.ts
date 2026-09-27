@@ -485,3 +485,23 @@ export function medkit(s: Strip, t: number, large: boolean): void {
 export function denied(s: Strip, t: number): void {
   s.tone(t, { wave: 'triangle', f: 220, f2: 180, gain: 0.04, a: 0.002, d: 0.08 });
 }
+
+/** The torch: a whoosh as it catches (torch.lit), a swing to or from the belt, a wet hiss as it dies. */
+export function torch(s: Strip, t: number, what: string): void {
+  if (what === 'torch.out') {
+    s.noiseHit(t, { type: 'highpass', f: 3500, f2: 1800, gain: 0.07, a: 0.01, hold: 0.15, d: 0.5 });
+    return;
+  }
+  const ignite = what === 'torch.lit';
+  s.noiseHit(t, {
+    buf: 'brown',
+    type: 'bandpass',
+    f: ignite ? 220 : 380,
+    f2: ignite ? 900 : 700,
+    q: 0.8,
+    gain: ignite ? 0.22 : 0.08,
+    a: ignite ? 0.05 : 0.03,
+    d: ignite ? 0.45 : 0.22,
+  });
+  if (ignite) s.debris(t + 0.05, t + 0.4, 6, 0.03, 2000, 5000);
+}

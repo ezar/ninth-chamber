@@ -3,6 +3,7 @@
  * and flags. Rules fire on the rising edge of their condition.
  */
 import type { RuleFile } from '../grid/schema';
+import { extinguishTorch } from '../player/torch';
 import { findActor, resetBlock, saveCheckpoint, type World } from '../world';
 import { evalExpr, parseExpr, parseSeconds, type Expr } from './expr';
 
@@ -97,6 +98,9 @@ function runAction(world: World, verb: string, args: string[]): void {
     case 'level.end':
       world.ended = true;
       world.events.emit({ type: 'level.end', tick });
+      return;
+    case 'torch.extinguish':
+      extinguishTorch(world, 'rule');
       return;
   }
 

@@ -4,6 +4,7 @@ import { BLOCK, DIR_VEC } from '../../grid/units';
 import { setSignal } from '../../logic/rules';
 import { blockAt, findActor, floorWith, respawn } from '../../world';
 import { emit, setMode, wishAlong, type Ctx } from '../context';
+import { pickTorch } from '../torch';
 import { mechanics, tuning } from '../tuning';
 
 /** Holding a block, waiting for push or pull input. */
@@ -130,7 +131,7 @@ export function lever(c: Ctx): void {
   }
 }
 
-/** Crouching to pick up a secret or the relic, or to read a journal note. */
+/** Crouching to pick up a secret, the relic or a torch, or to read a journal note. */
 export function pickup(c: Ctx): void {
   const { p, world } = c;
   const a = world.state.actors.find((x) => x.id === p.target);
@@ -147,6 +148,11 @@ export function pickup(c: Ctx): void {
     } else {
       emit(c, 'relic.taken', { id: a.id });
     }
+  }
+  if (a?.kind === 'torch' && !a.taken && p.modeTime >= tuning.pickupTime / 2) {
+    a.taken = true;
+    setSignal(world, `${a.id}.taken`, true);
+    pickTorch(c, a);
   }
   if (a?.kind === 'note' && p.modeTime >= tuning.pickupTime / 2) readNote(c, a.id);
   if (p.modeTime >= tuning.pickupTime) release(c);

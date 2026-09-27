@@ -232,11 +232,12 @@ const _qa = new THREE.Quaternion();
 const _qb = new THREE.Quaternion();
 const _axisX = new THREE.Vector3(1, 0, 0);
 const _axisY = new THREE.Vector3(0, 1, 0);
-function lowReady(p: AnimPose, w: number): void {
-  for (const [s, sign] of [
-    ['L', -1],
-    ['R', 1],
+function lowReady(p: AnimPose, wl: number, wr: number): void {
+  for (const [s, sign, w] of [
+    ['L', -1, wl],
+    ['R', 1, wr],
   ] as const) {
+    if (w <= 1e-3) continue;
     _qa.setFromAxisAngle(_axisX, READY_SHOULDER * w);
     p.q(JOINT_INDEX[`upperArm_${s}`]).premultiply(_qa);
     // Toe-in turns the left forearm towards +X and the right one towards -X.
@@ -245,6 +246,36 @@ function lowReady(p: AnimPose, w: number): void {
     p.q(JOINT_INDEX[`lowerArm_${s}`]).premultiply(_qa);
     p.q(JOINT_INDEX[`hand_${s}`]).premultiply(_qa);
   }
+}
+
+/**
+ * Holding the torch in the left hand: the upper arm raised forward about 30°
+ * and a little out, the elbow bent so the torch stands up ahead of her
+ * shoulder, lighting the way without covering her face. Like lowReady, the
+ * rotations are pre-multiplied in model space, only for the left arm; most of
+ * the clip's arm swing is taken out first so the flame rides steadily over
+ * the walk and run clips.
+ */
+const HOLD_LIFT = 0.52;
+const HOLD_OUT = 0.22;
+const HOLD_ELBOW = 1.3;
+/** Share of the clip's own left-arm motion removed while holding the torch. */
+const HOLD_STEADY = 0.75;
+const _axisZ = new THREE.Vector3(0, 0, 1);
+const _rest = new THREE.Quaternion();
+function holdTorch(p: AnimPose, w: number): void {
+  // Out to her left: the left arm hangs at -X, so a negative turn about Z.
+  _qb.setFromAxisAngle(_axisZ, -HOLD_OUT * w);
+  const upper = p.q(JOINT_INDEX.upperArm_L).slerp(_rest, HOLD_STEADY * w);
+  _qa.setFromAxisAngle(_axisX, HOLD_LIFT * w).premultiply(_qb);
+  upper.premultiply(_qa);
+  _qa.setFromAxisAngle(_axisX, (HOLD_LIFT + HOLD_ELBOW) * w).premultiply(_qb);
+  p.q(JOINT_INDEX.lowerArm_L)
+    .slerp(_rest, HOLD_STEADY * w)
+    .premultiply(_qa);
+  p.q(JOINT_INDEX.hand_L)
+    .slerp(_rest, HOLD_STEADY * w)
+    .premultiply(_qa);
 }
 
 export class NoraRig {
@@ -345,6 +376,7 @@ export class NoraRig {
       const armed = upright ? pose.weapons * pose.aiming : 0;
       const ready = upright ? pose.weapons * (1 - pose.aiming) : 0;
       this.readyW += (ready - this.readyW) * (1 - Math.exp(-Math.max(0, dt) * 10));
+      this.torchW += (pose.torch - this.torchW) * (1 - Math.exp(-Math.max(0, dt) * 9));
       this.aimW += (armed - this.aimW) * (1 - Math.exp(-Math.max(0, dt) * 14));
       if (this.aimW > 1e-3)
         this.animator.setProceduralOverride(Math.max(this.aimW, this.override.weight), AIM_JOINTS);
@@ -352,13 +384,17 @@ export class NoraRig {
       const root = this.driver.root;
       this.rootPos.copy(root.position);
       this.animator.update(pose, dt, this.procPose, this.rootPos, root.rotation.y, this.shown);
-      if (this.readyW > 1e-3) lowReady(this.shown, this.readyW);
+      // With the torch in her left hand only the right arm holds a pistol at low ready.
+      if (this.readyW > 1e-3) lowReady(this.shown, this.readyW * (1 - this.torchW), this.readyW);
+      if (this.torchW > 1e-3) holdTorch(this.shown, this.torchW);
       skin.apply(this.shown);
     } else skin.apply(this.procPose);
   }
 
   /** Weight of the low-ready arms layer (pistols drawn, no target). */
   private readyW = 0;
+  /** Weight of the hold-torch left-arm layer. */
+  private torchW = 0;
 
   /** Last opacity set (the camera fades her when it closes in), for things she holds. */
   opacity = 1;

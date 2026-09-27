@@ -3,6 +3,7 @@ import { distanceToEdge, supportHeight, sweep } from '../../grid/collision';
 import { BLOCK, DIR_VEC, OPPOSITE, cellCenter, yawToDir, yawVec } from '../../grid/units';
 import { blockAt } from '../../world';
 import { die, emit, faceDir, setMode, turnTowardsWish, wishAlong, type Ctx } from '../context';
+import { tryLightTorch } from '../torch';
 import { tuning } from '../tuning';
 import { startHang } from './hang';
 
@@ -109,7 +110,7 @@ export function jump(c: Ctx): void {
   emit(c, 'player.jumped', { kind });
 }
 
-/** Levers, pickups and journal notes in the player's sector. */
+/** Levers, pickups and journal notes in the player's sector, then a brazier to light the torch at. */
 function tryInteract(c: Ctx): boolean {
   const { p, world } = c;
   const cx = Math.floor(p.pos.x / BLOCK);
@@ -123,14 +124,17 @@ function tryInteract(c: Ctx): boolean {
       setMode(p, 'lever');
       return true;
     }
-    if (((a.kind === 'secret' || a.kind === 'relic') && !a.taken) || a.kind === 'note') {
+    if (
+      ((a.kind === 'secret' || a.kind === 'relic' || a.kind === 'torch') && !a.taken) ||
+      a.kind === 'note'
+    ) {
       p.vel = { x: 0, y: 0, z: 0 };
       p.target = a.id;
       setMode(p, 'pickup');
       return true;
     }
   }
-  return false;
+  return tryLightTorch(c);
 }
 
 /** Grabs a block right in front of the player. */

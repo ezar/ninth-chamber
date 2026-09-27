@@ -7,6 +7,7 @@
 import * as THREE from 'three/webgpu';
 import type { SimEvent } from '../core/events';
 import { enemyCenter, findEnemy } from '../sim/actors/enemies';
+import { torchInHand } from '../sim/player/torch';
 import { weapons } from '../sim/player/tuning';
 import type { World } from '../sim/world';
 import { EnemyViews } from './enemies';
@@ -177,6 +178,8 @@ export class CombatView {
   /** Smoothed aiming weight, for the barrels' direction. */
   private aimW = 0;
   private drawn = 0;
+  /** 1 while her left hand is free for a pistol, 0 while it holds the torch (smoothed). */
+  private leftFree = 1;
   private markerFor: string | null = null;
   private time = 0;
 
@@ -393,13 +396,15 @@ export class CombatView {
     // Follows Nora's aiming layer (nora.ts smooths it at the same rate).
     const aiming = armed ? this.aimPose(world).aiming : 0;
     this.aimW += (aiming - this.aimW) * (1 - Math.exp(-dt * 14));
+    // The torch fills her left hand: that pistol stays in its holster.
+    this.leftFree += ((torchInHand(p) ? 0 : 1) - this.leftFree) * (1 - Math.exp(-dt * 18));
     this.pistols.forEach((pistol, i) => {
       const side = i as 0 | 1;
       const g = pistol.group;
       // Holsters ride on her thighs; the pistols sit in them until drawn.
       const holster = this.holsters[side];
       const holstered = this.placeHolster(nora, side, holster);
-      const inHand = this.drawn > 0.35;
+      const inHand = this.drawn > 0.35 && (side === 1 || this.leftFree > 0.5);
       // The pistols fade with Nora when the camera closes in, so they never float on their own.
       g.visible = nora.opacity > 0.2 && (inHand || holstered);
       if (g.visible) fadeGroup(g, nora.opacity);
@@ -438,7 +443,7 @@ export class CombatView {
         _p.crossVectors(u, _c.copy(f).negate());
         _m.makeBasis(_p, u, _c);
         g.quaternion.setFromRotationMatrix(_m);
-        g.scale.setScalar(Math.min(1, this.drawn * 1.2));
+        g.scale.setScalar(Math.min(1, this.drawn * 1.2, side === 0 ? this.leftFree * 1.2 : 1));
       }
       pistol.flashLeft -= dt;
       pistol.flash.visible = g.visible && pistol.flashLeft > 0;

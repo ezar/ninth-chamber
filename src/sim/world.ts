@@ -14,6 +14,7 @@ import { compileRules, runLogic, type CompiledRule } from './logic/rules';
 import { createEnemies, resetEnemies, updateEnemies } from './actors/enemies';
 import { updateActors } from './actors/update';
 import { stepPlayer } from './player/controller';
+import { newTorch } from './player/torch';
 import { mechanics, tuning } from './player/tuning';
 import type { Actor, BlockActor, DoorActor, DynamicState, PlayerState, Stats } from './state';
 
@@ -79,6 +80,11 @@ function createActors(level: Level): Actor[] {
         actors.push({ kind: 'zone', id: e.id, cx, cz, w: e.size[0], h: e.size[1], inside: false });
         break;
       case 'brazier':
+        actors.push({ kind: 'brazier', id: e.id, cx, cz, y, lit: e.lit });
+        break;
+      case 'torch':
+        actors.push({ kind: 'torch', id: e.id, cx, cz, taken: false, variant: e.lit ? 'lit' : 'unlit' });
+        break;
       case 'enemy':
         break;
     }
@@ -109,6 +115,7 @@ function createPlayer(level: Level): PlayerState {
     target: null,
     dir: null,
     weapon: { drawn: false, busy: 0, cooldown: 0, target: null, hand: 1 },
+    torch: newTorch(),
   };
 }
 

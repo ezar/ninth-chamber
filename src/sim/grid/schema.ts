@@ -102,7 +102,22 @@ const entity = z.discriminatedUnion('type', [
     .strict(),
   z.object({ ...entityBase, type: z.literal('relic') }).strict(),
   z.object({ ...entityBase, type: z.literal('medkit'), size: z.enum(['small', 'large']) }).strict(),
-  z.object({ ...entityBase, type: z.literal('brazier') }).strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('brazier'),
+      /** A cold brazier gives no light and cannot light the torch. */
+      lit: z.boolean().default(true),
+    })
+    .strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('torch'),
+      /** Found burning (it can also be lit at a brazier). */
+      lit: z.boolean().default(false),
+    })
+    .strict(),
   z
     .object({
       ...entityBase,

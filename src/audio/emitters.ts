@@ -104,9 +104,14 @@ function fireBuffer(ctx: BaseAudioContext): AudioBuffer {
   return buf;
 }
 
+/** The carried torch's crackle, close and unpanned, relative to a brazier's. */
+const TORCH_LEVEL = 0.55;
+
 export class EmitterSet {
   private defs = new Map<string, EmitterDef>();
   private live = new Map<string, Live>();
+  /** The torch's fire loop (she carries it, so it stays with the listener); null while it is out. */
+  private torchLive: Live | null = null;
   private fire: { buffer: AudioBuffer; end: number } | null = null;
 
   constructor(
@@ -274,5 +279,32 @@ export class EmitterSet {
 
   stopAll(): void {
     for (const id of [...this.live.keys()]) this.stop(id);
+    this.torch(0);
+  }
+
+  /**
+   * The torch's crackle at `level` (1 in her hand, lower on her belt, 0 out):
+   * a brazier's fire loop, faded in and out, never cut.
+   */
+  torch(level: number): void {
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    let l = this.torchLive;
+    if (level > 0 && !l) {
+      const gain = new GainNode(ctx, { gain: 0 });
+      // A panner at the listener's side keeps the Live shape; the torch moves with her.
+      const panner = createPanner(ctx, 1.5, 1.1);
+      gain.connect(this.dest);
+      l = { def: { id: 'torch', kind: 'brazier', x: 0, y: 0, z: 0 }, panner, gain, sources: [], nodes: [] };
+      this.buildFire(l, t);
+      this.torchLive = l;
+    }
+    if (!l) return;
+    holdParam(l.gain.gain, t);
+    l.gain.gain.linearRampToValueAtTime(level * TORCH_LEVEL * 0.32, t + (level > 0 ? 0.35 : FADE));
+    if (level > 0) return;
+    this.torchLive = null;
+    this.live.set('__torch', l);
+    this.stop('__torch');
   }
 }

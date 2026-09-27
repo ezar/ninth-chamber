@@ -23,6 +23,7 @@ const SIGNALS: Record<string, string[]> = {
   secret: ['taken'],
   relic: ['taken'],
   enemy: ['dead'],
+  torch: ['taken'],
 };
 
 const ACTIONS_ON: Record<string, string[]> = { door: ['open', 'close', 'toggle'], block: ['reset'] };
@@ -104,7 +105,8 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
     }
     for (const action of rule.do) {
       const [verb = '', ...args] = action.split(/\s+/);
-      if (['flag', 'sfx', 'music', 'checkpoint', 'level.end', 'wait'].includes(verb)) continue;
+      if (['flag', 'sfx', 'music', 'checkpoint', 'level.end', 'wait', 'torch.extinguish'].includes(verb))
+        continue;
       if (verb === 'hint') {
         if (i18nKeys && args[0] && !i18nKeys.has(args[0]))
           errors.push(`rule ${i}: missing i18n key '${args[0]}'`);

@@ -124,6 +124,11 @@ export const weapons = {
     damage: 1,
     /** Time between shots (s), alternating hands. */
     cadence: 0.24,
+    /**
+     * Time between shots with only the right pistol, while the torch fills her
+     * left hand (s): each hand keeps its own rate, so the rate halves.
+     */
+    oneHandCadence: 0.48,
     /** Maximum range (m). */
     range: 16,
     /** Chance that a shot at a visible target hits. */
@@ -139,6 +144,18 @@ export const weapons = {
   aimTurnSpeed: 7,
   /** Height of Nora's chest above her feet, what enemies look at (m). */
   chestHeight: 1.2,
+};
+
+/** The torch (owner's request): lighting it and where its flame sits. */
+export const torch = {
+  /** Action lights a carried torch within this distance of a burning brazier's centre (m): from the next sector. */
+  lightReach: 2.3,
+  /** Largest height between her feet and the brazier's floor for lighting it (m). */
+  lightHeight: 1,
+  /** Flame height above her feet with the torch raised in her hand (m); water above it puts it out. */
+  handHeight: 1.6,
+  /** Flame height above her feet with the torch on her belt (m). */
+  beltHeight: 0.95,
 };
 
 /** Health restored by each medkit size (spec §7 "Salud"). */
