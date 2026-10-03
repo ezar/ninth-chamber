@@ -116,6 +116,23 @@ export interface FireState {
   phase: FirePhase;
 }
 
+export interface GlyphLockState {
+  id: string;
+  cx: number;
+  cz: number;
+  /** Glyph shown on the reading side (0..5). */
+  glyph: number;
+}
+
+export type DartPhase = 'idle' | 'armed' | 'cooldown';
+
+export interface DartState {
+  id: string;
+  phase: DartPhase;
+  /** Seconds in the current phase. */
+  time: number;
+}
+
 export interface MechanismState {
   platforms: PlatformState[];
   trapdoors: TrapdoorState[];
@@ -127,6 +144,8 @@ export interface MechanismState {
   boulders: BoulderState[];
   blades: BladeState[];
   fires: FireState[];
+  glyphs: GlyphLockState[];
+  darts: DartState[];
   /** What Nora is operating (turning a mirror, setting an item, taking one) and whether it has reacted. */
   use: { id: string; done: boolean } | null;
 }

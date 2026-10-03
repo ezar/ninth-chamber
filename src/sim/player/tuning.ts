@@ -249,6 +249,26 @@ export const traps = {
     /** Embers and a hiss before each burst (s): the readable warning. */
     warning: 0.9,
   },
+  /** The Clay Archive's darts (spec §19): a painted slab, a click, then a volley across the corridor. */
+  darts: {
+    /** From the click to the volley (s): a quick step off the line avoids it. */
+    delay: 0.45,
+    damage: 12,
+    /** Before the slab can fire again (s), once she is off it. */
+    cooldown: 1.5,
+    /** The volley flies below this height above the slab (m): she cannot jump over it. */
+    height: 2,
+  },
+};
+
+/** Mild poison from darts (spec §19): it drains health for a while but never kills; a medkit cures it. */
+export const poison = {
+  /** Seconds a dart poisons for (a second dart restarts it). */
+  duration: 8,
+  /** Health lost per second while poisoned. */
+  rate: 2.5,
+  /** It never takes her below this health. */
+  floor: 10,
 };
 
 /** The stone guardian (spec §7): immune to everything but traps and a blow to its core from above. */

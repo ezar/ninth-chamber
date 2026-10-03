@@ -105,6 +105,26 @@ export interface FireDef extends Rect {
   on: boolean;
 }
 
+export interface GlyphLockDef {
+  id: string;
+  cx: number;
+  cz: number;
+  facing: Dir;
+  glyph: number;
+  target: number;
+}
+
+export interface DartDef {
+  id: string;
+  /** The painted slab. */
+  cx: number;
+  cz: number;
+  from: Dir;
+  count: number;
+  /** Cells the volley crosses, from the wall it leaves to the one it strikes (open cells only). */
+  line: { cx: number; cz: number }[];
+}
+
 export interface MechanismDefs {
   platforms: Map<string, PlatformDef>;
   trapdoors: Map<string, TrapdoorDef>;
@@ -116,6 +136,8 @@ export interface MechanismDefs {
   boulders: Map<string, BoulderDef>;
   blades: Map<string, BladeDef>;
   fires: Map<string, FireDef>;
+  glyphs: Map<string, GlyphLockDef>;
+  darts: Map<string, DartDef>;
   /** Cells taken by mirror drums and receiver pedestals: solid for bodies. */
   solid: Set<number>;
   /** Cells covered by trapdoors (for navigation). */
@@ -148,6 +170,8 @@ function buildDefs(level: Level): MechanismDefs {
     boulders: new Map(),
     blades: new Map(),
     fires: new Map(),
+    glyphs: new Map(),
+    darts: new Map(),
     solid: new Set(),
     trapdoorCells: new Set(),
   };
@@ -239,6 +263,28 @@ function buildDefs(level: Level): MechanismDefs {
           on: e.on,
         });
         break;
+      case 'glyphlock':
+        d.glyphs.set(e.id, { id: e.id, cx, cz, facing: e.facing, glyph: e.glyph, target: e.target });
+        d.solid.add(cellKey(cx, cz));
+        break;
+      case 'darts': {
+        // Walk from the slab towards the wall the darts leave, then across to the far wall.
+        const v = DIR_VEC[e.from];
+        const open = (x: number, z: number): boolean => {
+          const s = level.sector(x, z);
+          return s !== undefined && !s.wall;
+        };
+        let sx = cx;
+        let sz = cz;
+        while (open(sx + v.x, sz + v.z)) {
+          sx += v.x;
+          sz += v.z;
+        }
+        const line: { cx: number; cz: number }[] = [];
+        for (let x = sx, z = sz; open(x, z); x -= v.x, z -= v.z) line.push({ cx: x, cz: z });
+        d.darts.set(e.id, { id: e.id, cx, cz, from: e.from, count: e.count, line });
+        break;
+      }
       default:
         break;
     }

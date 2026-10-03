@@ -118,6 +118,8 @@ export interface PlayerState {
   weapon: WeaponState;
   torch: TorchState;
   swim: SwimState;
+  /** Seconds of dart poison left (0: none). */
+  poison: number;
 }
 
 export interface BlockActor {

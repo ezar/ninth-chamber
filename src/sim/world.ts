@@ -126,6 +126,7 @@ function createPlayer(level: Level): PlayerState {
     weapon: { drawn: false, busy: 0, cooldown: 0, target: null, hand: 1 },
     torch: newTorch(),
     swim: { air: swimming.airMax, pitch: 0, roll: 0, stroke: 0, drown: 0 },
+    poison: 0,
   };
 }
 
@@ -299,6 +300,7 @@ export function respawn(world: World): void {
   p.weapon.cooldown = 0;
   p.weapon.busy = 0;
   p.swim = { air: swimming.airMax, pitch: 0, roll: 0, stroke: 0, drown: 0 };
+  p.poison = 0;
   resetEnemies(world);
   // Secrets found since the checkpoint stay found (they count once, like journal notes).
   for (const a of world.state.actors) {

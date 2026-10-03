@@ -38,6 +38,7 @@
   "hint.temple.guardian2": "It will not trust the bridge again. Draw it away, climb above it and wait for its fists to strike the stone.",
   "item.bronze_ray": "Bronze Ray",
   "prompt.mirror": "Turn the mirror",
+  "prompt.glyph": "Turn the cylinder",
   "prompt.take": "Take",
   "prompt.slot": "Set the bronze ray",
   "prompt.slotEmpty": "Something is missing here",
