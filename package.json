@@ -1,7 +1,7 @@
 {
   "name": "ninth-chamber",
   "private": true,
-  "version": "0.3.6",
+  "version": "0.4.0",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "engines": {
@@ -20,8 +20,10 @@
     "validate:levels": "tsx scripts/validate-levels.ts",
     "anim:build": "tsx scripts/anim/build-clips.ts",
     "bench": "tsx scripts/perf/bench.ts",
+    "loadtime": "tsx scripts/perf/loadtime.ts",
     "textures:ktx2": "tsx scripts/textures/ktx2.ts",
     "smoke": "tsx scripts/browser/smoke.ts",
+    "offline": "tsx scripts/browser/offline.ts",
     "shots": "tsx scripts/browser/shots.ts"
   },
   "dependencies": {

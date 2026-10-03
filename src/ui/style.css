@@ -1438,3 +1438,37 @@ body.reduce-motion #trap-cues .cue {
     opacity: 0;
   }
 }
+
+/* A new build is waiting (src/ui/service-worker.ts): on the title and in the pause menu, never over play. */
+#update-notice {
+  position: fixed;
+  z-index: 40;
+  top: max(20px, env(safe-area-inset-top));
+  right: max(24px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 14px;
+  border-left: 2px solid var(--ui-amber);
+  background: var(--ui-veil);
+  color: var(--ui-bone);
+  font: 500 13px var(--font-ui);
+}
+#update-notice button {
+  padding: 6px 12px;
+  border: 1px solid var(--ui-amber);
+  background: transparent;
+  color: var(--ui-amber);
+  font: 600 12px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+#update-notice button:hover,
+#update-notice button:focus-visible {
+  background: var(--ui-amber);
+  color: var(--ui-ink);
+}
+body:not([data-phase='title']):not(.paused) #update-notice {
+  display: none;
+}

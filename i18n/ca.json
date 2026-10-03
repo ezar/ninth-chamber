@@ -216,6 +216,7 @@
   "loading.prepare": "Preparant llums i ombres…",
   "loading.calibrate": "Ajustant els gràfics a aquest dispositiu…",
   "loading.ready": "Llest",
+  "loading.queued": "Obrint la tomba…",
   "pause.button": "Pausa",
   "pause.title": "Pausa",
   "pause.resume": "Continuar",
@@ -498,5 +499,7 @@
   "options.colourSafe": "Barres per a daltonisme",
   "options.colourSafe.hint": "Salut i verí en blau i taronja, amb ratlles per al verí.",
   "options.touchSize": "Mida dels botons tàctils",
-  "options.touchOpacity": "Opacitat dels botons tàctils"
+  "options.touchOpacity": "Opacitat dels botons tàctils",
+  "update.ready": "Hi ha una versió nova del joc.",
+  "update.apply": "Actualitza"
 }

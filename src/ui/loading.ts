@@ -1,7 +1,8 @@
 /**
  * The loading state on the start screen: a thin progress line and a short
- * line of text while textures, Nora and the shaders get ready, with the
- * start button disabled until the tomb can be entered. While the story cards
+ * line of text while textures, Nora and the shaders get ready. The start
+ * button works all along: pressed early, the game starts once the tomb is
+ * ready (spec §2: the title is usable long before the tomb has loaded). While the story cards
  * play over the reel (ui/prelude.ts) a small copy of the line sits in the
  * letterbox; both show the same progress.
  */
@@ -27,7 +28,7 @@ export class LoadingScreen {
   private done = false;
 
   constructor() {
-    this.button.disabled = true;
+    // The button works before the tomb is ready (main queues the start); it only says it is busy.
     this.button.setAttribute('aria-busy', 'true');
     document.body.classList.add('loading');
     this.render();
@@ -54,6 +55,13 @@ export class LoadingScreen {
     this.renderFill();
   }
 
+  /** Enter or Continue pressed while loading: the press is taken and the game starts when ready. */
+  queue(button: HTMLButtonElement): void {
+    button.classList.add('pressed', 'queued');
+    this.stage = 'loading.queued';
+    this.render();
+  }
+
   get isReady(): boolean {
     return this.done;
   }
@@ -64,8 +72,8 @@ export class LoadingScreen {
     this.stage = 'loading.ready';
     this.progress = 1;
     this.render();
-    this.button.disabled = false;
     this.button.removeAttribute('aria-busy');
+    for (const b of document.querySelectorAll('#start .queued')) b.classList.remove('pressed', 'queued');
     document.body.classList.remove('loading');
     this.root.classList.add('done');
     document.getElementById('prelude-loading')?.classList.add('done');

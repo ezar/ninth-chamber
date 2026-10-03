@@ -1,5 +1,31 @@
 # Changelog
 
+## Version 0.4.0 (2026-10-03): Publication
+
+The last of the three releases on the way to 0.4.0 (docs/roadmap.md). It closes Phase 3 of the spec (§2, "Beta y publicación") on everything that can be measured from here.
+
+- **The title answers before the tomb has loaded.** "Enter the tomb" and "Continue" work from the moment the game's script runs. Pressed early, they take the gesture (sound, fullscreen on phones), say "Opening the tomb…", and the game starts by itself once the first room is ready. Until then the other choices (Chambers, Options, Credits) stay hidden, because they arrive with the rest of the game.
+- **`pnpm loadtime`** (`scripts/perf/loadtime.ts`) serves the build the way GitHub Pages does (gzip for text) and opens it with an empty cache on an emulated 4G link (9 Mbps, 150 ms). On this container, headless Chromium with software WebGL:
+  - first paint (the splash and the story): 0.45 s;
+  - title usable: 1.7 s, after 0.7 MB (the budget is 4 s; CI fails above it);
+  - tomb ready: about 24 s, after 17 MB. About 16 s of that is the download; the rest is shader compilation on the CPU, which a real GPU does much faster. On a first visit the story prelude plays over that time.
+- **`pnpm offline`** (`scripts/browser/offline.ts`): loads the game, waits for the service worker to take control, cuts the network, reloads, and reaches the title and the first room with no errors. CI runs it.
+- **Update notice** (`src/ui/service-worker.ts`): when a new version has installed behind a running game, a quiet notice offers it on the title and in the pause menu, never over play. Updating saves the game, lets the new version take over and reloads into it. The worker still never takes over by itself.
+
+**Phase 3 gate** (spec §2):
+
+| Item                               | State                                                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Accessibility (§13)                | Done in 0.3.5. Not done: tutorial hints that can be turned off, and movable touch buttons (size and opacity are in).     |
+| Spanish, English and Catalan       | Done in 0.3.6.                                                                                                           |
+| Installable PWA that plays offline | Done (manifest, service worker, `pnpm offline`).                                                                         |
+| Published from the repo            | GitHub Pages, deployed from `main` on every merge (the hosting choice is in docs/roadmap.md).                            |
+| No known softlocks                 | The validator's reachability check and the block audit (0.3.6), plus "Restart from checkpoint". None known.              |
+| Initial load under 4 s on 4G       | The title answers at 1.7 s (`pnpm loadtime`, in CI).                                                                     |
+| Animation and lighting polish      | Ongoing with the owner's models (docs/art/models-brief.md).                                                              |
+| Playtests with five people (§16)   | The owner's, with the questions and the playtest log in docs/roadmap.md.                                                 |
+| Name search (§18)                  | The owner's: EUIPO and USPTO. A web search on 2026-10-03 found no game with this name; the closest is "The 9th Charnel". |
+
 ## Version 0.3.6 (2026-10-03): Catalan and softlocks
 
 The second of the three releases on the way to 0.4.0 (docs/roadmap.md).

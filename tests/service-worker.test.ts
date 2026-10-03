@@ -20,7 +20,9 @@ describe('service worker', () => {
   it('loads pages network first and never takes over a running game', () => {
     const src = serviceWorkerSource('v', []);
     expect(src).toMatch(/mode === 'navigate'[\s\S]*fetch\(request\)/);
-    expect(src).not.toContain('skipWaiting');
+    // It takes over only when the page asks (the player chose to update).
+    expect(src).toMatch(/event\.data === 'take-over'\) self\.skipWaiting\(\)/);
+    expect(src.match(/skipWaiting/g)).toHaveLength(1);
   });
 
   it('precaches the first room but leaves the music to be cached on use', () => {
