@@ -146,6 +146,8 @@ export class GameRenderer {
   private readonly flares = new FlareView();
   private readonly waterFx: WaterFx;
   private underwaterMix = 0;
+  /** The static (mobile) sun map has been drawn at least once. */
+  private sunShadowPrimed = false;
   private readonly waterSky = new THREE.Color();
   /** 0 in the air … 1 with the camera under water (fog, grade, muffled sound). */
   get underwater(): number {
@@ -901,9 +903,10 @@ export class GameRenderer {
       sun.autoUpdate = sunOn;
     } else {
       this.sunShadowAge += dt;
-      if (sunOn && this.sunShadowAge >= STATIC_SHADOW_REFRESH) {
+      if ((sunOn || !this.sunShadowPrimed) && this.sunShadowAge >= STATIC_SHADOW_REFRESH) {
         sun.needsUpdate = true;
         this.sunShadowAge = 0;
+        this.sunShadowPrimed = true;
       }
     }
     // Casters that are dark keep their last map (the scheduler moves them only while dark).

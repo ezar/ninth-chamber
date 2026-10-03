@@ -178,6 +178,79 @@ export class ArchiveView {
     this.dartGeo.rotateX(Math.PI / 2);
     this.buildLocks(stone);
     this.buildDarts();
+    this.buildTablets();
+  }
+
+  /**
+   * "Ten thousand tablets" (spec §19): rows of clay tablets standing in niches
+   * along the walls of the Archive's rooms, one instanced mesh. Walls behind
+   * an entity (a lever, a note, a door) are left bare.
+   */
+  private buildTablets(): void {
+    const rooms = new Set(
+      this.level.rooms
+        .filter((r) => r.look?.startsWith('archive_') && !['archive_shaft', 'archive_canal'].includes(r.look))
+        .map((r) => r.id),
+    );
+    if (rooms.size === 0) return;
+    const busy = new Set(this.level.entities.map((e) => `${e.at[0]},${e.at[1]}`));
+    const faces: { x: number; z: number; y: number; yaw: number }[] = [];
+    for (const s of this.level.allSectors()) {
+      if (s.wall || !rooms.has(s.room) || busy.has(`${s.cx},${s.cz}`)) continue;
+      const floor = Math.max(...s.floor);
+      for (const d of ['N', 'E', 'S', 'W'] as const) {
+        const v = DIR_VEC[d];
+        const n = this.level.sector(s.cx + v.x, s.cz + v.z);
+        if (n && !n.wall) continue;
+        faces.push({
+          x: center(s.cx) + v.x * (BLOCK / 2 - 0.1),
+          z: center(s.cz) + v.z * (BLOCK / 2 - 0.1),
+          y: floor,
+          yaw: DIR_YAW[d],
+        });
+      }
+    }
+    const rows = [0.9, 1.6, 2.3];
+    const per = 7;
+    const count = faces.length * rows.length * per;
+    if (count === 0) return;
+    const geo = new THREE.BoxGeometry(0.15, 0.21, 0.04);
+    const mat = new THREE.MeshStandardMaterial({ color: '#8e5030', roughness: 0.9 });
+    const ledgeGeo = new THREE.BoxGeometry(BLOCK - 0.1, 0.05, 0.2);
+    const ledgeMat = new THREE.MeshStandardMaterial({ color: '#6a3a22', roughness: 0.95 });
+    this.disposables.push(geo, mat, ledgeGeo, ledgeMat);
+    const tablets = new THREE.InstancedMesh(geo, mat, count);
+    const ledges = new THREE.InstancedMesh(ledgeGeo, ledgeMat, faces.length * rows.length);
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const scale = new THREE.Vector3();
+    const pos = new THREE.Vector3();
+    let t = 0;
+    let l = 0;
+    faces.forEach((f, fi) => {
+      for (const [ri, ry] of rows.entries()) {
+        q.setFromEuler(e.set(0, f.yaw, 0));
+        m.compose(pos.set(f.x, f.y + ry - 0.13, f.z), q, scale.set(1, 1, 1));
+        ledges.setMatrixAt(l++, m);
+        for (let i = 0; i < per; i++) {
+          // Deterministic jitter: a slight lean and a ragged height, so the rows read as handmade.
+          const seed = Math.sin((fi * 131 + ri * 17 + i * 7) * 12.9898) * 43758.5453;
+          const j = seed - Math.floor(seed);
+          if (j < 0.08) continue; // a gap where a tablet was taken
+          const along = -0.72 + i * 0.24;
+          const ax = Math.cos(f.yaw) * along;
+          const az = -Math.sin(f.yaw) * along;
+          q.setFromEuler(e.set((j - 0.5) * 0.18, f.yaw, (j - 0.5) * 0.12));
+          m.compose(pos.set(f.x + ax, f.y + ry, f.z + az), q, scale.set(1, 0.85 + j * 0.3, 1));
+          tablets.setMatrixAt(t++, m);
+        }
+      }
+    });
+    tablets.count = t;
+    tablets.receiveShadow = true;
+    ledges.receiveShadow = true;
+    this.group.add(tablets, ledges);
   }
 
   /** Whether the level has any of the Archive's mechanisms. */

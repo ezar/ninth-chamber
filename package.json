@@ -20,7 +20,9 @@
     "validate:levels": "tsx scripts/validate-levels.ts",
     "anim:build": "tsx scripts/anim/build-clips.ts",
     "bench": "tsx scripts/perf/bench.ts",
-    "textures:ktx2": "tsx scripts/textures/ktx2.ts"
+    "textures:ktx2": "tsx scripts/textures/ktx2.ts",
+    "smoke": "tsx scripts/browser/smoke.ts",
+    "shots": "tsx scripts/browser/shots.ts"
   },
   "dependencies": {
     "three": "^0.186.1",

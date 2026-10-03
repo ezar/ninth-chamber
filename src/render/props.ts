@@ -27,7 +27,11 @@ const center = (c: number): number => c * BLOCK + BLOCK / 2;
  */
 const RELIC_TINTS: Readonly<Record<string, { color: string; emissive: string; light: string }>> = {
   cisterns: { color: '#bfeee6', emissive: '#46d0c4', light: '#7ee6dc' },
+  clay_archive: { color: '#b4683e', emissive: '#ff6a2a', light: '#ff9a5a' },
 };
+
+/** Chambers whose relic is a tablet of fired clay rather than a gem in a cage. */
+const TABLET_RELICS: ReadonlySet<string> = new Set(['clay_archive']);
 
 /** Tints a relic gem material for its chamber (in place). */
 function tintRelic(m: THREE.MeshStandardMaterial, levelId: string): void {
@@ -85,6 +89,10 @@ export class Props {
     fire: number;
   }[] = [];
   private relicMesh: THREE.Mesh | null = null;
+  /** Pushable blocks are drawn as shelves of tablets (the Clay Archive, spec §19). */
+  private get shelves(): boolean {
+    return this.level.rooms.some((r) => r.look?.startsWith('archive_'));
+  }
   /** Emissive gain of the current relic view (the baked gem needs more than the stand-in). */
   private relicGain = 1;
   private relicBase = new THREE.Vector3();
@@ -219,6 +227,8 @@ export class Props {
     let m: THREE.Object3D | null = null;
     switch (a.kind) {
       case 'block':
+        // The Archive's shelves keep their own look (no baked model yet).
+        if (this.shelves) break;
         m = lib.instance('block');
         m?.scale.set((BLOCK - 0.03) / BLOCK, 1, (BLOCK - 0.03) / BLOCK);
         break;
@@ -242,6 +252,7 @@ export class Props {
         break;
       }
       case 'relic': {
+        if (TABLET_RELICS.has(this.level.id)) break;
         m = lib.instance('relic');
         const gem = m?.getObjectByName('gem');
         if (m && gem instanceof THREE.Mesh && gem.material instanceof THREE.MeshStandardMaterial) {
@@ -317,7 +328,7 @@ export class Props {
     let obj: THREE.Object3D | null = null;
     switch (a.kind) {
       case 'block':
-        obj = pushBlock(this.mats);
+        obj = this.shelves ? shelfBlock(this.mats) : pushBlock(this.mats);
         break;
       case 'door':
         obj = door(this.mats, a.height);
@@ -333,6 +344,12 @@ export class Props {
         obj = idol(a.variant, this.mats);
         break;
       case 'relic': {
+        if (TABLET_RELICS.has(this.level.id)) {
+          const t = nameTablet();
+          this.relicMesh = t.glow;
+          obj = t.group;
+          break;
+        }
         const r = relic();
         tintRelic(r.material, this.level.id);
         this.relicMesh = r;
@@ -726,6 +743,86 @@ function relic(): THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial> {
   const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), mat);
   mesh.scale.set(1, 1.3, 1);
   return mesh;
+}
+
+/**
+ * A shelf cut loose from the rock, full of clay tablets (the Clay Archive):
+ * pushed like a block. Three boards between two posts, the tablets one
+ * instanced mesh leaning in rows.
+ */
+function shelfBlock(m: PropMaterials): THREE.Group {
+  const g = new THREE.Group();
+  const stone = new THREE.MeshStandardMaterial({ ...surfaceParams(m.block), color: '#c98e66' });
+  const W = BLOCK - 0.06;
+  const H = mechanics.blockHeight - 0.02;
+  const back = new THREE.Mesh(new THREE.BoxGeometry(W, H, 0.24), stone);
+  back.position.y = H / 2;
+  g.add(back);
+  for (const sx of [-1, 1]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, H, W), stone);
+    post.position.set(sx * (W / 2 - 0.09), H / 2, 0);
+    g.add(post);
+  }
+  const boards = [0.08, 0.72, 1.36, H - 0.06];
+  for (const y of boards) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(W, 0.1, W), stone);
+    b.position.y = y;
+    g.add(b);
+  }
+  // Tablets on both faces of each of the three shelves.
+  const tabletMat = new THREE.MeshStandardMaterial({ color: '#9c5a36', roughness: 0.85 });
+  const tablet = new THREE.BoxGeometry(0.16, 0.22, 0.035);
+  const per = 8;
+  const mesh = new THREE.InstancedMesh(tablet, tabletMat, 3 * 2 * per);
+  const mtx = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  let n = 0;
+  for (let shelf = 0; shelf < 3; shelf++) {
+    const y = (boards[shelf] ?? 0) + 0.16;
+    for (const face of [-1, 1]) {
+      for (let i = 0; i < per; i++) {
+        const x = -W / 2 + 0.3 + i * ((W - 0.6) / (per - 1));
+        const seed = Math.sin((shelf * 31 + i * 7 + face * 3) * 12.9898) * 43758.5453;
+        const jitter = seed - Math.floor(seed);
+        e.set(0.12 * face + (jitter - 0.5) * 0.1, 0, (jitter - 0.5) * 0.25);
+        q.setFromEuler(e);
+        mtx.compose(
+          new THREE.Vector3(x, y, face * (W / 2 - 0.22)),
+          q,
+          new THREE.Vector3(1, 0.9 + jitter * 0.2, 1),
+        );
+        mesh.setMatrixAt(n++, mtx);
+      }
+    }
+  }
+  mesh.castShadow = true;
+  g.add(mesh);
+  return g;
+}
+
+/** The Tablet of the Name: fired clay with nine columns of signs, the ninth a single glowing sign. */
+function nameTablet(): { group: THREE.Group; glow: THREE.Mesh } {
+  const group = new THREE.Group();
+  const clay = new THREE.MeshStandardMaterial({ color: '#b4683e', roughness: 0.8 });
+  const slab = new THREE.Mesh(new RoundedBoxGeometry(0.22, 0.3, 0.045, 2, 0.012), clay);
+  group.add(slab);
+  const marks = new THREE.MeshStandardMaterial({ color: '#5a2c18', roughness: 1 });
+  const mark = new THREE.BoxGeometry(0.012, 0.012, 0.01);
+  for (let c = 0; c < 8; c++) {
+    for (let r = 0; r < 6; r++) {
+      const m = new THREE.Mesh(mark, marks);
+      m.position.set(-0.09 + c * 0.021, 0.11 - r * 0.042 - (c % 2) * 0.012, 0.024);
+      group.add(m);
+    }
+  }
+  const glow = new THREE.Mesh(
+    new THREE.CircleGeometry(0.016, 12),
+    new THREE.MeshStandardMaterial({ color: '#ffb070', emissive: '#ff6a2a', emissiveIntensity: 2.4 }),
+  );
+  glow.position.set(0.085, 0, 0.0235);
+  group.add(glow);
+  return { group, glow };
 }
 
 /** A bundle of red flares tied with cord, lying on the floor. */

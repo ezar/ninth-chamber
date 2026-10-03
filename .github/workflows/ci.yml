@@ -24,6 +24,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      # Browser smoke test: every level loads, plays and visits each room without console errors.
+      - run: npx playwright install --with-deps chromium
+      - run: pnpm smoke
       - uses: actions/upload-artifact@v4
         with:
           name: dist
