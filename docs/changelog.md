@@ -1,5 +1,40 @@
 # Changelog
 
+## Version 0.7.0 (2026-10-03): Chamber VIII, the Observatory
+
+The last of the three releases on the way to 0.7.0 (docs/roadmap.md): chamber VIII opens.
+
+- **The Observatory** (`levels/observatory.level.json`, spec §19): ten rooms at the summit, at night.
+  1. The outer terrace: wind off the summit, jackals, the first note. A ledge on the dome's outer face is reached on an updraught.
+  2. The gallery of instruments: three glyph locks spell the keeper's name (the eye, the star, the mountain).
+  3. The first ring teaches turning. One position off its start, a constellation on the wrong star opens a niche.
+  4. The hall of moons: a block onto the new moon.
+  5. The hall of the horizon: the last ray of a solstice sunset through a slit, and a mirror to turn it onto the sun disc.
+  6. The dome stairs: a jackal and three tiers to climb.
+  7. Under the dome: the view up into it, and the second note.
+  8. The battle and the alignment: Anzur rises.
+     - Levers on the raised rim, out of his reach, turn the three rings. The first two set cost him a phase each.
+     - In phase 2 his slams break the floor, and his empty seat opens.
+     - All three set let the oculus light fall, and only that light stops him. The dais beyond the light can only be reached through it on foot; Nora drops onto it from the ledge behind.
+  9. The oculus: up to the opening, under the whole night sky.
+  10. The chamber of the astrolabe: the relic and the last note.
+
+  It also has:
+  - three secrets: on the dome's outer ledge, in the niche of the wrong star, and in Anzur's empty seat during phase 2;
+  - three journal notes (the one who watches, three things, the ninth is not a tomb);
+  - Nora's ideas for five puzzles;
+  - ten night looks with the starfield, and a baked lightmap;
+  - a music palette drawn from the Temple's majestic cues;
+  - the campaign entry, and the end screen's figure: three rings turned to the ninth place.
+
+- **Campaign order**: the Wind Stair now leads to the Observatory, and the Observatory to the ninth chamber.
+- **Models**: Anzur, a dome ring, the oculus and the astrolabe are listed in docs/art/models-brief.md.
+- **Verification**:
+  - `tests/observatory.test.ts`: the bot plays the whole chamber, the boss fight included, with all three secrets and no deaths.
+  - Eight "every puzzle is needed" checks.
+  - `pnpm smoke` passes on the new level.
+  - Reference shots on the high and mobile tiers. They led to brighter night looks.
+
 ## Version 0.6.6 (2026-10-03): Anzur
 
 The second of three releases on the way to 0.7.0, chamber VIII, the Observatory (docs/roadmap.md).

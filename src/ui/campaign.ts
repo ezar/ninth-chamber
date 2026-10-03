@@ -14,7 +14,7 @@
 import type { StringKey } from './i18n';
 
 /** How the end screen draws a relic's clue: eight signs and a missing ninth. */
-export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs' | 'segments' | 'notes';
+export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs' | 'segments' | 'notes' | 'astrolabe';
 
 export interface Relic {
   name: StringKey;
@@ -173,7 +173,25 @@ export const CHAMBERS: readonly Chamber[] = [
     teaser: 'teaser.wind_stair',
     journal: ['journal.wind_stair.1', 'journal.wind_stair.2', 'journal.wind_stair.3'],
   },
-  { numeral: 'VIII', name: 'chamber.8.name', line: 'chamber.8.line', status: 'sealed' },
+  {
+    numeral: 'VIII',
+    level: 'observatory',
+    name: 'chamber.8.name',
+    line: 'chamber.8.line',
+    kicker: 'kicker.observatory',
+    premise: 'premise.observatory',
+    intro: ['intro.observatory.1', 'intro.observatory.2', 'intro.observatory.3'],
+    relic: {
+      name: 'relic.observatory.name',
+      clue: 'relic.observatory.clue',
+      figure: 'astrolabe',
+      figureLabel: 'end.observatory.figure',
+      moment: ['end.observatory.1', 'end.observatory.2', 'end.observatory.3'],
+      cleared: 'end.observatory.kicker',
+    },
+    teaser: 'teaser.observatory',
+    journal: ['journal.observatory.1', 'journal.observatory.2', 'journal.observatory.3'],
+  },
   { numeral: 'IX', name: 'chamber.9.name', line: 'chamber.9.line', status: 'unknown' },
 ];
 
@@ -183,7 +201,8 @@ export const chamberOf = (levelId: string): Chamber | undefined => CHAMBERS.find
  * The chamber after a level's, in campaign order: the next one that can be
  * played, skipping chambers not built yet (the Forge, VI, opens after the
  * Archive, IV, until the Root Halls, V, exist; the Wind Stair, VII, follows
- * the Forge); with none left, the next sealed one, for the end screen's teaser.
+ * the Forge, and the Observatory, VIII, follows that); with none left, the next
+ * sealed one, for the end screen's teaser.
  */
 export function nextChamber(levelId: string): Chamber | undefined {
   const i = CHAMBERS.findIndex((c) => c.level === levelId);

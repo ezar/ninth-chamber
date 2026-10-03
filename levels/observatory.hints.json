@@ -1,0 +1,39 @@
+{
+  "level": "observatory",
+  "puzzles": [
+    {
+      "id": "gallery",
+      "rooms": ["gallery"],
+      "solved": "z_first.entered",
+      "hints": ["hints.observatory.gallery.1", "hints.observatory.gallery.2", "hints.observatory.gallery.3"]
+    },
+    {
+      "id": "first_ring",
+      "rooms": ["first_ring"],
+      "solved": "z_moons.entered",
+      "hints": [
+        "hints.observatory.first_ring.1",
+        "hints.observatory.first_ring.2",
+        "hints.observatory.first_ring.3"
+      ]
+    },
+    {
+      "id": "moons",
+      "rooms": ["moons"],
+      "solved": "z_horizon.entered",
+      "hints": ["hints.observatory.moons.1", "hints.observatory.moons.2", "hints.observatory.moons.3"]
+    },
+    {
+      "id": "horizon",
+      "rooms": ["horizon"],
+      "solved": "z_stairs.entered",
+      "hints": ["hints.observatory.horizon.1", "hints.observatory.horizon.2", "hints.observatory.horizon.3"]
+    },
+    {
+      "id": "arena",
+      "rooms": ["arena"],
+      "solved": "anzur.defeated",
+      "hints": ["hints.observatory.arena.1", "hints.observatory.arena.2", "hints.observatory.arena.3"]
+    }
+  ]
+}

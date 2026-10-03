@@ -8,7 +8,7 @@ import { CHAMBERS, chamberOf, nextChamber } from '../src/ui/campaign';
 const keys = (o: object): Set<string> => new Set(Object.keys(o));
 
 describe('campaign story data', () => {
-  it('has nine chambers: six playable (VI and VII built before V), two sealed and the ninth unknown', () => {
+  it('has nine chambers: seven playable (VI to VIII built before V), the Root Halls sealed and the ninth unknown', () => {
     expect(CHAMBERS.map((c) => c.numeral)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
     expect(CHAMBERS.map((c) => c.level ?? null)).toEqual([
       'antechamber',
@@ -18,10 +18,10 @@ describe('campaign story data', () => {
       null,
       'bronze_forge',
       'wind_stair',
-      null,
+      'observatory',
       null,
     ]);
-    expect([4, 7].every((i) => CHAMBERS[i]?.status === 'sealed')).toBe(true);
+    expect(CHAMBERS[4]?.status).toBe('sealed');
     expect(CHAMBERS[8]?.status).toBe('unknown');
   });
 
@@ -50,14 +50,14 @@ describe('campaign story data', () => {
     expect([...placed].sort()).toEqual([...(chamberOf('antechamber')?.journal ?? [])].sort());
   });
 
-  it('chains the chambers: the Archive leads past the sealed Root Halls to the Forge, the Forge to the Wind Stair, then the sealed ones', () => {
+  it('chains the chambers: the Archive leads past the sealed Root Halls to the Forge, the Forge to the Wind Stair, then the Observatory and the ninth', () => {
     expect(nextChamber('antechamber')?.level).toBe('cisterns');
     expect(nextChamber('cisterns')?.level).toBe('sun_temple');
     expect(nextChamber('sun_temple')?.level).toBe('clay_archive');
     expect(nextChamber('clay_archive')?.level).toBe('bronze_forge');
     expect(nextChamber('bronze_forge')?.level).toBe('wind_stair');
-    expect(nextChamber('wind_stair')?.numeral).toBe('VIII');
-    expect(nextChamber('wind_stair')?.status).toBe('sealed');
+    expect(nextChamber('wind_stair')?.level).toBe('observatory');
+    expect(nextChamber('observatory')?.numeral).toBe('IX');
     expect(chamberOf('nowhere')).toBeUndefined();
   });
 });
