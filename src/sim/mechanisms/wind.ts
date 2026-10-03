@@ -38,9 +38,15 @@ export function windFactor(def: WindDef, st: Pick<WindState, 'on' | 'time'>): nu
   return t * t * (3 - 2 * t);
 }
 
-/** Starts calm, so the first update announces a zone that is already blowing (a steady wind's sound). */
+/**
+ * A cyclic zone starts in its phase without a sound (a level full of them
+ * would all blow at once on the first tick); a steady one starts calm, so the
+ * first update announces it and its sound plays.
+ */
 export function createWind(def: WindDef): WindState {
-  return { id: def.id, on: def.on, time: 0, phase: 'idle' };
+  const st: WindState = { id: def.id, on: def.on, time: 0, phase: 'idle' };
+  if (def.period !== null) st.phase = windPhase(def, st);
+  return st;
 }
 
 export function updateWind(world: World, def: WindDef, st: WindState, dt: number): void {
