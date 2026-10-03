@@ -151,6 +151,8 @@ export class GameRenderer {
   private underwaterMix = 0;
   /** The static (mobile) sun map has been drawn at least once. */
   private sunShadowPrimed = false;
+  /** Fire casters whose cube map has been drawn at least once. */
+  private readonly primedCasters = new WeakSet<THREE.PointLight>();
   private readonly waterSky = new THREE.Color();
   /** 0 in the air … 1 with the camera under water (fog, grade, muffled sound). */
   get underwater(): number {
@@ -912,7 +914,9 @@ export class GameRenderer {
     const sunOn = this.sun.intensity > 0.05;
     const sun = this.sun.shadow;
     if (p.sun.live) {
-      sun.autoUpdate = sunOn;
+      // Drawn once even before the sun shines (see the fire casters below).
+      sun.autoUpdate = sunOn || !this.sunShadowPrimed;
+      this.sunShadowPrimed = true;
     } else {
       this.sunShadowAge += dt;
       if ((sunOn || !this.sunShadowPrimed) && this.sunShadowAge >= STATIC_SHADOW_REFRESH) {
@@ -922,7 +926,12 @@ export class GameRenderer {
       }
     }
     // Casters that are dark keep their last map (the scheduler moves them only while dark).
-    for (const l of this.fireCasters) l.shadow.autoUpdate = l.intensity > 0;
+    // Each map is drawn once even while dark: a map first drawn later is created in a frame
+    // whose materials already sampled its placeholder (WebGL "bindTexture: deleted object").
+    for (const l of this.fireCasters) {
+      l.shadow.autoUpdate = l.intensity > 0 || !this.primedCasters.has(l);
+      this.primedCasters.add(l);
+    }
   }
 
   /** The shadows' current framing, biases and casters (debug console, audit). */

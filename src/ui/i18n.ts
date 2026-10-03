@@ -4,11 +4,12 @@
  */
 import en from '../../i18n/en.json';
 import es from '../../i18n/es.json';
+import ca from '../../i18n/ca.json';
 
 export type StringKey = keyof typeof en;
 type Strings = Record<StringKey, string>;
 
-const locales: Record<string, Strings> = { en, es };
+const locales: Record<string, Strings> = { en, es, ca };
 
 export function pickLocale(preferred: readonly string[]): string {
   for (const tag of preferred) {

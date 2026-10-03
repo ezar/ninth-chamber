@@ -27,6 +27,8 @@ jobs:
       # Browser smoke test: every level loads, plays and visits each room without console errors.
       - run: npx playwright install --with-deps chromium
       - run: pnpm smoke
+      # The medium tier draws fire and sun shadow maps that the mobile tier does not.
+      - run: pnpm smoke --tier medium
       - uses: actions/upload-artifact@v4
         with:
           name: dist

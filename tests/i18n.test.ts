@@ -11,5 +11,6 @@ describe('i18n', () => {
     expect(pickLocale(['es-ES', 'en'])).toBe('es');
     expect(pickLocale(['fr-FR', 'en-GB'])).toBe('en');
     expect(pickLocale(['fr'])).toBe('en');
+    expect(pickLocale(['ca-ES', 'es-ES'])).toBe('ca');
   });
 });

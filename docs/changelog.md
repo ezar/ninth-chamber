@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 0.3.6 (2026-10-03): Catalan and softlocks
+
+The second of the three releases on the way to 0.4.0 (docs/roadmap.md).
+
+- **Catalan** (`i18n/ca.json`): every string in the game, the journal included, in central Catalan. It is offered in Options → Language and picked automatically for browsers set to Catalan. The page's built-in texts (the splash, the story prelude, the loading line) come in all three languages.
+- **Reachability in the level validator** (`src/sim/grid/reach.ts`, spec §16): a graph of every cell the controller could possibly reach from the start. It counts steps, grabs up to the highest a jump reaches (3.7 m), drops, running jumps over gaps of up to two cells, swimming at the highest water level, doors as open, moving platforms at every height on their path, and a pushable block in any cell of its room.
+  - `pnpm validate:levels` now fails when a relic, secret, note, checkpoint zone or exit zone lies outside that graph, or when a checkpoint zone covers a deadly sector, a dart slab or a boulder's path.
+  - Unreachable levers, medkits, items and torches are warnings.
+  - All four chambers pass, and `tests/reach.test.ts` checks each rule: a sealed room fails, a 3.5 m climb passes and a 4 m one does not, a block turns an impossible climb into a step, and a flooded pit can be swum.
+- **Softlock audit**: every pushable block in the four chambers (nine blocks, the Clay Archive's shelves included) was pushed and pulled through every position the real simulation allows. Only one position is a dead end: the causeway block once it drops into its notch in the Antechamber, which is the puzzle's solution. The two blocks of the scales puzzle keep their reset lever. "Restart from checkpoint" stays the escape from anything else.
+- **WebGL warnings fixed on the medium and high tiers**: the fire lights' cube shadow maps, and the sun's map in rooms where it starts dark, were first drawn in a frame whose materials had already sampled them ("bindTexture: attempt to use a deleted object", "texture format and sampler type mismatch"). Each is now drawn once at the start. All four chambers are clean on the mobile, medium and high tiers, and CI runs the smoke test on medium as well as mobile.
+- **Title screen layout**: the footer is part of the page flow, so the keys help no longer overlaps the copyright line. That overlap showed in Spanish at 1280×720 and in Catalan at smaller sizes. Short desktop windows get a smaller seal and title.
+
 ## Version 0.3.5 (2026-10-03): Accessibility
 
 The first of the three releases on the way to 0.4.0 (docs/roadmap.md), Phase 3 of the spec: what spec §13 asks of accessibility.
