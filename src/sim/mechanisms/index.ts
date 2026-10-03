@@ -24,6 +24,7 @@ import type { MechanismState } from './types';
 import { turnMirror, updateUse } from './use';
 import { createDarts, createGlyphLock, turnGlyph, updateDarts, updateGlyphs, updatePoison } from './archive';
 import { createPour, pourAction, pourCovers, updateHeat, updatePour } from './bronze';
+import { createWind, updateWind, windAction } from './wind';
 
 export { mechanismPrompt, useMechanism } from './use';
 
@@ -60,6 +61,7 @@ export function createMechanisms(level: Level): MechanismState {
     darts: [...d.darts.values()].map(createDarts),
     pours: [...d.pours.values()].map(createPour),
     heat: [...d.heat.values()].map((h) => ({ id: h.id, on: h.on })),
+    winds: [...d.winds.values()].map(createWind),
     scorched: false,
     use: null,
   };
@@ -132,6 +134,10 @@ export function updateMechanisms(world: World, dt: number): void {
   for (const s of m.pours) {
     const def = d.pours.get(s.id);
     if (def) updatePour(world, def, s, dt);
+  }
+  for (const s of m.winds) {
+    const def = d.winds.get(s.id);
+    if (def) updateWind(world, def, s, dt);
   }
   updateGlyphs(world, d.glyphs);
   updatePoison(world, dt);
@@ -247,6 +253,9 @@ export function mechanismAction(world: World, id: string, op: string, args: stri
     heat.on = op === 'on';
     return true;
   }
+
+  const wind = m.winds.find((w) => w.id === id);
+  if (wind) return windAction(wind, op);
 
   const fire = m.fires.find((f) => f.id === id);
   if (fire && (op === 'on' || op === 'off')) {

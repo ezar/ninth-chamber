@@ -155,6 +155,17 @@ export interface HeatState {
   on: boolean;
 }
 
+/** idle: calm; warn: the flutes rise before a gust; gust: it blows. */
+export type WindPhase = 'idle' | 'warn' | 'gust';
+
+export interface WindState {
+  id: string;
+  on: boolean;
+  /** Seconds it has been running (its place in the cycle). */
+  time: number;
+  phase: WindPhase;
+}
+
 export interface MechanismState {
   platforms: PlatformState[];
   trapdoors: TrapdoorState[];
@@ -170,6 +181,7 @@ export interface MechanismState {
   darts: DartState[];
   pours: PourState[];
   heat: HeatState[];
+  winds: WindState[];
   /** Nora stood in open heat last tick. */
   scorched: boolean;
   /** What Nora is operating (turning a mirror, setting an item, taking one) and whether it has reacted. */

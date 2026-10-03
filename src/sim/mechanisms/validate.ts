@@ -7,7 +7,7 @@
 import type { Level } from '../grid/level';
 import { sectorTop } from '../grid/level';
 import { DIR_VEC, OPPOSITE } from '../grid/units';
-import { guardianTuning, tuning } from '../player/tuning';
+import { guardianTuning, tuning, wind as windTuning } from '../player/tuning';
 
 type Cell = [number, number];
 
@@ -130,6 +130,21 @@ export function validateMechanisms(
           for (let z = cz; z < cz + e.size[1]; z++)
             if (!open(x, z)) errors.push(`fire '${e.id}' covers a wall at ${x},${z}`);
         break;
+      case 'wind': {
+        if (cx - r.x + e.size[0] > r.w || cz - r.z + e.size[1] > r.h)
+          errors.push(`wind '${e.id}' leaves its room`);
+        if (e.period !== undefined) {
+          const blow = e.blow ?? Math.min(windTuning.blow, e.period);
+          if (blow >= e.period)
+            errors.push(`wind '${e.id}': its gust lasts the whole period (leave out the period)`);
+          else if (e.period - blow < windTuning.warning)
+            warnings.push(`wind '${e.id}': the lull is shorter than the flutes' warning`);
+        } else if (e.blow !== undefined)
+          warnings.push(`wind '${e.id}': 'blow' without a period does nothing`);
+        if (e.dir === 'up' && (e.strength ?? 0) >= 0.9)
+          errors.push(`wind '${e.id}': an updraught takes at most 0.9 of gravity`);
+        break;
+      }
       case 'guardian': {
         const [ax, az, aw, ah] = e.arena;
         if (ax < 0 || az < 0 || ax + aw > r.w || az + ah > r.h)

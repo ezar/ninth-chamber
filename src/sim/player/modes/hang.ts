@@ -3,7 +3,8 @@ import { blocks, ledgeAhead } from '../../grid/collision';
 import { BLOCK, DIR_VEC, RIGHT_OF } from '../../grid/units';
 import type { Ledge } from '../../state';
 import { emit, faceDir, setMode, wishAlong, type Ctx } from '../context';
-import { tuning } from '../tuning';
+import { tearingGust } from '../../mechanisms/wind';
+import { tuning, wind as windTuning } from '../tuning';
 
 export function startHang(c: Ctx, ledge: Ledge, x: number, z: number): void {
   const { p } = c;
@@ -21,6 +22,15 @@ export function hang(c: Ctx): void {
   const ledge = p.ledge;
   if (!ledge || q.cellFloor(ledge.cx, ledge.cz) !== ledge.y) {
     letGo(c);
+    return;
+  }
+  // A tearing gust that has blown on her long enough pulls her off (spec §19, chamber VII).
+  const gust = p.modeTime >= windTuning.grip ? tearingGust(c.world, p.pos.x, p.pos.z) : null;
+  if (gust) {
+    letGo(c);
+    p.vel.x += gust.x * windTuning.throw;
+    p.vel.z += gust.z * windTuning.throw;
+    emit(c, 'player.torn');
     return;
   }
   const forward = wishAlong(c, ledge.dir);

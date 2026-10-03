@@ -5,7 +5,8 @@ import { useMechanism } from '../../mechanisms';
 import { blockAt } from '../../world';
 import { die, emit, faceDir, setMode, turnTowardsWish, wishAlong, type Ctx } from '../context';
 import { tryLightTorch } from '../torch';
-import { tuning } from '../tuning';
+import { windAt } from '../../mechanisms/wind';
+import { tuning, wind as windTuning } from '../tuning';
 import { startHang } from './hang';
 import { floatInDeepWater, wadeSpeed, walkTop } from './swim';
 
@@ -64,6 +65,7 @@ export function ground(c: Ctx): void {
   }
   p.pos.x = res.x;
   p.pos.z = res.z;
+  pushByWind(c, feet);
 
   const floor = q.floorAt(p.pos.x, p.pos.z);
   const support = Math.max(floor, supportHeight(q, p.pos.x, p.pos.z, 0.05));
@@ -81,6 +83,26 @@ export function ground(c: Ctx): void {
 
   const sector = c.world.level.sector(Math.floor(p.pos.x / BLOCK), Math.floor(p.pos.z / BLOCK));
   if (sector?.flags.has('death') && Math.abs(p.pos.y - floor) < 0.05) die(c, 'spikes');
+}
+
+/** A gust pushes her along the floor, but never off an edge (spec §19, chamber VII). */
+function pushByWind(c: Ctx, feet: number): void {
+  const { p, q, dt } = c;
+  const w = windAt(c.world, p.pos.x, p.pos.z);
+  if (w.x === 0 && w.z === 0) return;
+  const k = windTuning.ground * dt;
+  const res = sweep(
+    q,
+    { x: p.pos.x, z: p.pos.z, y: feet, radius: tuning.radius, height: tuning.height },
+    w.x * k,
+    w.z * k,
+    tuning.stepUp,
+    (cx, cz) => walkTop(c, cx, cz) >= feet - tuning.stepDown,
+  );
+  const drop = (x: number, z: number): boolean =>
+    walkTop(c, Math.floor(x / BLOCK), Math.floor(z / BLOCK)) < feet - tuning.stepDown;
+  if (!drop(res.x, p.pos.z)) p.pos.x = res.x;
+  if (!drop(p.pos.x, res.z)) p.pos.z = res.z;
 }
 
 /** Starts a jump: vertical when still, standing or running forward otherwise. */

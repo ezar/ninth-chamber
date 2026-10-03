@@ -2,6 +2,7 @@
 import { ledgeAhead, sweep } from '../../grid/collision';
 import { BLOCK, DIR_VEC, yawToDir } from '../../grid/units';
 import { die, emit, hurt, setMode, type Ctx } from '../context';
+import { windAt } from '../../mechanisms/wind';
 import { tuning } from '../tuning';
 import { jump } from './ground';
 import { startClimb, startHang } from './hang';
@@ -26,17 +27,21 @@ export function air(c: Ctx): void {
     p.vel.z *= cap / h;
   }
 
+  // Wind (spec §19, chamber VII) carries her along and an updraught holds her up.
+  const wind = windAt(c.world, p.pos.x, p.pos.z);
+  const gravity = tuning.gravity * (1 - wind.lift);
+
   // Gravity integrated exactly (constant acceleration): jump height and air time
   // match the spec's formulas regardless of the step size.
   const vy0 = p.vel.y;
-  let y = p.pos.y + vy0 * dt - 0.5 * tuning.gravity * dt * dt;
-  p.vel.y = vy0 - tuning.gravity * dt;
+  let y = p.pos.y + vy0 * dt - 0.5 * gravity * dt * dt;
+  p.vel.y = vy0 - gravity * dt;
 
   const res = sweep(
     q,
     { x: p.pos.x, z: p.pos.z, y: Math.min(p.pos.y, y), radius: tuning.radius, height: tuning.height },
-    p.vel.x * dt,
-    p.vel.z * dt,
+    (p.vel.x + wind.x) * dt,
+    (p.vel.z + wind.z) * dt,
     0,
   );
   if (res.hitX) p.vel.x = 0;
