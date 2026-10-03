@@ -549,6 +549,26 @@ export function drumTurn(s: Strip, t: number): void {
   s.tone(t + 0.62, { f: 180, f2: 150, gain: 0.05, a: 0.004, d: 0.18 });
 }
 
+/**
+ * The Wind Stair's stone flutes (spec §19, chamber VII): a breathy tone that
+ * rises towards its note before a gust, `dur` seconds long.
+ */
+export function fluteRise(s: Strip, t: number, dur: number, note: number): void {
+  s.tone(t, { wave: 'sine', f: note * 0.7, f2: note, glide: dur, gain: 0.05, a: dur * 0.9, d: 0.2 });
+  s.tone(t, { wave: 'triangle', f: note * 1.4, f2: note * 2, glide: dur, gain: 0.012, a: dur, d: 0.15 });
+  s.noiseHit(t, { type: 'bandpass', f: note * 2, f2: note * 3, q: 6, gain: 0.03, a: dur * 0.9, d: 0.2 });
+}
+
+/** A gust through the flutes: their note held while it blows, over the rush of the wind. */
+export function fluteGust(s: Strip, t: number, dur: number, note: number): void {
+  const hold = Math.max(0.1, dur - 0.8);
+  s.tone(t, { wave: 'sine', f: note, gain: 0.07, a: 0.25, hold, d: 0.6 });
+  s.tone(t, { wave: 'sine', f: note * 1.005, gain: 0.04, a: 0.3, hold, d: 0.6, detune: 7 });
+  s.tone(t, { wave: 'triangle', f: note * 2, gain: 0.015, a: 0.3, hold, d: 0.5 });
+  s.noiseHit(t, { buf: 'pink', type: 'lowpass', f: 500, f2: 1400, gain: 0.18, a: 0.3, hold, d: 0.7 });
+  s.noiseHit(t, { type: 'bandpass', f: note * 3, q: 8, gain: 0.025, a: 0.3, hold, d: 0.5 });
+}
+
 /** A sun disc catching the light: a warm, shimmering chord. */
 export function sunChime(s: Strip, t: number): void {
   for (const [f, g] of [

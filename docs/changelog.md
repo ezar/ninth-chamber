@@ -1,5 +1,25 @@
 # Changelog
 
+## Version 0.5.5 (2026-10-03): Wind
+
+The first of three releases on the way to 0.6.0, chamber VII, the Wind Stair (docs/roadmap.md).
+
+- **Wind zones** (`src/sim/mechanisms/wind.ts`, spec §19): a rectangle of cells where the wind blows one way (north, east, south, west or up), on a fixed cycle with a warning, or steadily.
+  - A horizontal gust carries Nora at 3 m/s in the air. That lengthens a running jump by about a block, and a head gust shortens it by as much.
+  - On the ground it pushes at a third of that speed. She can always walk against it, and it never pushes her off an edge.
+  - An updraught takes half of gravity away: she jumps higher and falls slower, but the height fallen still hurts.
+  - A zone may `tear`: hanging Nora is torn off the ledge once a gust has blown on her for 0.6 s, so she waits for the lull.
+  - Rules turn zones `on`, `off` or `toggle` them (the flute levers), and each zone emits `<id>.gust`.
+- **Look and sound**: dust streaks and leaves blown along each zone while it gusts, and a faint stir while the flutes warn. Synthesised stone flutes rise towards their note before each gust and sing while it blows, higher up the shaft. Subtitles for the flutes, the gust and being torn off a ledge.
+- **Level tools**: the reachability check counts the longer jumps in wind and the higher reach in updraughts. The validator checks each zone's room, cycle and strength.
+- **Saves**: schema 5 (a migration adds the wind list).
+- **Verification**: `tests/wind.test.ts`.
+  - With a following gust, a running jump clears 3 blocks; without one it does not, and a head gust stops it clearing 2.
+  - An updraught reaches a 4.5 m ledge.
+  - The ground push stops at the edge.
+  - Tearing gusts tear her off, and lulls and short gusts do not.
+  - The gust cycle, the rule actions, replays and the save migration.
+
 ## Version 0.5.1 (2026-10-03): Ask Nora
 
 - **Pause → Ask Nora** showed at all times and did nothing when she had no idea yet. The menu items' `display: block` overrode the `hidden` attribute. Now a global rule makes `hidden` always hide. That also fixes "Another idea", which showed after the third hint.

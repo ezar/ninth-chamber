@@ -40,6 +40,7 @@ import type { SimEvent } from '../core/events';
 import { TempleView } from './temple';
 import { ArchiveView } from './archive';
 import { ForgeView } from './forge';
+import { WindView } from './wind';
 import { GrabEdgeView } from './grab-edges';
 import { setupKtx2 } from './ktx2';
 
@@ -117,6 +118,7 @@ export class GameRenderer {
   private temple: TempleView | null = null;
   private archive: ArchiveView | null = null;
   private forge: ForgeView | null = null;
+  private wind: WindView | null = null;
   private grabEdges: GrabEdgeView | null = null;
   private highContrast = false;
   private guardians: GuardianView | null = null;
@@ -558,6 +560,9 @@ export class GameRenderer {
     this.forge?.dispose();
     this.forge = new ForgeView(level, new THREE.MeshStandardMaterial(surfaceParams(surf.wall)));
     this.scene.add(this.forge.group);
+    this.wind?.dispose();
+    this.wind = new WindView(level);
+    this.scene.add(this.wind.group);
     this.indexFires();
 
     this.buildShafts(meshes.skylights, sunRooms);
@@ -787,6 +792,7 @@ export class GameRenderer {
     this.temple?.update(world, this.time, dt, eye);
     this.archive?.update(world, dt);
     this.forge?.update(world, dt);
+    this.wind?.update(world, dt);
     this.guardians?.update(world, this.time, dt, eye);
     this.updateFireLights(eye, dt);
     this.updateShafts(dt);

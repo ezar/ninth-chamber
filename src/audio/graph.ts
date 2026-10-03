@@ -13,7 +13,7 @@
  */
 
 import type { SimEvent } from '../core/events';
-import { mechanics, tuning } from '../sim/player/tuning';
+import { mechanics, tuning, wind } from '../sim/player/tuning';
 import { Ambience } from './ambience';
 import { clamp, noiseBank, setPanningModel, Strip, type NoiseBank, type Vec3 } from './dsp';
 import { EmitterSet, type EmitterDef } from './emitters';
@@ -52,6 +52,14 @@ const MIN_GAP: Record<string, number> = {
   'enemy.alerted': 0.35,
 };
 const DEFAULT_GAP = 0.03;
+
+/** The flutes sing higher up the shaft: a pentatonic note a step every eight metres from A3. */
+const FLUTE_STEPS = [0, 2, 4, 7, 9];
+function fluteNote(y: number): number {
+  const step = Math.max(0, Math.round(y / 8));
+  const semis = 12 * Math.floor(step / 5) + (FLUTE_STEPS[step % 5] ?? 0);
+  return 220 * 2 ** (Math.min(semis, 36) / 12);
+}
 /** Scheduling lead, so every node starts on a clean sample in the future. */
 const LEAD = 0.01;
 /** Growls vary in length (s). */
@@ -1061,6 +1069,18 @@ export class AudioGraph {
         break;
       case 'receiver.lit':
         this.play('sfx', at, (s, t) => sfx.sunChime(s, t));
+        break;
+      // The Wind Stair: the flutes rise before each gust and sing while it blows.
+      case 'wind.warn':
+        this.play('sfx', at, (s, t) => sfx.fluteRise(s, t, wind.warning, fluteNote(at?.y ?? 0)));
+        break;
+      case 'wind.gust': {
+        const blow = num(e, 'blow', 2);
+        this.play('sfx', at, (s, t) => sfx.fluteGust(s, t, blow, fluteNote(at?.y ?? 0)));
+        break;
+      }
+      case 'player.torn':
+        this.play('sfx', null, (s, t) => sfx.letGo(s, t));
         break;
       // The Bronze Forge: the crucible's rumble, the pour, the hiss of cooling metal, the heat.
       case 'bronze.warn':

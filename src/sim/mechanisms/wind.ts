@@ -54,6 +54,8 @@ export function updateWind(world: World, def: WindDef, st: WindState, dt: number
       tick: world.tick,
       id: st.id,
       dir: def.dir,
+      // How long the gust blows (a steady wind: a few seconds of sound, then it settles).
+      blow: def.period === null ? 3 : def.blow,
       x: ((def.minX + def.maxX) / 2) * BLOCK,
       y: world.level.floorAt(((def.minX + def.maxX) / 2) * BLOCK, ((def.minZ + def.maxZ) / 2) * BLOCK) + 2,
       z: ((def.minZ + def.maxZ) / 2) * BLOCK,
