@@ -154,8 +154,14 @@ export class GuardianView {
   }
 
   private build(g: GuardianState): Body {
-    const rock = new THREE.MeshStandardMaterial({ ...surfaceParams(this.stone), color: '#b99c77' });
-    const dark = new THREE.MeshStandardMaterial({ ...surfaceParams(this.stone), color: '#6f5a44' });
+    // Bazûr (the Forge) is cast bronze, darkened by the furnaces; Ubara (the Temple) is carved stone.
+    const cast = g.kind === 'bronze';
+    const rock = cast
+      ? new THREE.MeshStandardMaterial({ color: '#7a5a34', metalness: 0.9, roughness: 0.42 })
+      : new THREE.MeshStandardMaterial({ ...surfaceParams(this.stone), color: '#b99c77' });
+    const dark = cast
+      ? new THREE.MeshStandardMaterial({ color: '#3e2c1a', metalness: 0.85, roughness: 0.55 })
+      : new THREE.MeshStandardMaterial({ ...surfaceParams(this.stone), color: '#6f5a44' });
     const bronze = new THREE.MeshStandardMaterial({ color: '#8c6a3c', metalness: 0.85, roughness: 0.45 });
     const core = new THREE.MeshStandardMaterial({
       color: '#ffb347',

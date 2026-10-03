@@ -310,8 +310,10 @@ export interface EnemyState {
   calm: number;
   /** Seconds until the next bite while attacking. */
   biteIn: number;
-  /** Tamrit only: dissolved by the water, gone for good (a crumbled heap reforms). */
+  /** Tamrit and the automatons: ended for good by water or bronze (a crumbled heap of Tamrit reforms). */
   dissolved?: boolean;
+  /** How an automaton was ended for good (the render sinks or topples it). */
+  fate?: 'quenched' | 'melted';
 }
 
 export interface TileState {

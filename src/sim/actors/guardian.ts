@@ -27,6 +27,7 @@ import { BLOCK, DIR_YAW, cellCenter, wrapAngle } from '../grid/units';
 import { setSignal } from '../logic/rules';
 import { isTrapdoorCell } from '../mechanisms';
 import { knockback } from '../mechanisms/traps';
+import { bronzeBurnsAt } from '../mechanisms/bronze';
 import { damagePlayer } from '../player/context';
 import { guardianTuning as G, tuning } from '../player/tuning';
 import type { PlayerMode } from '../state';
@@ -60,6 +61,8 @@ export function createGuardians(level: Level): GuardianState[] {
     const home = { x, y: level.floorAt(x, z), z };
     out.push({
       id: e.id,
+      kind: e.kind,
+      immune: 0,
       mode: 'dormant',
       modeTime: 0,
       phase: 1,
@@ -161,8 +164,23 @@ function updateGuardian(world: World, g: GuardianState, dt: number): void {
   g.modeTime += dt;
   g.cooldown = Math.max(0, g.cooldown - dt);
   g.repathIn = Math.max(0, g.repathIn - dt);
+  g.immune = Math.max(0, g.immune - dt);
   const ph = g.phase - 1;
   const p = world.state.player;
+
+  // Bazûr (the bronze guardian): molten bronze poured over it cools its plates, a blow.
+  const awake = g.mode !== 'dormant' && g.mode !== 'falling' && g.mode !== 'fallen' && g.mode !== 'climbing';
+  if (g.kind === 'bronze' && awake && g.immune <= 0 && bronzeBurnsAt(world, ...cellOf(g.pos), g.pos.y)) {
+    g.immune = G.bronzeImmune;
+    setSignal(world, `${g.id}.burned`, true);
+    emit(world, 'guardian.burned', g, { phase: g.phase });
+    if (g.phase === 2) {
+      defeat(world, g);
+      return;
+    }
+    toPhase2(world, g);
+    setMode(g, 'stunned');
+  }
 
   if (g.mode !== 'falling' && g.mode !== 'fallen' && g.mode !== 'climbing') {
     // The floor gave way (a trapdoor opened, a tile fell): it drops.

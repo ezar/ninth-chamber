@@ -338,6 +338,8 @@ export const guardianTuning = {
   bounceOut: 2.8,
   /** Stagger after a core strike (s). */
   stunTime: 2.4,
+  /** Bazûr: after molten bronze has cost it a phase, the same pour cannot count again for this long (s). */
+  bronzeImmune: 8,
   /** Fall speed limit and gravity in a pit (m/s, m/s²). */
   gravity: 24,
   /** Lies stunned at the bottom of a pit (s), then drags itself out (s). */
@@ -411,7 +413,7 @@ export const noise = {
 };
 
 /** Enemy types: each is data plus a behaviour from a closed list (spec §7 "Enemigos"). */
-export const ENEMY_TYPES = ['jackal', 'clay'] as const;
+export const ENEMY_TYPES = ['jackal', 'clay', 'automaton'] as const;
 export type EnemyType = (typeof ENEMY_TYPES)[number];
 export const ENEMY_BEHAVIOURS = ['packHunter'] as const;
 export type EnemyBehaviour = (typeof ENEMY_BEHAVIOURS)[number];
@@ -419,6 +421,8 @@ export type EnemyBehaviour = (typeof ENEMY_BEHAVIOURS)[number];
 export interface EnemyStats {
   behaviour: EnemyBehaviour;
   health: number;
+  /** Share of a hit's damage that gets through (1 when omitted; the automatons' plates let little through). */
+  armour?: number;
   /** Chase speed (m/s). */
   runSpeed: number;
   /** Speed while prowling, returning home or leaving (m/s). */
@@ -536,6 +540,43 @@ export const enemyTypes: Record<EnemyType, EnemyStats> = {
     prowlSwing: 0.8,
     prowlRate: 0.6,
   },
+  // The Forge's bronze automatons (spec §19): slow and heavy, plated so pistols barely scratch
+  // them (about thirty seconds of steady fire). Quench water or molten bronze ends them for good.
+  automaton: {
+    behaviour: 'packHunter',
+    health: 6,
+    armour: 0.05,
+    runSpeed: 2.1,
+    trotSpeed: 1.2,
+    accel: 4,
+    turnSpeed: 2.6,
+    radius: 0.5,
+    height: 2.1,
+    eyeHeight: 1.8,
+    climb: 0.5,
+    maxDrop: 1,
+    dropSpeed: 5,
+    bite: { damage: 26, interval: 1.9, range: 1.5, reachUp: 1, windup: 0.8 },
+    sightRange: 14,
+    sightHeight: 3,
+    alertTime: 1,
+    hurtTime: 0.1,
+    staggerCooldown: 3,
+    repathTime: 0.6,
+    searchLimit: 2000,
+    refugeTime: 10,
+    calmTime: 6,
+    flankDistance: 0,
+    flankUntil: 0,
+    prowlSwing: 0.6,
+    prowlRate: 0.5,
+  },
+};
+
+/** The bronze automatons (enemy type 'automaton'). */
+export const automaton = {
+  /** Water this deep over its floor quenches it for good (m). */
+  quenchDepth: 1,
 };
 
 /** Tamrit's clay (enemy type 'clay'). */
