@@ -1,0 +1,31 @@
+{
+  "id": "forge_bellows",
+  "background": "#080402",
+  "exposure": 1.04,
+  "hemi": {
+    "sky": "#8a4a22",
+    "ground": "#120804",
+    "intensity": 0.16
+  },
+  "fog": {
+    "color": "#3a1a0c",
+    "density": 0.03
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ff9a46",
+    "intensity": 50,
+    "flicker": 0.3
+  },
+  "bloom": {
+    "strength": 0.95,
+    "radius": 0.6,
+    "threshold": 0.68
+  },
+  "grade": {
+    "tint": "#ffc79a",
+    "saturation": 1.06,
+    "contrast": 1.22,
+    "vignette": 0.5
+  }
+}

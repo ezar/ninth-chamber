@@ -1,0 +1,31 @@
+{
+  "id": "forge_mould",
+  "background": "#080402",
+  "exposure": 1.1,
+  "hemi": {
+    "sky": "#8a4a22",
+    "ground": "#120804",
+    "intensity": 0.16
+  },
+  "fog": {
+    "color": "#2a1608",
+    "density": 0.02
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ffa04a",
+    "intensity": 52,
+    "flicker": 0.22
+  },
+  "bloom": {
+    "strength": 1.0,
+    "radius": 0.65,
+    "threshold": 0.66
+  },
+  "grade": {
+    "tint": "#ffd0a4",
+    "saturation": 1.04,
+    "contrast": 1.2,
+    "vignette": 0.46
+  }
+}

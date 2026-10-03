@@ -1,0 +1,65 @@
+{
+  "level": "bronze_forge",
+  "puzzles": [
+    {
+      "id": "first_pour",
+      "rooms": ["first_pour"],
+      "solved": "z_bellows.entered",
+      "hints": [
+        "hints.bronze_forge.first_pour.1",
+        "hints.bronze_forge.first_pour.2",
+        "hints.bronze_forge.first_pour.3"
+      ]
+    },
+    {
+      "id": "bellows",
+      "rooms": ["bellows"],
+      "solved": "z_canal.entered",
+      "hints": [
+        "hints.bronze_forge.bellows.1",
+        "hints.bronze_forge.bellows.2",
+        "hints.bronze_forge.bellows.3"
+      ]
+    },
+    {
+      "id": "canal",
+      "rooms": ["canal"],
+      "solved": "z_workshop.entered",
+      "hints": ["hints.bronze_forge.canal.1", "hints.bronze_forge.canal.2", "hints.bronze_forge.canal.3"]
+    },
+    {
+      "id": "quench",
+      "rooms": ["workshop", "quench"],
+      "solved": "a1.dead",
+      "hints": ["hints.bronze_forge.quench.1", "hints.bronze_forge.quench.2", "hints.bronze_forge.quench.3"]
+    },
+    {
+      "id": "furnaces",
+      "rooms": ["furnaces"],
+      "solved": "z_bridge.entered",
+      "hints": [
+        "hints.bronze_forge.furnaces.1",
+        "hints.bronze_forge.furnaces.2",
+        "hints.bronze_forge.furnaces.3"
+      ]
+    },
+    {
+      "id": "bridge",
+      "rooms": ["bridge"],
+      "solved": "z_casting.entered",
+      "hints": ["hints.bronze_forge.bridge.1", "hints.bronze_forge.bridge.2", "hints.bronze_forge.bridge.3"]
+    },
+    {
+      "id": "bazur",
+      "rooms": ["casting"],
+      "solved": "bazur.defeated",
+      "hints": ["hints.bronze_forge.bazur.1", "hints.bronze_forge.bazur.2", "hints.bronze_forge.bazur.3"]
+    },
+    {
+      "id": "mould",
+      "rooms": ["mould"],
+      "solved": "pour_mould.cast",
+      "hints": ["hints.bronze_forge.mould.1", "hints.bronze_forge.mould.2", "hints.bronze_forge.mould.3"]
+    }
+  ]
+}

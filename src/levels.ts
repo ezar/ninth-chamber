@@ -13,6 +13,7 @@ const LEVELS: Record<string, () => Promise<unknown>> = {
   cisterns: () => import('../levels/cisterns.level.json').then((m) => m.default),
   sun_temple: () => import('../levels/sun_temple.level.json').then((m) => m.default),
   clay_archive: () => import('../levels/clay_archive.level.json').then((m) => m.default),
+  bronze_forge: () => import('../levels/bronze_forge.level.json').then((m) => m.default),
 };
 
 /** Nora's ideas for each level (levels/<id>.hints.json), loaded with it. */
@@ -21,6 +22,7 @@ const HINTS: Record<string, () => Promise<unknown>> = {
   cisterns: () => import('../levels/cisterns.hints.json').then((m) => m.default),
   sun_temple: () => import('../levels/sun_temple.hints.json').then((m) => m.default),
   clay_archive: () => import('../levels/clay_archive.hints.json').then((m) => m.default),
+  bronze_forge: () => import('../levels/bronze_forge.hints.json').then((m) => m.default),
 };
 
 /** The level's puzzles with their hints; none when the file is missing or invalid. */

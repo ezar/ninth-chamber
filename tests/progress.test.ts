@@ -45,7 +45,7 @@ describe('campaign progress', () => {
     expect(markReached(broken, 'cisterns').has('cisterns')).toBe(true);
   });
 
-  it('shows reached chambers open, the rest locked or coming, V–VIII sealed and IX unknown', () => {
+  it('shows reached chambers open, the rest locked or coming, the unbuilt ones sealed and IX unknown', () => {
     const playable = new Set(['antechamber', 'cisterns']);
     const states = CHAMBERS.map((c) => chamberState(c, new Set(['antechamber']), playable));
     expect(states).toEqual([
@@ -54,7 +54,7 @@ describe('campaign progress', () => {
       'soon',
       'soon',
       'sealed',
-      'sealed',
+      'soon',
       'sealed',
       'sealed',
       'unknown',

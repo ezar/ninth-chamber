@@ -1,0 +1,41 @@
+{
+  "id": "forge_quench",
+  "background": "#080402",
+  "exposure": 1.04,
+  "hemi": {
+    "sky": "#4a3a30",
+    "ground": "#0a0806",
+    "intensity": 0.2
+  },
+  "fog": {
+    "color": "#1c1612",
+    "density": 0.03
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ff8a3a",
+    "intensity": 46,
+    "flicker": 0.28
+  },
+  "bloom": {
+    "strength": 0.95,
+    "radius": 0.6,
+    "threshold": 0.68
+  },
+  "grade": {
+    "tint": "#e6cdb4",
+    "saturation": 0.92,
+    "contrast": 1.16,
+    "vignette": 0.48
+  },
+  "water": {
+    "deep": "#0c1412",
+    "tint": "#5a6a62",
+    "sky": "#120c08",
+    "caustics": 0.25,
+    "fog": {
+      "color": "#0e1614",
+      "density": 0.32
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "forge_workshop",
+  "background": "#080402",
+  "exposure": 0.98,
+  "hemi": {
+    "sky": "#5a3a26",
+    "ground": "#0e0804",
+    "intensity": 0.18
+  },
+  "fog": {
+    "color": "#3a1a0c",
+    "density": 0.03
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ff8a3a",
+    "intensity": 46,
+    "flicker": 0.28
+  },
+  "bloom": {
+    "strength": 0.95,
+    "radius": 0.6,
+    "threshold": 0.68
+  },
+  "grade": {
+    "tint": "#eec4a0",
+    "saturation": 0.96,
+    "contrast": 1.2,
+    "vignette": 0.5
+  }
+}
