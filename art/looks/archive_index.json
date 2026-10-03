@@ -1,0 +1,12 @@
+{
+  "id": "archive_index",
+  "background": "#0a0503",
+  "exposure": 1.04,
+  "hemi": { "sky": "#7e4a2e", "ground": "#180c06", "intensity": 0.2 },
+  "fog": { "color": "#4a2a1a", "density": 0.034 },
+  "sun": null,
+  "fire": { "color": "#ff9a46", "intensity": 42, "flicker": 0.26 },
+  "bloom": { "strength": 0.7, "radius": 0.5, "threshold": 0.74 },
+  "grade": { "tint": "#ffd8b6", "saturation": 0.97, "contrast": 1.16, "vignette": 0.46 },
+  "trim": { "friezeHeight": 3.0, "reliefs": true }
+}

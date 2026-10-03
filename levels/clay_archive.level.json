@@ -1,0 +1,761 @@
+{
+  "schema": 1,
+  "id": "clay_archive",
+  "name": "level.clay_archive",
+  "par": 1500,
+  "start": {
+    "room": "shaft",
+    "at": [3, 4],
+    "face": "N"
+  },
+  "rooms": [
+    {
+      "id": "shaft",
+      "origin": [0, 0, 0],
+      "ceil": 36,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": ["###.###", "#.....#", "#.....#", "#.....#", "#.....#", "#.....#", "#######"],
+      "look": "archive_shaft",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "reading",
+      "origin": [-2, -9, 0],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "L": 0
+      },
+      "rows": [
+        "#####.#####",
+        "#.........#",
+        "#.........#",
+        "#.L.......#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#####.#####"
+      ],
+      "look": "archive_reading",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "stacks",
+      "origin": [-4, -20, 0],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "n": 0
+      },
+      "rows": [
+        "############.##",
+        "#.............#",
+        "#.............#",
+        "#.............#",
+        "###########.###",
+        "##............#",
+        "#n............#",
+        "##............#",
+        "#.............#",
+        "#.............#",
+        "#######.#######"
+      ],
+      "look": "archive_stacks",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "gallery",
+      "origin": [5, -33, 0],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": [
+        "##.##",
+        "##.##",
+        "##.##",
+        "##.##",
+        "##.##",
+        "##.##",
+        "#...#",
+        "##.##",
+        "##.##",
+        "##.##",
+        "##.##",
+        "##..#",
+        "###.#"
+      ],
+      "look": "archive_dark",
+      "reverb": "stone_small"
+    },
+    {
+      "id": "kiln",
+      "origin": [1, -44, 0],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "L": 0
+      },
+      "rows": [
+        "#####.#####",
+        "#.L.....L.#",
+        "#.........#",
+        "#####.#####",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "######.####"
+      ],
+      "look": "archive_kiln",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "scriptorium",
+      "origin": [-2, -57, 0],
+      "ceil": 24,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "2": 2,
+        "4": 4
+      },
+      "rows": [
+        "##.############",
+        "#.............#",
+        "#...........44#",
+        "#..........244#",
+        "#.............#",
+        "#.............#",
+        "#.............#",
+        "#.............#",
+        "#.............#",
+        "#.............#",
+        "#.............#",
+        "#.............#",
+        "########.######"
+      ],
+      "look": "archive_scriptorium",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "index",
+      "origin": [-4, -66, 0],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "L": 0
+      },
+      "rows": [
+        "####.####",
+        "#.......#",
+        "#.......#",
+        "#.L...L.#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "archive_index",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "canal",
+      "origin": [-6, -75, 0],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "~": -6
+      },
+      "rows": [
+        "#########",
+        "#.......#",
+        "#.......#",
+        "#~~~~~~.#",
+        "#~~~~~~.#",
+        "#.......#",
+        "........#",
+        "#.......#",
+        "######.##"
+      ],
+      "look": "archive_canal",
+      "reverb": "stone_medium",
+      "water": -2
+    },
+    {
+      "id": "tamrit",
+      "origin": [-19, -80, 0],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "2": 2,
+        "4": 4,
+        "l": -2
+      },
+      "rows": [
+        "###4#########",
+        "#4444442....#",
+        "#4444442...l#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#............",
+        "#############"
+      ],
+      "look": "archive_tamrit",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "name",
+      "origin": [-21, -91, 4],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "L": 0,
+        "R": 0,
+        "G": 0
+      },
+      "rows": [
+        "###########",
+        "#....R....#",
+        "#####G#####",
+        "#.........#",
+        "#.........#",
+        "#.L..L..L.#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#####.#####"
+      ],
+      "look": "archive_name",
+      "reverb": "stone_medium"
+    }
+  ],
+  "entities": [
+    {
+      "id": "z_start",
+      "type": "zone",
+      "room": "shaft",
+      "at": [1, 3],
+      "size": [5, 3]
+    },
+    {
+      "id": "z_reading",
+      "type": "zone",
+      "room": "reading",
+      "at": [3, 6],
+      "size": [5, 2]
+    },
+    {
+      "id": "lock_reading",
+      "type": "glyphlock",
+      "room": "reading",
+      "at": [2, 3],
+      "facing": "E",
+      "glyph": 5,
+      "target": 1
+    },
+    {
+      "id": "door_reading",
+      "type": "door",
+      "room": "reading",
+      "at": [5, 0],
+      "height": 8
+    },
+    {
+      "id": "note_tamrit",
+      "type": "note",
+      "room": "reading",
+      "at": [1, 1],
+      "text": "journal.clay_archive.1",
+      "style": "carving",
+      "wall": "N"
+    },
+    {
+      "id": "brazier_reading",
+      "type": "brazier",
+      "room": "reading",
+      "at": [9, 1]
+    },
+    {
+      "id": "torch1",
+      "type": "torch",
+      "room": "reading",
+      "at": [9, 6]
+    },
+    {
+      "id": "z_stacks",
+      "type": "zone",
+      "room": "stacks",
+      "at": [5, 8],
+      "size": [5, 2]
+    },
+    {
+      "id": "shelf_gap",
+      "type": "block",
+      "room": "stacks",
+      "at": [11, 4]
+    },
+    {
+      "id": "shelf_niche",
+      "type": "block",
+      "room": "stacks",
+      "at": [2, 6]
+    },
+    {
+      "id": "idol_jade",
+      "type": "secret",
+      "room": "stacks",
+      "at": [1, 6],
+      "idol": "jade"
+    },
+    {
+      "id": "medkit_stacks",
+      "type": "medkit",
+      "room": "stacks",
+      "at": [13, 1],
+      "size": "small"
+    },
+    {
+      "id": "brazier_stacks_w",
+      "type": "brazier",
+      "room": "stacks",
+      "at": [1, 9]
+    },
+    {
+      "id": "brazier_stacks_e",
+      "type": "brazier",
+      "room": "stacks",
+      "at": [13, 9]
+    },
+    {
+      "id": "brazier_stacks_n",
+      "type": "brazier",
+      "room": "stacks",
+      "at": [1, 1]
+    },
+    {
+      "id": "z_gallery",
+      "type": "zone",
+      "room": "gallery",
+      "at": [2, 10],
+      "size": [1, 1]
+    },
+    {
+      "id": "darts_low",
+      "type": "darts",
+      "room": "gallery",
+      "at": [2, 8],
+      "from": "W"
+    },
+    {
+      "id": "darts_high",
+      "type": "darts",
+      "room": "gallery",
+      "at": [2, 3],
+      "from": "E"
+    },
+    {
+      "id": "note_names",
+      "type": "note",
+      "room": "gallery",
+      "at": [1, 6],
+      "text": "journal.clay_archive.2",
+      "style": "carving",
+      "wall": "W"
+    },
+    {
+      "id": "z_kiln",
+      "type": "zone",
+      "room": "kiln",
+      "at": [4, 8],
+      "size": [3, 2]
+    },
+    {
+      "id": "kiln_block",
+      "type": "block",
+      "room": "kiln",
+      "at": [8, 8]
+    },
+    {
+      "id": "kiln_plate",
+      "type": "plate",
+      "room": "kiln",
+      "at": [8, 6]
+    },
+    {
+      "id": "kiln_mouth",
+      "type": "door",
+      "room": "kiln",
+      "at": [5, 3],
+      "height": 6
+    },
+    {
+      "id": "lock_first",
+      "type": "glyphlock",
+      "room": "kiln",
+      "at": [2, 1],
+      "facing": "S",
+      "glyph": 0,
+      "target": 4
+    },
+    {
+      "id": "lock_scribe",
+      "type": "glyphlock",
+      "room": "kiln",
+      "at": [8, 1],
+      "facing": "S",
+      "glyph": 0,
+      "target": 2
+    },
+    {
+      "id": "door_kiln",
+      "type": "door",
+      "room": "kiln",
+      "at": [5, 0],
+      "height": 8
+    },
+    {
+      "id": "brazier_kiln",
+      "type": "brazier",
+      "room": "kiln",
+      "at": [1, 5]
+    },
+    {
+      "id": "medkit_kiln",
+      "type": "medkit",
+      "room": "kiln",
+      "at": [9, 2],
+      "size": "small"
+    },
+    {
+      "id": "z_scriptorium",
+      "type": "zone",
+      "room": "scriptorium",
+      "at": [6, 10],
+      "size": [5, 2]
+    },
+    {
+      "id": "idol_gold",
+      "type": "secret",
+      "room": "scriptorium",
+      "at": [13, 2],
+      "idol": "gold"
+    },
+    {
+      "id": "brazier_script_w",
+      "type": "brazier",
+      "room": "scriptorium",
+      "at": [1, 6]
+    },
+    {
+      "id": "brazier_script_e",
+      "type": "brazier",
+      "room": "scriptorium",
+      "at": [13, 8]
+    },
+    {
+      "id": "z_index",
+      "type": "zone",
+      "room": "index",
+      "at": [3, 6],
+      "size": [3, 2]
+    },
+    {
+      "id": "lock_flood",
+      "type": "glyphlock",
+      "room": "index",
+      "at": [2, 3],
+      "facing": "E",
+      "glyph": 3,
+      "target": 1
+    },
+    {
+      "id": "lock_fire",
+      "type": "glyphlock",
+      "room": "index",
+      "at": [6, 3],
+      "facing": "W",
+      "glyph": 3,
+      "target": 0
+    },
+    {
+      "id": "door_index",
+      "type": "door",
+      "room": "index",
+      "at": [4, 0],
+      "height": 8
+    },
+    {
+      "id": "brazier_index",
+      "type": "brazier",
+      "room": "index",
+      "at": [7, 7]
+    },
+    {
+      "id": "z_canal",
+      "type": "zone",
+      "room": "canal",
+      "at": [5, 6],
+      "size": [3, 2]
+    },
+    {
+      "id": "flood_gate",
+      "type": "watergate",
+      "room": "canal",
+      "at": [3, 1],
+      "wall": "N",
+      "rooms": ["tamrit"],
+      "low": -6,
+      "high": 3
+    },
+    {
+      "id": "medkit_canal",
+      "type": "medkit",
+      "room": "canal",
+      "at": [7, 1],
+      "size": "large"
+    },
+    {
+      "id": "brazier_canal",
+      "type": "brazier",
+      "room": "canal",
+      "at": [1, 5]
+    },
+    {
+      "id": "z_tamrit",
+      "type": "zone",
+      "room": "tamrit",
+      "at": [9, 10],
+      "size": [3, 2]
+    },
+    {
+      "id": "tamrit",
+      "type": "enemy",
+      "room": "tamrit",
+      "at": [3, 5],
+      "enemy": "clay",
+      "face": "E"
+    },
+    {
+      "id": "lever_flood",
+      "type": "lever",
+      "room": "tamrit",
+      "at": [1, 1],
+      "wall": "W"
+    },
+    {
+      "id": "door_tamrit",
+      "type": "door",
+      "room": "tamrit",
+      "at": [3, 0],
+      "height": 8
+    },
+    {
+      "id": "idol_stone",
+      "type": "secret",
+      "room": "tamrit",
+      "at": [11, 2],
+      "idol": "stone"
+    },
+    {
+      "id": "brazier_tamrit_sw",
+      "type": "brazier",
+      "room": "tamrit",
+      "at": [1, 10]
+    },
+    {
+      "id": "brazier_tamrit_w",
+      "type": "brazier",
+      "room": "tamrit",
+      "at": [1, 4]
+    },
+    {
+      "id": "brazier_tamrit_ledge",
+      "type": "brazier",
+      "room": "tamrit",
+      "at": [6, 1]
+    },
+    {
+      "id": "note_word",
+      "type": "note",
+      "room": "tamrit",
+      "at": [5, 1],
+      "text": "journal.clay_archive.3",
+      "style": "carving",
+      "wall": "N"
+    },
+    {
+      "id": "z_name",
+      "type": "zone",
+      "room": "name",
+      "at": [4, 8],
+      "size": [3, 2]
+    },
+    {
+      "id": "lock_look",
+      "type": "glyphlock",
+      "room": "name",
+      "at": [2, 5],
+      "facing": "S",
+      "glyph": 0,
+      "target": 4
+    },
+    {
+      "id": "lock_when",
+      "type": "glyphlock",
+      "room": "name",
+      "at": [5, 5],
+      "facing": "S",
+      "glyph": 0,
+      "target": 1
+    },
+    {
+      "id": "lock_way",
+      "type": "glyphlock",
+      "room": "name",
+      "at": [8, 5],
+      "facing": "S",
+      "glyph": 2,
+      "target": 0
+    },
+    {
+      "id": "gate_name",
+      "type": "door",
+      "room": "name",
+      "at": [5, 2],
+      "height": 8
+    },
+    {
+      "id": "name_tablet",
+      "type": "relic",
+      "room": "name",
+      "at": [5, 1]
+    },
+    {
+      "id": "brazier_name_w",
+      "type": "brazier",
+      "room": "name",
+      "at": [1, 8]
+    },
+    {
+      "id": "brazier_name_e",
+      "type": "brazier",
+      "room": "name",
+      "at": [9, 8]
+    }
+  ],
+  "logic": [
+    {
+      "when": "z_start.entered",
+      "do": ["hint hint.archive.start", "music vista"]
+    },
+    {
+      "when": "z_reading.entered",
+      "do": ["checkpoint", "hint hint.archive.lock", "music calm"]
+    },
+    {
+      "when": "lock_reading.set",
+      "do": ["door_reading.open", "camera.focus door_reading 2s", "sfx rumble"]
+    },
+    {
+      "when": "torch1.taken",
+      "do": ["hint hint.torch"]
+    },
+    {
+      "when": "z_stacks.entered",
+      "do": ["checkpoint", "hint hint.archive.shelves"]
+    },
+    {
+      "when": "z_gallery.entered",
+      "do": ["checkpoint", "hint hint.archive.darts", "music tension"]
+    },
+    {
+      "when": "z_gallery.entered and not torchLit",
+      "do": ["hint hint.dark"]
+    },
+    {
+      "when": "z_kiln.entered",
+      "do": ["checkpoint", "hint hint.archive.kiln", "music calm"]
+    },
+    {
+      "when": "kiln_plate.pressed",
+      "do": ["kiln_mouth.open"],
+      "once": false
+    },
+    {
+      "when": "not kiln_plate.pressed",
+      "do": ["kiln_mouth.close"],
+      "once": false
+    },
+    {
+      "when": "kiln_plate.pressed",
+      "do": ["camera.focus kiln_mouth 2s"]
+    },
+    {
+      "when": "lock_first.set and lock_scribe.set",
+      "do": ["door_kiln.open", "camera.focus door_kiln 2s", "sfx rumble"]
+    },
+    {
+      "when": "z_scriptorium.entered",
+      "do": ["checkpoint", "music vista"]
+    },
+    {
+      "when": "z_index.entered",
+      "do": ["checkpoint", "hint hint.archive.index"]
+    },
+    {
+      "when": "lock_flood.set and lock_fire.set",
+      "do": ["door_index.open", "camera.focus door_index 2s", "sfx rumble"]
+    },
+    {
+      "when": "z_canal.entered",
+      "do": ["checkpoint", "hint hint.archive.canal", "camera.focus flood_gate 3s"]
+    },
+    {
+      "when": "z_tamrit.entered",
+      "do": ["checkpoint", "music boss", "hint hint.archive.tamrit"]
+    },
+    {
+      "when": "lever_flood.used",
+      "do": ["flood_gate.toggle", "camera.focus tamrit 3s", "sfx rumble"]
+    },
+    {
+      "when": "tamrit.dead",
+      "do": ["door_tamrit.open", "camera.focus door_tamrit 3s", "music calm", "music solved"]
+    },
+    {
+      "when": "z_name.entered",
+      "do": ["checkpoint", "music relic", "hint hint.archive.name"]
+    },
+    {
+      "when": "lock_look.set and lock_when.set and lock_way.set",
+      "do": ["gate_name.open", "camera.focus gate_name 3s", "sfx rumble"]
+    },
+    {
+      "when": "name_tablet.taken",
+      "do": ["camera.focus name_tablet 3s", "music fanfare", "wait 3s", "level.end"]
+    }
+  ]
+}

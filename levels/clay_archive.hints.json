@@ -1,0 +1,51 @@
+{
+  "level": "clay_archive",
+  "puzzles": [
+    {
+      "id": "reading",
+      "rooms": ["reading"],
+      "solved": "lock_reading.set",
+      "hints": [
+        "hints.clay_archive.reading.1",
+        "hints.clay_archive.reading.2",
+        "hints.clay_archive.reading.3"
+      ]
+    },
+    {
+      "id": "stacks",
+      "rooms": ["stacks"],
+      "solved": "z_gallery.entered",
+      "hints": ["hints.clay_archive.stacks.1", "hints.clay_archive.stacks.2", "hints.clay_archive.stacks.3"]
+    },
+    {
+      "id": "darts",
+      "rooms": ["gallery"],
+      "solved": "z_kiln.entered",
+      "hints": ["hints.clay_archive.darts.1", "hints.clay_archive.darts.2", "hints.clay_archive.darts.3"]
+    },
+    {
+      "id": "kiln",
+      "rooms": ["kiln"],
+      "solved": "lock_first.set and lock_scribe.set",
+      "hints": ["hints.clay_archive.kiln.1", "hints.clay_archive.kiln.2", "hints.clay_archive.kiln.3"]
+    },
+    {
+      "id": "index",
+      "rooms": ["index"],
+      "solved": "lock_flood.set and lock_fire.set",
+      "hints": ["hints.clay_archive.index.1", "hints.clay_archive.index.2", "hints.clay_archive.index.3"]
+    },
+    {
+      "id": "tamrit",
+      "rooms": ["tamrit"],
+      "solved": "tamrit.dead",
+      "hints": ["hints.clay_archive.tamrit.1", "hints.clay_archive.tamrit.2", "hints.clay_archive.tamrit.3"]
+    },
+    {
+      "id": "name",
+      "rooms": ["name"],
+      "solved": "lock_look.set and lock_when.set and lock_way.set",
+      "hints": ["hints.clay_archive.name.1", "hints.clay_archive.name.2", "hints.clay_archive.name.3"]
+    }
+  ]
+}

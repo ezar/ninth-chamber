@@ -103,6 +103,21 @@ export const PALETTES: Record<string, Palette> = {
     fanfare: 'sun_temple.fanfare',
     stingers: STINGERS,
   },
+  /**
+   * Dry, dusty, hushed: the Clay Archive draws on the quietest cues of the
+   * first three chambers until it has its own (docs/changelog.md, 0.3.0).
+   */
+  clay_archive: {
+    intro: 'antechamber.intro',
+    explore: ['antechamber.explore.2', 'cisterns.explore.2'],
+    tension: 'antechamber.tension',
+    combat: 'sun_temple.combat',
+    chase: 'chase',
+    boss: 'boss',
+    relic: 'antechamber.relic',
+    fanfare: 'fanfare',
+    stingers: { ...STINGERS, solved: 'sting.solved.2' },
+  },
 };
 
 export function paletteFor(levelId: string): Palette {

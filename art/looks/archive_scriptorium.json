@@ -1,0 +1,12 @@
+{
+  "id": "archive_scriptorium",
+  "background": "#120a06",
+  "exposure": 1.1,
+  "hemi": { "sky": "#d6a070", "ground": "#3a2012", "intensity": 0.32 },
+  "fog": { "color": "#8c5a38", "density": 0.024 },
+  "sun": { "color": "#ffd49e", "intensity": 5.0, "direction": [-0.15, 0.96, 0.2] },
+  "fire": { "color": "#ffa04a", "intensity": 36, "flicker": 0.22 },
+  "bloom": { "strength": 0.62, "radius": 0.6, "threshold": 0.8 },
+  "grade": { "tint": "#ffe4c4", "saturation": 1.02, "contrast": 1.1, "vignette": 0.36 },
+  "trim": { "friezeHeight": 4.0, "reliefs": true }
+}

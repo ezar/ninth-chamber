@@ -1,0 +1,11 @@
+{
+  "id": "archive_shaft",
+  "background": "#120a06",
+  "exposure": 1.12,
+  "hemi": { "sky": "#d9a676", "ground": "#3a2214", "intensity": 0.3 },
+  "fog": { "color": "#8a5a3a", "density": 0.022 },
+  "sun": { "color": "#ffd09a", "intensity": 5.5, "direction": [0.05, 0.98, -0.1] },
+  "fire": { "color": "#ff9a46", "intensity": 34, "flicker": 0.24 },
+  "bloom": { "strength": 0.6, "radius": 0.6, "threshold": 0.8 },
+  "grade": { "tint": "#ffe1c0", "saturation": 1.0, "contrast": 1.12, "vignette": 0.4 }
+}
