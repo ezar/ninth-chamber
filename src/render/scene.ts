@@ -38,6 +38,7 @@ import { WaterFx } from './water-fx';
 import { WaterView, waterLookOf } from './water';
 import type { SimEvent } from '../core/events';
 import { TempleView } from './temple';
+import { ArchiveView } from './archive';
 import { setupKtx2 } from './ktx2';
 
 export interface PlayerPose {
@@ -112,6 +113,7 @@ export class GameRenderer {
   private props: Props | null = null;
   /** The Temple of the Sun's mechanisms and its guardian (empty for levels without them). */
   private temple: TempleView | null = null;
+  private archive: ArchiveView | null = null;
   private guardians: GuardianView | null = null;
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
@@ -144,6 +146,8 @@ export class GameRenderer {
   private readonly flares = new FlareView();
   private readonly waterFx: WaterFx;
   private underwaterMix = 0;
+  /** The static (mobile) sun map has been drawn at least once. */
+  private sunShadowPrimed = false;
   private readonly waterSky = new THREE.Color();
   /** 0 in the air … 1 with the camera under water (fog, grade, muffled sound). */
   get underwater(): number {
@@ -532,6 +536,9 @@ export class GameRenderer {
     for (const id of this.temple.replacedActors) this.props.hidden.add(id);
     this.guardians = new GuardianView(world, surf.wall);
     this.scene.add(this.temple.group, this.guardians.group);
+    this.archive?.dispose();
+    this.archive = new ArchiveView(level, new THREE.MeshStandardMaterial(surfaceParams(surf.wall)));
+    this.scene.add(this.archive.group);
     this.indexFires();
 
     this.buildShafts(meshes.skylights, sunRooms);
@@ -759,6 +766,7 @@ export class GameRenderer {
     this.props?.update(world, this.time, dt);
     this.adoptRoomObjects();
     this.temple?.update(world, this.time, dt, eye);
+    this.archive?.update(world, dt);
     this.guardians?.update(world, this.time, dt, eye);
     this.updateFireLights(eye, dt);
     this.updateShafts(dt);
@@ -851,6 +859,7 @@ export class GameRenderer {
 
   /** Splashes and rings from the simulation's water events. */
   onEvent(e: SimEvent): void {
+    this.archive?.onEvent(e);
     const n = (k: string, d = 0): number => (typeof e[k] === 'number' ? (e[k] as number) : d);
     const p = this.world?.state.player;
     if (!p) return;
@@ -894,9 +903,10 @@ export class GameRenderer {
       sun.autoUpdate = sunOn;
     } else {
       this.sunShadowAge += dt;
-      if (sunOn && this.sunShadowAge >= STATIC_SHADOW_REFRESH) {
+      if ((sunOn || !this.sunShadowPrimed) && this.sunShadowAge >= STATIC_SHADOW_REFRESH) {
         sun.needsUpdate = true;
         this.sunShadowAge = 0;
+        this.sunShadowPrimed = true;
       }
     }
     // Casters that are dark keep their last map (the scheduler moves them only while dark).

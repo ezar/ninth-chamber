@@ -82,7 +82,25 @@ function rays(): string {
   );
 }
 
+/** The Tablet of the Name: eight columns of signs, one per keeper, and the ninth a single sign. */
+function signs(): string {
+  const cols = Array.from({ length: 8 }, (_, i) => {
+    const [x, y] = at(angle(i), 82);
+    // A short column: three wedge marks stacked, as pressed into clay.
+    const marks = [-10, 0, 10]
+      .map((dy, k) => `M${x - (k === 1 ? 7 : 5)} ${y + dy} L${x + (k === 1 ? 7 : 5)} ${y + dy}`)
+      .join(' ');
+    return (
+      `<g class="map-star" style="--i:${i}"><circle class="glow" cx="${x}" cy="${y}" r="14"/>` +
+      `<path class="map-line" pathLength="1" d="${marks}"/></g>`
+    );
+  }).join('');
+  const [nx, ny] = at(angle(8), 82);
+  return `${cols}<circle class="map-ninth" cx="${nx}" cy="${ny}" r="9"/><circle class="map-here" cx="${nx}" cy="${ny}" r="3"/>`;
+}
+
 export function relicFigureSvg(figure: RelicFigure, label: string): string {
-  const body = figure === 'moons' ? moons() : figure === 'rays' ? rays() : stars();
+  const body =
+    figure === 'moons' ? moons() : figure === 'rays' ? rays() : figure === 'signs' ? signs() : stars();
   return frame(label, body);
 }

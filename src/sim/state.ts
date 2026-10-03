@@ -118,6 +118,8 @@ export interface PlayerState {
   weapon: WeaponState;
   torch: TorchState;
   swim: SwimState;
+  /** Seconds of dart poison left (0: none). */
+  poison: number;
 }
 
 export interface BlockActor {
@@ -308,6 +310,8 @@ export interface EnemyState {
   calm: number;
   /** Seconds until the next bite while attacking. */
   biteIn: number;
+  /** Tamrit only: dissolved by the water, gone for good (a crumbled heap reforms). */
+  dissolved?: boolean;
 }
 
 export interface TileState {

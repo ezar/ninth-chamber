@@ -8,10 +8,15 @@ import { CHAMBERS, chamberOf, nextChamber } from '../src/ui/campaign';
 const keys = (o: object): Set<string> => new Set(Object.keys(o));
 
 describe('campaign story data', () => {
-  it('has nine chambers: three playable, five sealed and the ninth unknown', () => {
+  it('has nine chambers: four playable, four sealed and the ninth unknown', () => {
     expect(CHAMBERS.map((c) => c.numeral)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
-    expect(CHAMBERS.slice(0, 3).map((c) => c.level)).toEqual(['antechamber', 'cisterns', 'sun_temple']);
-    expect(CHAMBERS.slice(3, 8).every((c) => c.status === 'sealed' && !c.level)).toBe(true);
+    expect(CHAMBERS.slice(0, 4).map((c) => c.level)).toEqual([
+      'antechamber',
+      'cisterns',
+      'sun_temple',
+      'clay_archive',
+    ]);
+    expect(CHAMBERS.slice(4, 8).every((c) => c.status === 'sealed' && !c.level)).toBe(true);
     expect(CHAMBERS[8]?.status).toBe('unknown');
   });
 
@@ -40,10 +45,11 @@ describe('campaign story data', () => {
     expect([...placed].sort()).toEqual([...(chamberOf('antechamber')?.journal ?? [])].sort());
   });
 
-  it('chains the chambers: the Temple leads to the sealed ones', () => {
+  it('chains the chambers: the Archive leads to the sealed ones', () => {
     expect(nextChamber('antechamber')?.level).toBe('cisterns');
     expect(nextChamber('cisterns')?.level).toBe('sun_temple');
-    expect(nextChamber('sun_temple')?.status).toBe('sealed');
+    expect(nextChamber('sun_temple')?.level).toBe('clay_archive');
+    expect(nextChamber('clay_archive')?.status).toBe('sealed');
     expect(chamberOf('nowhere')).toBeUndefined();
   });
 });

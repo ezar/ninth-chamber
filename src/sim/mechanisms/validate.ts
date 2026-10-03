@@ -146,6 +146,24 @@ export function validateMechanisms(
       case 'item':
         if (i18nKeys && !i18nKeys.has(`item.${e.item}`)) errors.push(`missing i18n key 'item.${e.item}'`);
         break;
+      case 'glyphlock': {
+        const v = DIR_VEC[e.facing];
+        if (!open(cx + v.x, cz + v.z)) errors.push(`glyph lock '${e.id}' is read from a wall`);
+        if (e.glyph === e.target) warnings.push(`glyph lock '${e.id}' starts already set`);
+        break;
+      }
+      case 'darts': {
+        const v = DIR_VEC[e.from];
+        let x = cx;
+        let z = cz;
+        while (open(x + v.x, z + v.z)) {
+          x += v.x;
+          z += v.z;
+        }
+        const wall = level.sector(x + v.x, z + v.z);
+        if (!wall?.wall) errors.push(`darts '${e.id}' have no wall to fly from on their ${e.from} side`);
+        break;
+      }
       default:
         break;
     }

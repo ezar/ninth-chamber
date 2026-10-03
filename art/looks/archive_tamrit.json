@@ -1,0 +1,18 @@
+{
+  "id": "archive_tamrit",
+  "background": "#0b0503",
+  "exposure": 1.08,
+  "hemi": { "sky": "#8e4e30", "ground": "#1c0c06", "intensity": 0.24 },
+  "fog": { "color": "#4e2a18", "density": 0.03 },
+  "sun": null,
+  "fire": { "color": "#ff8a3e", "intensity": 46, "flicker": 0.3 },
+  "bloom": { "strength": 0.75, "radius": 0.55, "threshold": 0.72 },
+  "grade": { "tint": "#ffd2ae", "saturation": 1.0, "contrast": 1.18, "vignette": 0.5 },
+  "water": {
+    "deep": "#16100a",
+    "tint": "#8a6a48",
+    "sky": "#2a1e14",
+    "caustics": 0.45,
+    "fog": { "color": "#2e2012", "density": 0.18 }
+  }
+}

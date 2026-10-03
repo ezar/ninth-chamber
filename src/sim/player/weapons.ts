@@ -152,13 +152,15 @@ function fire(c: Ctx, target: EnemyState | null, oneHand: boolean): void {
 
 /**
  * Medkit button: uses the smallest kit that heals fully, or the largest one
- * available when none does. Nothing happens at full health.
+ * available when none does. Any kit cures dart poison. Nothing happens at
+ * full health unless she is poisoned.
  */
 export function stepMedkit(c: Ctx): void {
   const { p, world } = c;
   if (!c.pressed('medkit') || p.mode === 'dead') return;
   const missing = tuning.maxHealth - p.health;
-  if (missing <= 0) return;
+  // A medkit also cures dart poison, even at full health.
+  if (missing <= 0 && p.poison <= 0) return;
   const inv = world.state.inventory;
   const small = inv.medkit_small ?? 0;
   const large = inv.medkit_large ?? 0;
@@ -171,6 +173,7 @@ export function stepMedkit(c: Ctx): void {
     return;
   }
   inv[`medkit_${size}`] = (inv[`medkit_${size}`] ?? 0) - 1;
+  p.poison = 0;
   const heal = Math.min(missing, medkits[size]);
   p.health += heal;
   world.stats.medkitsUsed++;

@@ -1,0 +1,11 @@
+{
+  "id": "archive_stacks",
+  "background": "#0a0503",
+  "exposure": 1.04,
+  "hemi": { "sky": "#7e4a2e", "ground": "#180c06", "intensity": 0.22 },
+  "fog": { "color": "#4e2e1c", "density": 0.036 },
+  "sun": null,
+  "fire": { "color": "#ff9a46", "intensity": 40, "flicker": 0.26 },
+  "bloom": { "strength": 0.66, "radius": 0.5, "threshold": 0.76 },
+  "grade": { "tint": "#ffd6b2", "saturation": 0.95, "contrast": 1.14, "vignette": 0.48 }
+}

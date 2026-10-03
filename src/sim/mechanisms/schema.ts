@@ -1,7 +1,8 @@
 /**
- * Level-file entries for the Temple of the Sun's mechanisms and traps (spec
- * §8): moving platforms, trapdoors, sun beams with mirrors and receivers, key
- * items with their slots, rolling boulders, pendulum blades and fire floors.
+ * Level-file entries for the mechanisms and traps (spec §8): moving
+ * platforms, trapdoors, sun beams with mirrors and receivers, key items with
+ * their slots, rolling boulders, pendulum blades and fire floors (the Temple
+ * of the Sun), and glyph locks and dart traps (the Clay Archive, spec §19).
  * They are spread into the entity union of grid/schema.ts. This module only
  * depends on zod so the schema has no import cycles.
  *
@@ -130,7 +131,33 @@ export const mechanismEntities = [
       on: z.boolean().default(true),
     })
     .strict(),
+  z
+    .object({
+      ...base,
+      type: z.literal('glyphlock'),
+      /** The side its glyph is read from (and turned from): the face shown points this way. */
+      facing: FACING,
+      /** Glyph shown at the start (0..5, see GLYPHS). */
+      glyph: int.min(0).max(5).default(0),
+      /** Glyph that sets the lock (`<id>.set`). */
+      target: int.min(0).max(5),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      type: z.literal('darts'),
+      /** The painted slab is `at`; the darts fly from the wall on this side, across `at`, to the far wall. */
+      from: FACING,
+      /** Darts in a volley (only for the look). */
+      count: int.min(1).max(5).default(3),
+    })
+    .strict(),
 ] as const;
+
+/** The six glyphs of the Clay Archive's locks, by index: each has its own shape and colour. */
+export const GLYPHS = ['sun', 'water', 'reed', 'eye', 'star', 'mountain'] as const;
+export type Glyph = (typeof GLYPHS)[number];
 
 /** Signals each mechanism type emits, by suffix; platforms also emit `at<N>` for waypoint N. */
 export const MECHANISM_SIGNALS: Record<string, string[]> = {
@@ -142,6 +169,8 @@ export const MECHANISM_SIGNALS: Record<string, string[]> = {
   boulder: ['rolling', 'done'],
   fire: ['burning'],
   sunbeam: ['on'],
+  glyphlock: ['set'],
+  darts: ['fired'],
 };
 
 /** Rule actions each mechanism type accepts (`<id>.<action> [args]`). */
@@ -153,6 +182,7 @@ export const MECHANISM_ACTIONS: Record<string, string[]> = {
   boulder: ['release', 'reset'],
   blade: ['start', 'stop'],
   fire: ['on', 'off'],
+  glyphlock: ['turn'],
 };
 
 /** Whether `<entity of type>.<suffix>` is a signal a mechanism emits. */

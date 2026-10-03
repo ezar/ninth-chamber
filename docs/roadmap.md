@@ -1,6 +1,6 @@
 # Roadmap to 0.3.0
 
-Agreed with the owner on 2026-09-27, after 0.2.4. 0.2.5 shipped on 2026-10-03; the owner asked for the work to go ahead before outside feedback arrived. Playtest feedback from people outside the project (spec §16, "Pruebas con personas") may still reorder or cut the items below. The design of chamber IV is in [spec §19](spec.md).
+Agreed with the owner on 2026-09-27, after 0.2.4. 0.2.5, 0.2.6 and 0.3.0 were built on 2026-10-03; the owner asked for the work to go ahead before outside feedback arrived. Two checks of the 0.3.0 gate are the owner's, on the iPhone (see below). Playtest feedback from people outside the project (spec §16, "Pruebas con personas") may still reorder or cut the items below. The design of chamber IV is in [spec §19](spec.md).
 
 **Goal:** close Phase 2 of the spec (inventory, keys and relics, save, options, control remapping) and open the second half of the campaign with chamber IV, the Clay Archive.
 

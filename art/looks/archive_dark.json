@@ -1,0 +1,13 @@
+{
+  "id": "archive_dark",
+  "background": "#040201",
+  "exposure": 1.0,
+  "hemi": { "sky": "#4a2c1c", "ground": "#0c0603", "intensity": 0.08 },
+  "fog": { "color": "#2a1810", "density": 0.05 },
+  "sun": null,
+  "fire": { "color": "#ff9a46", "intensity": 40, "flicker": 0.3 },
+  "bloom": { "strength": 0.7, "radius": 0.5, "threshold": 0.72 },
+  "grade": { "tint": "#ffd2ac", "saturation": 0.92, "contrast": 1.2, "vignette": 0.56 },
+  "lightmap": 0.4,
+  "fill": 2.2
+}

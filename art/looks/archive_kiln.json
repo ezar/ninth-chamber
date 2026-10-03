@@ -1,0 +1,11 @@
+{
+  "id": "archive_kiln",
+  "background": "#0e0503",
+  "exposure": 1.06,
+  "hemi": { "sky": "#a0482a", "ground": "#1e0a05", "intensity": 0.2 },
+  "fog": { "color": "#5a2614", "density": 0.034 },
+  "sun": null,
+  "fire": { "color": "#ff7a36", "intensity": 48, "flicker": 0.32 },
+  "bloom": { "strength": 0.8, "radius": 0.55, "threshold": 0.72 },
+  "grade": { "tint": "#ffcaa4", "saturation": 1.04, "contrast": 1.16, "vignette": 0.46 }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "archive_canal",
+  "background": "#070806",
+  "exposure": 1.06,
+  "hemi": { "sky": "#6a6a56", "ground": "#12100c", "intensity": 0.2 },
+  "fog": { "color": "#3a3628", "density": 0.032 },
+  "sun": null,
+  "fire": { "color": "#ff9c4e", "intensity": 40, "flicker": 0.25 },
+  "bloom": { "strength": 0.55, "radius": 0.55, "threshold": 0.8 },
+  "grade": { "tint": "#e8dcc8", "saturation": 0.9, "contrast": 1.14, "vignette": 0.44 },
+  "water": {
+    "deep": "#0e1210",
+    "tint": "#6e7a5e",
+    "sky": "#22261e",
+    "caustics": 0.5,
+    "fog": { "color": "#1e2418", "density": 0.16 }
+  }
+}

@@ -10,3 +10,4 @@ __pycache__
 *.blend1
 .claude/
 scripts/audio/.cache/
+shots/

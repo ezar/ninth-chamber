@@ -14,7 +14,7 @@ import type { Level } from '../grid/level';
 import { BLOCK, DIR_YAW, cellCenter, wrapAngle } from '../grid/units';
 import { setSignal } from '../logic/rules';
 import { damagePlayer } from '../player/context';
-import { enemyTypes, noise, tuning, weapons, type EnemyStats } from '../player/tuning';
+import { clayGuardian, enemyTypes, noise, tuning, weapons, type EnemyStats } from '../player/tuning';
 import type { EnemyMode, EnemyState, Vec3 } from '../state';
 import type { World } from '../world';
 import { findPath, walkable, type NavGrid, type Walker } from './pathfind';
@@ -41,7 +41,16 @@ function navOf(world: World): NavGrid {
 }
 
 function emit(world: World, type: string, e: EnemyState, data: Record<string, unknown> = {}): void {
-  world.events.emit({ type, tick: world.tick, id: e.id, x: e.pos.x, y: e.pos.y, z: e.pos.z, ...data });
+  world.events.emit({
+    type,
+    tick: world.tick,
+    id: e.id,
+    enemy: e.type,
+    x: e.pos.x,
+    y: e.pos.y,
+    z: e.pos.z,
+    ...data,
+  });
 }
 
 function setMode(e: EnemyState, mode: EnemyMode): void {
@@ -170,6 +179,13 @@ export function damageEnemy(world: World, e: EnemyState, amount: number): void {
   if (e.mode === 'dead' || amount <= 0) return;
   e.health = Math.max(0, e.health - amount);
   emit(world, 'enemy.hit', e, { health: e.health, amount });
+  if (e.health === 0 && e.type === 'clay') {
+    // Tamrit falls apart into wet clay, and reforms (updateClay).
+    setMode(e, 'dead');
+    e.path = [];
+    emit(world, 'enemy.crumbled', e);
+    return;
+  }
   if (e.health === 0) {
     kill(world, e);
     return;
@@ -211,6 +227,7 @@ function updateEnemy(world: World, e: EnemyState, dt: number): void {
   e.calm = Math.max(0, e.calm - dt);
   const p = world.state.player;
 
+  if (e.type === 'clay' && updateClay(world, e)) return;
   if (e.mode === 'dead') {
     brake(e, s, dt, 6);
     move(world, e, s, dt);
@@ -245,6 +262,34 @@ function updateEnemy(world: World, e: EnemyState, dt: number): void {
       break;
   }
   move(world, e, s, dt);
+}
+
+/**
+ * Tamrit's clay: deep water dissolves it for good, whatever it is doing; a
+ * crumbled heap rises again after a while, whole and still hunting. True when
+ * it is gone (nothing else to update).
+ */
+function updateClay(world: World, e: EnemyState): boolean {
+  if (e.dissolved) return true;
+  const [cx, cz] = cellOfPos(e.pos);
+  if (waterDepth(world, cx, cz) >= clayGuardian.dissolveDepth) {
+    e.dissolved = true;
+    e.health = 0;
+    e.aware = false;
+    e.path = [];
+    setMode(e, 'dead');
+    world.stats.kills++;
+    setSignal(world, `${e.id}.dead`, true);
+    emit(world, 'enemy.dissolved', e);
+    return true;
+  }
+  if (e.mode === 'dead' && e.modeTime >= clayGuardian.reform) {
+    e.health = statsOf(e).health;
+    e.aware = true;
+    setMode(e, 'chase');
+    emit(world, 'enemy.reformed', e);
+  }
+  return false;
 }
 
 /** Idle at home, or walking back home after giving up. Sight may alert it. */

@@ -919,16 +919,44 @@ export class AudioGraph {
         this.play('sfx', at, (s, t) => sfx.holster(s, t, drawing));
         break;
       }
+      // Tamrit is clay: no growls or yelps, but stone and wet earth.
+      case 'enemy.crumbled':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'stone.impact', { gain: LEVEL.impact * 0.6, rate: 0.5 }))
+            sfx.heavyImpact(s, t, 0.6);
+          this.layer(s, t, 'debris', { delay: 0.05, gain: LEVEL.debris, duration: 1.2, fadeOut: 0.4 });
+        });
+        break;
+      case 'enemy.reformed':
+        this.play('sfx', at, (s, t) => {
+          if (
+            !this.layer(s, t, 'block.drag', { gain: LEVEL.drag * 0.5, rate: 0.6, duration: 1, fadeOut: 0.3 })
+          )
+            sfx.rumble(s, t, 1);
+        });
+        break;
+      case 'enemy.dissolved':
+        this.play('sfx', at, (s, t) => {
+          this.layer(s, t, 'debris', { gain: LEVEL.debris * 0.7, rate: 0.7, duration: 2, fadeOut: 0.8 });
+          sfx.rumble(s, t, 1.6);
+        });
+        m.duck(1.2);
+        break;
       case 'enemy.alerted': {
+        if (e.enemy === 'clay') {
+          this.play('sfx', at, (s, t) => sfx.rumble(s, t, 0.9));
+          break;
+        }
         const dur = growlLength();
         this.play('sfx', at, (s, t) => sfx.growl(s, t, dur));
         break;
       }
       case 'enemy.hit': {
         const dying = num(e, 'health', 1) <= 0;
+        const clay = e.enemy === 'clay';
         this.play('sfx', at, (s, t) => {
           sfx.bulletHit(s, t);
-          if (!dying) sfx.yelp(s, t + 0.02, false);
+          if (!dying && !clay) sfx.yelp(s, t + 0.02, false);
         });
         break;
       }
@@ -937,6 +965,14 @@ export class AudioGraph {
         break;
       case 'enemy.bite': {
         const hit = e.hit === true;
+        if (e.enemy === 'clay') {
+          // The stylus arm comes down like a club.
+          this.play('sfx', at, (s, t) => {
+            sfx.whoosh(s, t);
+            if (hit) sfx.weight(s, t + 0.12, 0.5);
+          });
+          break;
+        }
         this.play('sfx', at, (s, t) => sfx.bite(s, t, hit));
         break;
       }
@@ -965,6 +1001,19 @@ export class AudioGraph {
         this.play('sfx', at, (s, t) => {
           this.layer(s, t, 'fire', { gain: 0.9, rate: 0.8, duration: 1.3, fadeOut: 0.4 });
           sfx.fireBurst(s, t, 1.3);
+        });
+        break;
+      // The Clay Archive: a cylinder turning in its socket, and the darts' click and volley.
+      case 'glyph.turned':
+        this.play('sfx', at, (s, t) => sfx.drumTurn(s, t));
+        break;
+      case 'darts.click':
+        this.play('sfx', at, (s, t) => sfx.holster(s, t, false));
+        break;
+      case 'darts.fired':
+        this.play('sfx', at, (s, t) => {
+          sfx.whoosh(s, t);
+          sfx.whoosh(s, t + 0.05);
         });
         break;
       case 'mirror.turned':

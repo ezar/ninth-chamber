@@ -12,6 +12,7 @@ import { devices, tuning } from '../player/tuning';
 import type { World } from '../world';
 import { defsOf } from './defs';
 import type { Facing4 } from './types';
+import { turnGlyph } from './archive';
 
 /** Starts operating a mechanism from the ground; false when there is nothing to operate. */
 export function useMechanism(c: Ctx): boolean {
@@ -48,7 +49,24 @@ export function useMechanism(c: Ctx): boolean {
     start(c, mirror.id, 'lever');
     return true;
   }
+  const lock = glyphAhead(world, cx, cz, dir);
+  if (lock && distanceToEdge(p.pos.x, p.pos.z, dir) <= devices.mirrorReach) {
+    faceDir(p, dir);
+    start(c, lock, 'lever');
+    return true;
+  }
   return false;
+}
+
+/** The glyph lock in front of Nora, if she stands on its reading side facing it. */
+function glyphAhead(world: World, cx: number, cz: number, dir: ReturnType<typeof yawToDir>): string | null {
+  const v = DIR_VEC[dir];
+  const lock = world.state.mechanisms.glyphs.find((g) => g.cx === cx + v.x && g.cz === cz + v.z);
+  if (!lock) return null;
+  const def = defsOf(world.level).glyphs.get(lock.id);
+  // She faces the lock from the side it is read from: opposite to its facing.
+  const back = DIR_VEC[def?.facing ?? dir];
+  return back.x === -v.x && back.z === -v.z ? lock.id : null;
 }
 
 function start(c: Ctx, id: string, mode: 'lever' | 'pickup'): void {
@@ -90,7 +108,11 @@ export function updateUse(world: World): void {
     return;
   }
   const mirror = m.mirrors.find((mi) => mi.id === use.id);
-  if (mirror) turnMirror(world, mirror.id);
+  if (mirror) {
+    turnMirror(world, mirror.id);
+    return;
+  }
+  if (m.glyphs.some((g) => g.id === use.id)) turnGlyph(world, use.id);
 }
 
 /** Turns a mirror a quarter turn clockwise. */
@@ -127,5 +149,7 @@ export function mechanismPrompt(world: World): string | null {
   const v = DIR_VEC[dir];
   const near = m.mirrors.some((mi) => !mi.fixed && mi.cx === cx + v.x && mi.cz === cz + v.z);
   if (near && distanceToEdge(p.pos.x, p.pos.z, dir) <= devices.mirrorReach) return 'prompt.mirror';
+  if (glyphAhead(world, cx, cz, dir) && distanceToEdge(p.pos.x, p.pos.z, dir) <= devices.mirrorReach)
+    return 'prompt.glyph';
   return null;
 }

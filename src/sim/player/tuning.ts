@@ -249,6 +249,26 @@ export const traps = {
     /** Embers and a hiss before each burst (s): the readable warning. */
     warning: 0.9,
   },
+  /** The Clay Archive's darts (spec §19): a painted slab, a click, then a volley across the corridor. */
+  darts: {
+    /** From the click to the volley (s): a quick step off the line avoids it. */
+    delay: 0.45,
+    damage: 12,
+    /** Before the slab can fire again (s), once she is off it. */
+    cooldown: 1.5,
+    /** The volley flies below this height above the slab (m): she cannot jump over it. */
+    height: 2,
+  },
+};
+
+/** Mild poison from darts (spec §19): it drains health for a while but never kills; a medkit cures it. */
+export const poison = {
+  /** Seconds a dart poisons for (a second dart restarts it). */
+  duration: 8,
+  /** Health lost per second while poisoned. */
+  rate: 2.5,
+  /** It never takes her below this health. */
+  floor: 10,
 };
 
 /** The stone guardian (spec §7): immune to everything but traps and a blow to its core from above. */
@@ -369,7 +389,7 @@ export const noise = {
 };
 
 /** Enemy types: each is data plus a behaviour from a closed list (spec §7 "Enemigos"). */
-export const ENEMY_TYPES = ['jackal'] as const;
+export const ENEMY_TYPES = ['jackal', 'clay'] as const;
 export type EnemyType = (typeof ENEMY_TYPES)[number];
 export const ENEMY_BEHAVIOURS = ['packHunter'] as const;
 export type EnemyBehaviour = (typeof ENEMY_BEHAVIOURS)[number];
@@ -464,4 +484,42 @@ export const enemyTypes: Record<EnemyType, EnemyStats> = {
     prowlSwing: 0.6,
     prowlRate: 0.9,
   },
+  // Tamrit, the Clay Archive's scribe (spec §19): slow, tall and patient. Shot to pieces it
+  // crumbles and reforms (clayGuardian below); only deep water dissolves it. It never gives up.
+  clay: {
+    behaviour: 'packHunter',
+    health: 8,
+    runSpeed: 2.7,
+    trotSpeed: 1.4,
+    accel: 5,
+    turnSpeed: 3.2,
+    radius: 0.5,
+    height: 2.3,
+    eyeHeight: 2.0,
+    climb: 0.5,
+    maxDrop: 1,
+    dropSpeed: 5,
+    bite: { damage: 22, interval: 1.6, range: 1.5, reachUp: 1, windup: 0.7 },
+    sightRange: 16,
+    sightHeight: 4,
+    alertTime: 1.2,
+    hurtTime: 0.15,
+    staggerCooldown: 2,
+    repathTime: 0.5,
+    searchLimit: 2000,
+    refugeTime: 1e9,
+    calmTime: 6,
+    flankDistance: 0,
+    flankUntil: 0,
+    prowlSwing: 0.8,
+    prowlRate: 0.6,
+  },
+};
+
+/** Tamrit's clay (enemy type 'clay'). */
+export const clayGuardian = {
+  /** A heap of wet clay for this long after being shot to pieces, then it rises again (s). */
+  reform: 6,
+  /** Water this deep over its floor dissolves it for good (m). */
+  dissolveDepth: 1,
 };

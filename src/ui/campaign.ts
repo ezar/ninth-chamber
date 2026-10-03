@@ -6,13 +6,15 @@
  *
  * The clues: the Amber Heart's star map says where to look in the sky, the
  * Tide Glass says on which night (a new moon), the Sun Disc says which way to
- * walk (the sunset of the longest day). Every relic shows eight signs and the
- * empty place of a ninth, like the seal.
+ * walk (the sunset of the longest day). From the fourth on, the relics are
+ * parts of the key: the Tablet of the Name gives the word that opens the
+ * ninth. Every relic shows eight signs and the empty place of a ninth, like
+ * the seal.
  */
 import type { StringKey } from './i18n';
 
 /** How the end screen draws a relic's clue: eight signs and a missing ninth. */
-export type RelicFigure = 'stars' | 'moons' | 'rays';
+export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs';
 
 export interface Relic {
   name: StringKey;
@@ -113,7 +115,25 @@ export const CHAMBERS: readonly Chamber[] = [
     teaser: 'teaser.sun_temple',
     journal: ['journal.sun_temple.1', 'journal.sun_temple.2', 'journal.sun_temple.3'],
   },
-  { numeral: 'IV', name: 'chamber.4.name', line: 'chamber.4.line', status: 'sealed' },
+  {
+    numeral: 'IV',
+    level: 'clay_archive',
+    name: 'level.clay_archive',
+    line: 'chamber.4.line',
+    kicker: 'kicker.clay_archive',
+    premise: 'premise.clay_archive',
+    intro: ['intro.clay_archive.1', 'intro.clay_archive.2', 'intro.clay_archive.3'],
+    relic: {
+      name: 'relic.clay_archive.name',
+      clue: 'relic.clay_archive.clue',
+      figure: 'signs',
+      figureLabel: 'end.clay_archive.figure',
+      moment: ['end.clay_archive.1', 'end.clay_archive.2', 'end.clay_archive.3'],
+      cleared: 'end.clay_archive.kicker',
+    },
+    teaser: 'teaser.clay_archive',
+    journal: ['journal.clay_archive.1', 'journal.clay_archive.2', 'journal.clay_archive.3'],
+  },
   { numeral: 'V', name: 'chamber.5.name', line: 'chamber.5.line', status: 'sealed' },
   { numeral: 'VI', name: 'chamber.6.name', line: 'chamber.6.line', status: 'sealed' },
   { numeral: 'VII', name: 'chamber.7.name', line: 'chamber.7.line', status: 'sealed' },

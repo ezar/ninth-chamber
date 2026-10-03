@@ -22,6 +22,7 @@ import {
 } from './traps';
 import type { MechanismState } from './types';
 import { turnMirror, updateUse } from './use';
+import { createDarts, createGlyphLock, turnGlyph, updateDarts, updateGlyphs, updatePoison } from './archive';
 
 export { mechanismPrompt, useMechanism } from './use';
 
@@ -54,6 +55,8 @@ export function createMechanisms(level: Level): MechanismState {
       time: 0,
       phase: f.on ? firePhase(f, 0) : 'idle',
     })),
+    glyphs: [...d.glyphs.values()].map(createGlyphLock),
+    darts: [...d.darts.values()].map(createDarts),
     use: null,
   };
 }
@@ -113,6 +116,12 @@ export function updateMechanisms(world: World, dt: number): void {
     const def = d.fires.get(f.id);
     if (def) updateFire(world, def, f, dt);
   }
+  for (const s of m.darts) {
+    const def = d.darts.get(s.id);
+    if (def) updateDarts(world, def, s, dt);
+  }
+  updateGlyphs(world, d.glyphs);
+  updatePoison(world, dt);
 
   // Sunlight last, once everything that can stand in its way has moved.
   const lit = new Set<string>();
@@ -203,6 +212,7 @@ export function mechanismAction(world: World, id: string, op: string, args: stri
   }
 
   if (op === 'turn' && m.mirrors.some((mi) => mi.id === id)) return turnMirror(world, id);
+  if (op === 'turn' && m.glyphs.some((g) => g.id === id)) return turnGlyph(world, id);
 
   const boulder = m.boulders.find((b) => b.id === id);
   const bdef = d.boulders.get(id);
