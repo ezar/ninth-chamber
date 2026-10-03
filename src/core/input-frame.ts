@@ -71,6 +71,16 @@ export interface RawInput {
  */
 export class InputFramer {
   private prevHeld: ButtonMask = 0;
+  private prevRaw: ButtonMask = 0;
+  /** Buttons played as toggles (spec §13: hold or toggle for Action and Walk). */
+  private toggles: ButtonMask = 0;
+  private latched: ButtonMask = 0;
+
+  /** Sets which buttons latch on one press and let go on the next, instead of being held. */
+  setToggles(mask: ButtonMask): void {
+    this.toggles = mask;
+    this.latched &= mask;
+  }
 
   next(raw: RawInput, tapped: ButtonMask, camYaw: number): InputFrame {
     let { moveX, moveY } = raw;
@@ -79,7 +89,16 @@ export class InputFramer {
       moveX /= len;
       moveY /= len;
     }
-    const held = raw.held;
+    let held = raw.held;
+    if (this.toggles) {
+      // A fresh press of a toggle button flips its latch; the press only reaches the sim when it latches on.
+      const fresh = ((raw.held & ~this.prevRaw) | tapped) & this.toggles;
+      const letGo = fresh & this.latched;
+      this.latched = (this.latched ^ fresh) >>> 0;
+      this.prevRaw = raw.held;
+      held = ((held & ~this.toggles) | this.latched) >>> 0;
+      tapped = (tapped & ~letGo) >>> 0;
+    }
     const pressed = ((held & ~this.prevHeld) | tapped) >>> 0;
     const released = (this.prevHeld & ~held) >>> 0;
     this.prevHeld = held;

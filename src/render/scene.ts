@@ -39,6 +39,7 @@ import { WaterView, waterLookOf } from './water';
 import type { SimEvent } from '../core/events';
 import { TempleView } from './temple';
 import { ArchiveView } from './archive';
+import { GrabEdgeView } from './grab-edges';
 import { setupKtx2 } from './ktx2';
 
 export interface PlayerPose {
@@ -114,6 +115,8 @@ export class GameRenderer {
   /** The Temple of the Sun's mechanisms and its guardian (empty for levels without them). */
   private temple: TempleView | null = null;
   private archive: ArchiveView | null = null;
+  private grabEdges: GrabEdgeView | null = null;
+  private highContrast = false;
   private guardians: GuardianView | null = null;
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
@@ -400,6 +403,12 @@ export class GameRenderer {
 
   private renderScale = 1;
 
+  /** High contrast (spec §13): grabbable edges drawn with a bright strip. */
+  setHighContrast(on: boolean): void {
+    this.highContrast = on;
+    this.grabEdges?.setVisible(on);
+  }
+
   /** Reduced motion (spec §13): no film grain. */
   setReducedMotion(on: boolean): void {
     this.reducedMotion = on;
@@ -518,6 +527,9 @@ export class GameRenderer {
       skylights: meshes.skylights,
     });
     this.waterFx.build(level, world);
+    this.grabEdges?.dispose();
+    this.grabEdges = new GrabEdgeView(level, (o, room) => culling.group(room)?.add(o));
+    this.grabEdges.setVisible(this.highContrast);
 
     const bronze = new THREE.MeshStandardMaterial({ color: '#5e7b68', roughness: 0.65, metalness: 0.35 });
     const propMats = {

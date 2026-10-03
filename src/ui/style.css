@@ -554,6 +554,8 @@ html[lang='es'] .fallback > [lang='en'] {
   display: none;
   position: relative;
   z-index: 3;
+  /* Options → Accessibility: touch button size and opacity. */
+  --s: var(--touch-scale, 1);
   --pad-r: max(18px, env(safe-area-inset-right));
   --pad-b: max(18px, env(safe-area-inset-bottom));
   --pad-l: max(18px, env(safe-area-inset-left));
@@ -683,6 +685,7 @@ body.touch.moved #look-ghost {
 
 .tbtn {
   --size: 64px;
+  opacity: var(--touch-opacity, 1);
   position: fixed;
   width: var(--size);
   height: var(--size);
@@ -738,36 +741,36 @@ body.touch.moved #look-ghost {
 
 /* Arc slots, centres measured from the bottom-right safe corner. */
 .tbtn-jump {
-  --size: 84px;
-  right: calc(var(--pad-r) + 42px);
-  bottom: calc(var(--pad-b) + 42px);
+  --size: calc(84px * var(--s));
+  right: calc(var(--pad-r) + 42px * var(--s));
+  bottom: calc(var(--pad-b) + 42px * var(--s));
 }
 .tbtn-action {
-  --size: 66px;
-  right: calc(var(--pad-r) + 146px);
-  bottom: calc(var(--pad-b) + 30px);
+  --size: calc(66px * var(--s));
+  right: calc(var(--pad-r) + 146px * var(--s));
+  bottom: calc(var(--pad-b) + 30px * var(--s));
 }
 .tbtn-walk {
-  --size: 52px;
-  right: calc(var(--pad-r) + 36px);
-  bottom: calc(var(--pad-b) + 144px);
+  --size: calc(52px * var(--s));
+  right: calc(var(--pad-r) + 36px * var(--s));
+  bottom: calc(var(--pad-b) + 144px * var(--s));
 }
 /* Free slots for later buttons (weapons): diagonal and far arc. */
 .tbtn-slot-a {
-  --size: 66px;
-  right: calc(var(--pad-r) + 124px);
-  bottom: calc(var(--pad-b) + 118px);
+  --size: calc(66px * var(--s));
+  right: calc(var(--pad-r) + 124px * var(--s));
+  bottom: calc(var(--pad-b) + 118px * var(--s));
 }
 .tbtn-slot-b {
-  --size: 58px;
-  right: calc(var(--pad-r) + 36px);
-  bottom: calc(var(--pad-b) + 214px);
+  --size: calc(58px * var(--s));
+  right: calc(var(--pad-r) + 36px * var(--s));
+  bottom: calc(var(--pad-b) + 214px * var(--s));
 }
 /* Third slot (the torch): above Fire, clear of Walk and Draw in portrait and landscape. */
 .tbtn-slot-c {
-  --size: 54px;
-  right: calc(var(--pad-r) + 124px);
-  bottom: calc(var(--pad-b) + 206px);
+  --size: calc(54px * var(--s));
+  right: calc(var(--pad-r) + 124px * var(--s));
+  bottom: calc(var(--pad-b) + 206px * var(--s));
 }
 body:not(.has-torch) .tbtn-slot-c {
   display: none;
@@ -808,7 +811,7 @@ body.touch #hud-stats {
 
 @media (orientation: portrait) {
   .tbtn-action {
-    right: calc(var(--pad-r) + 132px);
+    right: calc(var(--pad-r) + 132px * var(--s));
   }
   #stick-ghost {
     bottom: calc(var(--pad-b) + 48px);
@@ -816,12 +819,12 @@ body.touch #hud-stats {
 }
 @media (max-height: 420px) {
   .tbtn-slot-b {
-    right: calc(var(--pad-r) + 214px);
-    bottom: calc(var(--pad-b) + 36px);
+    right: calc(var(--pad-r) + 214px * var(--s));
+    bottom: calc(var(--pad-b) + 36px * var(--s));
   }
   .tbtn-slot-c {
-    right: calc(var(--pad-r) + 214px);
-    bottom: calc(var(--pad-b) + 124px);
+    right: calc(var(--pad-r) + 214px * var(--s));
+    bottom: calc(var(--pad-b) + 124px * var(--s));
   }
 }
 
@@ -1333,4 +1336,104 @@ body.touch #hud-stats {
   font-style: italic;
   font-size: 16px;
   line-height: 1.5;
+}
+
+/* ─────────────────────────── Accessibility (spec §13) ───────────────────────────
+ * Poison on the health bar, the colour-blind safe palette, subtitles and the
+ * trap arrows (ui/caption-view.ts).
+ */
+#hud-health.poisoned #hud-health-fill {
+  background: #8fb34a;
+}
+body.colour-safe #hud-health-fill {
+  background: #5aa9ff;
+}
+body.colour-safe #hud-health.low #hud-health-fill {
+  background: #ffffff;
+}
+body.colour-safe #hud-health.poisoned #hud-health-fill {
+  background: repeating-linear-gradient(135deg, #ff9f1c 0 6px, #7a4300 6px 10px);
+}
+body.colour-safe #hud-health.poisoned {
+  border-color: #ff9f1c;
+}
+
+#captions {
+  position: absolute;
+  left: 50%;
+  bottom: max(150px, calc(env(safe-area-inset-bottom) + 150px));
+  transform: translateX(-50%);
+  width: min(720px, 86vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  font: 500 17px var(--font-ui);
+}
+#captions[data-size='small'] {
+  font-size: 14px;
+}
+#captions[data-size='large'] {
+  font-size: 23px;
+}
+#captions p {
+  margin: 0;
+  padding: 3px 10px;
+  background: rgba(8, 7, 6, 0.78);
+  color: var(--ui-bone);
+  text-align: center;
+  animation: caption-in 0.2s ease-out;
+}
+#captions p.trap {
+  color: var(--ui-amber);
+}
+body.touch #captions {
+  bottom: auto;
+  top: 22%;
+}
+@keyframes caption-in {
+  from {
+    opacity: 0;
+  }
+}
+
+#trap-cues {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#trap-cues .cue {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%) rotate(var(--angle));
+  border-left: 22px solid transparent;
+  border-right: 22px solid transparent;
+  border-bottom: 34px solid #ffb547;
+  filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 8px rgba(0, 0, 0, 0.9));
+  animation: cue 1.6s ease-out forwards;
+}
+@keyframes cue {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+body.reduce-motion #trap-cues .cue {
+  animation: cue-still 1.6s linear forwards;
+}
+@keyframes cue-still {
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }

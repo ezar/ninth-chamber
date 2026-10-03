@@ -38,7 +38,17 @@ import {
   padHas,
   type PadSnapshot,
 } from './pad';
-import { SENSITIVITY_RANGE, type Language, type RendererChoice, type Settings } from './settings';
+import {
+  GAME_SPEEDS,
+  SENSITIVITY_RANGE,
+  TOUCH_OPACITY_RANGE,
+  TOUCH_SIZE_RANGE,
+  type HoldMode,
+  type Language,
+  type RendererChoice,
+  type Settings,
+} from './settings';
+import { CAPTION_SIZES, type CaptionSize } from './captions';
 
 export type MenuContext = 'pause' | 'title';
 type PanelName = 'pause' | 'options' | 'confirm' | 'inventory' | 'hint';
@@ -642,6 +652,98 @@ export class Menu {
         () => t('options.subtitles.hint'),
       ),
     );
+    this.addRow(
+      choiceRow<CaptionSize>(
+        'options.subtitleSize',
+        CAPTION_SIZES,
+        () => s.subtitleSize,
+        (v) => {
+          s.subtitleSize = v;
+          this.cb.change('subtitleSize');
+        },
+        (v) => t(`options.size.${v}`),
+      ),
+    );
+    this.addRow(
+      toggleRow(
+        'options.trapCues',
+        () => s.trapCues,
+        (v) => {
+          s.trapCues = v;
+          this.cb.change('trapCues');
+        },
+        () => t('options.trapCues.hint'),
+      ),
+    );
+    for (const [key, label] of [
+      ['actionMode', 'options.actionMode'],
+      ['walkMode', 'options.walkMode'],
+    ] as const) {
+      this.addRow(
+        choiceRow<HoldMode>(
+          label,
+          ['hold', 'toggle'],
+          () => s[key],
+          (v) => {
+            s[key] = v;
+            this.cb.change(key);
+          },
+          (v) => t(`options.mode.${v}`),
+        ),
+      );
+    }
+    this.addRow(
+      choiceRow<string>(
+        'options.gameSpeed',
+        GAME_SPEEDS.map(String),
+        () => String(s.gameSpeed),
+        (v) => {
+          s.gameSpeed = Number(v);
+          this.cb.change('gameSpeed');
+        },
+        (v) => `${Math.round(Number(v) * 100)} %`,
+        () => t('options.gameSpeed.hint'),
+      ),
+    );
+    this.addRow(
+      toggleRow(
+        'options.highContrast',
+        () => s.highContrast,
+        (v) => {
+          s.highContrast = v;
+          this.cb.change('highContrast');
+        },
+        () => t('options.highContrast.hint'),
+      ),
+    );
+    this.addRow(
+      toggleRow(
+        'options.colourSafe',
+        () => s.colourSafe,
+        (v) => {
+          s.colourSafe = v;
+          this.cb.change('colourSafe');
+        },
+        () => t('options.colourSafe.hint'),
+      ),
+    );
+    for (const [key, label, range] of [
+      ['touchSize', 'options.touchSize', TOUCH_SIZE_RANGE],
+      ['touchOpacity', 'options.touchOpacity', TOUCH_OPACITY_RANGE],
+    ] as const) {
+      this.addRow(
+        rangeRow(
+          label,
+          range,
+          () => s[key],
+          (v) => {
+            s[key] = v;
+            this.cb.change(key);
+          },
+          pct,
+        ),
+      );
+    }
     this.addRow(
       choiceRow<Language>(
         'options.language',

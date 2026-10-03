@@ -12,6 +12,7 @@ import {
   type TextureFiltering,
 } from '../render/quality';
 import { noOverrides, sanitizeBindings, type BindingOverrides } from '../core/bindings';
+import { CAPTION_SIZES, type CaptionSize } from './captions';
 
 export type Language = 'en' | 'es';
 
@@ -46,13 +47,33 @@ export interface Settings {
   cameraSensitivity: number;
   invertY: boolean;
   reducedMotion: boolean;
-  /** Placeholder until captions exist (spec §13 "Accesibilidad"). */
+  /** Captions for the sounds that matter (spec §13 "Accesibilidad"). */
   subtitles: boolean;
+  subtitleSize: CaptionSize;
+  /** An arrow at the screen edge when a trap arms. */
+  trapCues: boolean;
+  /** Action and Walk: held down, or pressed once to latch and again to let go. */
+  actionMode: HoldMode;
+  walkMode: HoldMode;
+  /** 1 or 0.75: the simulation's wall clock (stats count ticks, so they are not penalized). */
+  gameSpeed: number;
+  /** Grabbable edges drawn with a bright line. */
+  highContrast: boolean;
+  /** Health and poison drawn in a palette safe for colour blindness, with patterns. */
+  colourSafe: boolean;
+  /** Touch buttons: scale 0.8..1.4 and opacity 0.3..1. */
+  touchSize: number;
+  touchOpacity: number;
   /** Null follows the browser. */
   language: Language | null;
   /** The player's key and gamepad bindings over the defaults (core/bindings.ts). */
   bindings: BindingOverrides;
 }
+
+export type HoldMode = 'hold' | 'toggle';
+export const GAME_SPEEDS: readonly number[] = [1, 0.75];
+export const TOUCH_SIZE_RANGE = { min: 0.8, max: 1.4, step: 0.1 } as const;
+export const TOUCH_OPACITY_RANGE = { min: 0.3, max: 1, step: 0.1 } as const;
 
 export const SETTINGS_KEY = 'nc.settings';
 export const SETTINGS_VERSION = 3;
@@ -78,6 +99,15 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     invertY: false,
     reducedMotion: prefersReducedMotion,
     subtitles: false,
+    subtitleSize: 'medium',
+    trapCues: true,
+    actionMode: 'hold',
+    walkMode: 'hold',
+    gameSpeed: 1,
+    highContrast: false,
+    colourSafe: false,
+    touchSize: 1,
+    touchOpacity: 1,
     language: null,
     bindings: noOverrides(),
   };
@@ -88,6 +118,8 @@ type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 const clamp = (v: unknown, min: number, max: number, fallback: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
 const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
+const holdMode = (v: unknown, fallback: HoldMode): HoldMode =>
+  v === 'hold' || v === 'toggle' ? v : fallback;
 const optionalBool = (v: unknown, fallback: boolean | null): boolean | null =>
   typeof v === 'boolean' || v === null ? v : fallback;
 
@@ -155,6 +187,22 @@ export function loadSettings(
     invertY: bool(r.invertY, defaults.invertY),
     reducedMotion: bool(r.reducedMotion, defaults.reducedMotion),
     subtitles: bool(r.subtitles, defaults.subtitles),
+    subtitleSize: CAPTION_SIZES.includes(r.subtitleSize as CaptionSize)
+      ? (r.subtitleSize as CaptionSize)
+      : defaults.subtitleSize,
+    trapCues: bool(r.trapCues, defaults.trapCues),
+    actionMode: holdMode(r.actionMode, defaults.actionMode),
+    walkMode: holdMode(r.walkMode, defaults.walkMode),
+    gameSpeed: GAME_SPEEDS.includes(r.gameSpeed as number) ? (r.gameSpeed as number) : defaults.gameSpeed,
+    highContrast: bool(r.highContrast, defaults.highContrast),
+    colourSafe: bool(r.colourSafe, defaults.colourSafe),
+    touchSize: clamp(r.touchSize, TOUCH_SIZE_RANGE.min, TOUCH_SIZE_RANGE.max, defaults.touchSize),
+    touchOpacity: clamp(
+      r.touchOpacity,
+      TOUCH_OPACITY_RANGE.min,
+      TOUCH_OPACITY_RANGE.max,
+      defaults.touchOpacity,
+    ),
     language: r.language === 'en' || r.language === 'es' ? r.language : defaults.language,
     bindings: r.bindings === undefined ? defaults.bindings : sanitizeBindings(r.bindings),
   };
