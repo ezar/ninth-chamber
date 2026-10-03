@@ -14,6 +14,7 @@ The prop GLBs listed below are **generated** by [`scripts/blender/build_props.py
   - **emissive**: JPEG, only on `coals` and `gem`.
   - Data maps are stored as PNG when that stays small, otherwise as high-quality 4:4:4 JPEG. If a GLB still exceeds 1.45 MB the build steps the quality down (and halves the ORM) until it fits.
   - Texture sizes: 1024 for the large props, 512 for the small ones (idols, relic, medkit, coals, gem).
+  - **Shipped as KTX2.** The Blender build writes the maps above; `pnpm textures:ktx2` (`scripts/textures/ktx2.ts`) then rewrites every model in place with `KHR_texture_basisu`: base colour and emissive as sRGB ETC1S, normal maps as ETC1S in normal-map mode, ORM as linear ETC1S, each with full mips. GPUs keep them compressed (ASTC, BC or ETC2), about a quarter of the memory of plain RGBA. Nora (`nora.glb`, from her own pipeline) gets the same treatment, with a UASTC normal map.
 - Materials follow the palette and material library in [`docs/art/README.md`](../../docs/art/README.md): sandstone `#b8895a` (rough 0.88), oxidized bronze with verdigris `#5e7b68` worn back to `#a8773c` metal where hands go, gold `#e8b75a`, sand `#c8a77c`. Nothing teal or turquoise. After baking, the stone and sand base colours are calibrated so their mean matches the palette (`#b8895a` for sandstone, a paler `#c2a481` for the pushable block, `#c8a77c` for sand) while keeping all the procedural variation, and non-metal albedo stays inside sRGB 40 to 235.
 - The build is deterministic: every noise is a pure function of position and every random choice uses a seeded `random.Random`.
 
@@ -61,6 +62,7 @@ pip install bpy==4.5.* pillow   # Python 3.11
 python scripts/blender/build_props.py                   # every prop and a contact sheet
 python scripts/blender/build_props.py --only door,lever # just some
 python scripts/blender/build_props.py --quick           # half-size bakes for quick iteration
+pnpm textures:ktx2 --only models door lever             # then compress the rebuilt models' textures
 ```
 
 The contact sheet (all props re-imported from the GLBs and rendered with a warm key and a cool fill) is written to `$TMPDIR/ninth-chamber-props/contact.png` unless `--contact` says otherwise.

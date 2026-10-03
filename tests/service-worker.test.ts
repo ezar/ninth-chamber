@@ -25,7 +25,8 @@ describe('service worker', () => {
 
   it('precaches the first room but leaves the music to be cached on use', () => {
     expect(precached('models/nora.glb')).toBe(true);
-    expect(precached('textures/wall/albedo.jpg')).toBe(true);
+    expect(precached('textures/wall/albedo.ktx2')).toBe(true);
+    expect(precached('basis/basis_transcoder.wasm')).toBe(true);
     expect(precached('levels/antechamber.lightmap.png')).toBe(true);
     expect(precached('anim/idle.json')).toBe(true);
     expect(precached('audio/music/title.ogg')).toBe(false);

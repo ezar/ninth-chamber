@@ -33,6 +33,7 @@ import { chamberOf, nextChamber } from './ui/campaign';
 import { waterSurface } from './sim/actors/water';
 import { ChamberMap } from './ui/chamber-map';
 import { EndScreen } from './ui/end-screen';
+import { PlaytestLog, clearSessions, exportLog, loadSessions } from './ui/playtest';
 import { browserProgressStorage, loadReached, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
 import { applyStaticStrings, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
@@ -46,6 +47,7 @@ import { Reader } from './ui/reader';
 import { registerServiceWorker } from './ui/service-worker';
 import { browserStorage, defaultSettings, loadSettings, saveSettings, type Settings } from './ui/settings';
 import { TitleScreen } from './ui/title';
+import { version } from '../package.json';
 
 const $ = <T extends HTMLElement>(sel: string): T => {
   const el = document.querySelector<T>(sel);
@@ -180,6 +182,50 @@ async function main(): Promise<void> {
   let world: World = createWorld(level, 1);
   renderer.setWorld(world);
 
+  // The playtest log (Options → Playtest): this session, kept on the device.
+  const playtest = new PlaytestLog(storage, {
+    version,
+    started: new Date().toISOString(),
+    level: level.id,
+    device: {
+      userAgent: navigator.userAgent,
+      touch: hints.coarsePointer,
+      cores: hints.cores ?? null,
+      memoryGb: hints.memoryGb ?? null,
+      screen: `${screen.width}×${screen.height} @${window.devicePixelRatio || 1}`,
+    },
+    renderer: renderer.backendName,
+    tier,
+  });
+  const exportPlaytest = (): void => {
+    playtest.save();
+    const now = new Date();
+    const text = exportLog(loadSessions(storage), now.toISOString());
+    const name = `ninth-chamber-playtest-${now.toISOString().slice(0, 10)}.json`;
+    const file = new File([text], name, { type: 'application/json' });
+    // Phones: the share sheet (mail, messages, files); elsewhere a download.
+    if (navigator.canShare?.({ files: [file] })) {
+      void navigator.share({ files: [file], title: name }).catch(() => {});
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  window.addEventListener('pagehide', () => playtest.save());
+  // Script errors and three.js warnings go into the log too (the browser's own WebGL
+  // warnings never reach the page, so testers' notes still matter for those).
+  window.addEventListener('error', (e) => playtest.problem(`error: ${e.message}`));
+  window.addEventListener('unhandledrejection', (e) => playtest.problem(`rejection: ${String(e.reason)}`));
+  const warn = console.warn.bind(console);
+  console.warn = (...args: unknown[]): void => {
+    warn(...args);
+    playtest.problem(`warning: ${args.map(String).join(' ')}`);
+  };
+
   audio.setEmitters(
     level.entities
       .filter((e) => (e.type === 'brazier' && e.lit) || e.type === 'relic')
@@ -272,6 +318,7 @@ async function main(): Promise<void> {
   };
   const applyTier = (t: QualityTier): void => {
     tier = t;
+    playtest.setTier(t);
     renderer.setQuality(QUALITY[t]);
     applyResolution();
   };
@@ -352,6 +399,11 @@ async function main(): Promise<void> {
       activeBackend: () => renderer.backendName,
       autoGrain: () => renderer.quality.filmGrain && !settings.reducedMotion,
       autoSharpen: () => renderer.pixelRatio < (window.devicePixelRatio || 1) - 0.01,
+    },
+    playtest: {
+      count: () => loadSessions(storage).length,
+      export: exportPlaytest,
+      clear: () => clearSessions(storage),
     },
   });
   applyVolumes();
@@ -456,6 +508,7 @@ async function main(): Promise<void> {
   const pause = (): void => {
     if (phase !== 'play' || paused || world.ended || reader.isOpen) return;
     paused = true;
+    playtest.save();
     keyboard.setEnabled(false);
     audio.setPaused(true);
     document.body.classList.add('paused');
@@ -500,6 +553,7 @@ async function main(): Promise<void> {
   };
 
   const quitToTitle = (): void => {
+    playtest.save();
     paused = false;
     menu.close();
     document.body.classList.remove('paused');
@@ -524,6 +578,7 @@ async function main(): Promise<void> {
   const goToLevel = (id: string): void => {
     if (id === level.id && phase === 'title') return;
     markReached(progress, id);
+    playtest.save();
     audio.ui('confirm');
     curtain.classList.add('in');
     window.setTimeout(() => location.assign(levelUrl(location.href, id)), 480);
@@ -604,6 +659,7 @@ async function main(): Promise<void> {
 
   const onEvent = (e: SimEvent): void => {
     const p = world.state.player.pos;
+    playtest.onEvent(e.type);
     audio.onEvent(e, soundAt(e));
     if (e.type === 'player.respawned') {
       // The checkpoint may bring back a torch in another state: the crackle follows it.
@@ -640,6 +696,7 @@ async function main(): Promise<void> {
       const next = nextChamber(level.id)?.level;
       if (next && playable.has(next)) markReached(progress, next);
       endScreen.show(world, (id) => playable.has(id));
+      playtest.save();
     }
   };
   bus.on('*', onEvent);
@@ -863,6 +920,8 @@ async function main(): Promise<void> {
     draw(dt);
     redraw = false;
     if (phase === 'play') hud.update(world, dt);
+    // Stalls over a second (a hidden tab, a debugger) are not play.
+    if (phase === 'play' && !reader.isOpen && rawDt < 1) playtest.frame(rawDt);
     audio.setHealth(world.state.player.health / tuning.maxHealth);
     audio.setUnderwater(renderer.underwater);
 
@@ -870,6 +929,7 @@ async function main(): Promise<void> {
     const r = level.roomAt(Math.floor(p.x / BLOCK), Math.floor(p.z / BLOCK));
     if (r && r.id !== room) {
       room = r.id;
+      playtest.enterRoom(r.id);
       audio.setRoom((r.reverb as ReverbPreset | null) ?? null);
     }
 

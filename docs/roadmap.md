@@ -1,6 +1,6 @@
 # Roadmap to 0.3.0
 
-Agreed with the owner on 2026-09-27, after 0.2.4. Nothing here is built yet. **Work starts only after playtest feedback** from people outside the project (spec §16, "Pruebas con personas"). That feedback may reorder or cut items below. The design of chamber IV is in [spec §19](spec.md).
+Agreed with the owner on 2026-09-27, after 0.2.4. 0.2.5 shipped on 2026-10-03; the owner asked for the work to go ahead before outside feedback arrived. Playtest feedback from people outside the project (spec §16, "Pruebas con personas") may still reorder or cut the items below. The design of chamber IV is in [spec §19](spec.md).
 
 **Goal:** close Phase 2 of the spec (inventory, keys and relics, save, options, control remapping) and open the second half of the campaign with chamber IV, the Clay Archive.
 
@@ -75,3 +75,4 @@ These are for players, without guiding them while they play:
 4. What device did you play on, and was it smooth? If you can, turn on Options → Graphics → performance readout and note the FPS.
 5. Did the sound cut out at any point?
 6. What did you like most, what did you like least, and would you keep playing?
+7. If you can, export the playtest log (Options → Playtest → Export playtest log) and send it with your answers. It stays on your device until you do.

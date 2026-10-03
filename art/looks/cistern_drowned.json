@@ -13,6 +13,6 @@
     "tint": "#4d8a86",
     "sky": "#121a1b",
     "caustics": 0.45,
-    "fog": { "color": "#0a2527", "density": 0.2 }
+    "fog": { "color": "#123a3c", "density": 0.15 }
   }
 }

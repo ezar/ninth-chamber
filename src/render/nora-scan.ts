@@ -13,6 +13,7 @@
  */
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { ktx2 } from './ktx2';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { NoraModel, type NoraPose, type RetargetJoint } from './nora';
 import { CLIP_NAMES, NoraAnimator, type ClipLibrary, type ClipName, type PoseLayer } from './anim/animator';
@@ -321,6 +322,8 @@ export class NoraRig {
     try {
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(MeshoptDecoder);
+      const k = ktx2();
+      if (k) loader.setKTX2Loader(k);
       const [gltf, loaded] = await Promise.all([
         loader.loadAsync(url),
         // Each clip is optional: a mode whose clip is missing stays procedural.

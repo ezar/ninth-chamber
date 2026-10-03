@@ -11,6 +11,7 @@
  */
 import * as THREE from 'three/webgpu';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import { ktx2 } from './ktx2';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { TICK_DT } from '../core/loop';
@@ -818,6 +819,8 @@ export async function loadJackalAsset(url: string): Promise<JackalAsset | null> 
   try {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
+    const k = ktx2();
+    if (k) loader.setKTX2Loader(k);
     const gltf: GLTF = await loader.loadAsync(url);
     const names = new Set(gltf.animations.map((a) => a.name));
     if (!names.has(CLIPS.idle) || !names.has(CLIPS.run))

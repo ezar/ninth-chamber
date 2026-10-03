@@ -6,12 +6,13 @@
  * quality tier (render/quality.ts).
  */
 import * as THREE from 'three/webgpu';
-import { length, smoothstep, uniform, uv } from 'three/tsl';
+import { clamp, length, normalWorld, positionWorld, smoothstep, texture, uniform, uv, vec2 } from 'three/tsl';
 import { BLOCK } from '../sim/grid/units';
 import type { Vec3 } from '../sim/state';
 import type { World } from '../sim/world';
 import { CombatView } from './combat';
 import { FIRE_GAIN, FIRE_LIGHT_LIFT, FireLightScheduler, type FireSpot } from './fire-lights';
+import { MASK_RES, MASK_SIZE, fireMask, maskAtlas, type MaskAtlas } from './light-mask';
 import { buildLevelMeshes, type Surface } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
 import type { NoraPose } from './nora';
@@ -37,6 +38,7 @@ import { WaterFx } from './water-fx';
 import { WaterView, waterLookOf } from './water';
 import type { SimEvent } from '../core/events';
 import { TempleView } from './temple';
+import { setupKtx2 } from './ktx2';
 
 export interface PlayerPose {
   pos: Vec3;
@@ -78,6 +80,18 @@ export class GameRenderer {
    * the scheduler moves them between braziers with fades instead.
    */
   private readonly fireLights: THREE.PointLight[] = [];
+  /**
+   * Per plain fire light: its colour times intensity, and which brazier's
+   * mask it reads (the mask's world corner and its texel offset in the atlas).
+   * The light's colorNode multiplies the two, so it stops at walls (light-mask.ts).
+   */
+  private readonly fireMaskUniforms: {
+    tint: THREE.UniformNode<'color', THREE.Color>;
+    tile: THREE.UniformNode<'vec4', THREE.Vector4>;
+  }[] = [];
+  private readonly maskTexture = texture(placeholderMask());
+  private readonly maskAtlasSize = uniform(new THREE.Vector2(1, 1));
+  private maskTiles: MaskAtlas['tiles'] = [];
   private readonly fireCasters: THREE.PointLight[] = [];
   private readonly fireSchedule: FireLightScheduler;
   /** Sun window, fire shadow filters and biases, the debug view (shadows.ts). */
@@ -168,6 +182,11 @@ export class GameRenderer {
     this.sun.shadow.mapSize.set(profile.sun.size, profile.sun.size);
     for (let i = 0; i < profile.fireLights.pool; i++) {
       const l = new THREE.PointLight('#ff8a3d', 0, 18, 2);
+      const tint = uniform(new THREE.Color(0, 0, 0));
+      const tile = uniform(new THREE.Vector4(0, 0, 0, 0));
+      // three reads a light's colorNode when it builds the light (not in the typings).
+      (l as THREE.PointLight & { colorNode?: THREE.Node }).colorNode = tint.mul(this.fireMaskAt(tile));
+      this.fireMaskUniforms.push({ tint, tile });
       this.fireLights.push(l);
       this.scene.add(l);
     }
@@ -193,8 +212,9 @@ export class GameRenderer {
     this.scene.add(this.torch.group);
     for (const b of this.bounceLights) this.scene.add(b.light);
     // A soft fill that follows Nora so she reads against backlight (a common
-    // character-lighting cheat); short range, so it barely touches the set.
-    this.characterFill.position.set(0.6, 2.2, 1.6);
+    // character-lighting cheat); short range, so it barely touches the set. Only
+    // 0.3 m to the side, so in a two-metre corridor it leaves no hot spot on the wall.
+    this.characterFill.position.set(0.3, 2.3, 1.6);
     this.nora.root.add(this.characterFill);
     const contact = makeContactShadow();
     this.contactShadow = contact.mesh;
@@ -208,6 +228,8 @@ export class GameRenderer {
 
   async init(): Promise<void> {
     await this.renderer.init();
+    // KTX2 textures transcode for this GPU (level surfaces, prop models, Nora).
+    setupKtx2(this.renderer);
     [this.surfaces] = await Promise.all([
       loadSurfaces(),
       this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`, `${import.meta.env.BASE_URL}anim/`),
@@ -323,7 +345,11 @@ export class GameRenderer {
     const fix = (t: THREE.Texture | null | undefined): void => {
       if (!t || t.isRenderTargetTexture || !t.image) return;
       let changed = false;
-      if (t.minFilter === THREE.LinearFilter || t.minFilter === THREE.NearestFilter) {
+      // Compressed textures bring their own mips (and cannot generate them).
+      if (
+        !('isCompressedTexture' in t) &&
+        (t.minFilter === THREE.LinearFilter || t.minFilter === THREE.NearestFilter)
+      ) {
         t.minFilter = THREE.LinearMipmapLinearFilter;
         t.generateMipmaps = true;
         changed = true;
@@ -923,6 +949,11 @@ export class GameRenderer {
     this.hemi.color.copy(l.hemiSky);
     this.hemi.groundColor.copy(l.hemiGround);
     this.hemi.intensity = l.hemiIntensity * (this.hasLightmap ? 0.6 : 1);
+    // Dark rooms raise the fill (the look's scale): brighter and reaching a little further.
+    // Under water it grows threefold, so the drowned tunnels are not swum blind.
+    const fill = l.fill * (1 + 2 * this.underwaterMix);
+    this.characterFill.intensity = 1.6 * fill;
+    this.characterFill.distance = 4.5 * Math.sqrt(fill);
     if (this.hasLightmap && Math.abs(l.lightmap - this.lightmapScale) > 1e-3) {
       this.lightmapScale = l.lightmap;
       for (const m of this.levelMeshes)
@@ -947,10 +978,44 @@ export class GameRenderer {
   /** Brightness of the volumetric sun shafts per unit of sun intensity (art direction knob). */
   static RAYS_GAIN = 0.24;
 
+  /**
+   * The brazier mask at the lit point, read from the atlas through a light's
+   * `tile` (world corner xy, texel offset zw). The point moves 5 cm off its
+   * surface, so a wall face reads the open half metre in front of it.
+   */
+  private fireMaskAt(tile: THREE.UniformNode<'vec4', THREE.Vector4>) {
+    const p = positionWorld.xz.add(normalWorld.xz.mul(0.05));
+    // Outside the mask, the clamp lands on its dark border.
+    const local = clamp(p.sub(tile.xy).mul(MASK_RES / BLOCK), 0.5, MASK_SIZE - 0.5);
+    // sample() keeps a reference to maskTexture, so a new level's atlas reaches every light.
+    return this.maskTexture.sample(vec2(tile.zw).add(local).div(this.maskAtlasSize)).r;
+  }
+
   /** Braziers with their rooms, and which rooms touch, for the fire light scheduler. */
   private indexFires(): void {
     const level = this.world?.level;
     if (!level) return;
+    // Where each brazier's light may fall (light-mask.ts), packed into one texture.
+    const grid = {
+      open: (cx: number, cz: number): boolean => {
+        const sec = level.sector(cx, cz);
+        return sec !== undefined && !sec.wall;
+      },
+    };
+    const atlas = maskAtlas((this.props?.fires ?? []).map((f) => fireMask(grid, f.pos.x, f.pos.z)));
+    const rgba = new Uint8Array(atlas.width * atlas.height * 4);
+    for (let i = 0; i < atlas.data.length; i++) {
+      const v = atlas.data[i] ?? 0;
+      rgba[i * 4] = v;
+      rgba[i * 4 + 1] = v;
+      rgba[i * 4 + 2] = v;
+      rgba[i * 4 + 3] = 255;
+    }
+    // The previous atlas is left to the garbage collector: disposing a texture a
+    // compiled binding may still hold floods WebGPU with validation errors.
+    this.maskTexture.value = maskDataTexture(rgba, atlas.width, atlas.height);
+    this.maskAtlasSize.value.set(atlas.width, atlas.height);
+    this.maskTiles = atlas.tiles;
     this.fireSpots = (this.props?.fires ?? []).map((f) => ({
       x: f.pos.x,
       y: f.pos.y,
@@ -1000,7 +1065,14 @@ export class GameRenderer {
     };
     levels.plain.forEach((l, i) => {
       const light = this.fireLights[i];
-      if (light) drive(light, l.fire, l.level);
+      if (!light) return;
+      drive(light, l.fire, l.level);
+      // The light's colorNode replaces three's colour × intensity uniform: drive ours.
+      const u = this.fireMaskUniforms[i];
+      const tile = this.maskTiles[l.fire];
+      if (!u) return;
+      u.tint.value.copy(light.color).multiplyScalar(light.intensity);
+      if (tile) u.tile.value.set(tile.originX, tile.originZ, tile.tileX, tile.tileY);
     });
     levels.casters.forEach((l, i) => {
       const light = this.fireCasters[i];
@@ -1106,4 +1178,21 @@ function makeContactShadow(): { mesh: THREE.Mesh; strength: THREE.UniformNode<'f
   mesh.renderOrder = 1;
   mesh.visible = false;
   return { mesh, strength };
+}
+
+/** A brazier mask atlas as a texture: one channel stored as RGBA, filtered alike on every backend. */
+function maskDataTexture(rgba: Uint8Array, width: number, height: number): THREE.DataTexture {
+  const t = new THREE.DataTexture(rgba, width, height, THREE.RGBAFormat, THREE.UnsignedByteType);
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearFilter;
+  t.generateMipmaps = false;
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  t.colorSpace = THREE.NoColorSpace;
+  t.needsUpdate = true;
+  return t;
+}
+
+/** Until a level's braziers are known: a single lit texel, so the lights behave as before. */
+function placeholderMask(): THREE.DataTexture {
+  return maskDataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 }

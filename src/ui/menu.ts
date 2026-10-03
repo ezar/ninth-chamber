@@ -54,6 +54,14 @@ export interface MenuCallbacks {
     autoGrain(): boolean;
     autoSharpen(): boolean;
   };
+  /** The playtest log kept on the device (ui/playtest.ts). No rows without it. */
+  playtest?: {
+    /** Sessions stored. */
+    count(): number;
+    /** Hands the log to the player (share sheet or download). */
+    export(): void;
+    clear(): void;
+  };
 }
 
 interface OptionRow {
@@ -536,6 +544,42 @@ export class Menu {
         (v) => t(`lang.${v}`),
       ),
     );
+
+    this.buildPlaytest();
+  }
+
+  private buildPlaytest(): void {
+    const log = this.cb.playtest;
+    if (!log) return;
+    const h = document.createElement('h3');
+    h.className = 'opt-group';
+    h.dataset.i18n = 'options.group.playtest';
+    h.textContent = t('options.group.playtest');
+    this.list.append(h);
+    const count = (): string => t('options.playtest.hint', { count: String(log.count()) });
+    this.addRow(buttonRow('options.playtest.export', () => log.export(), count));
+    // Deleting asks for a second press on the same row.
+    let armed = false;
+    const clear = buttonRow(
+      'options.playtest.clear',
+      () => {
+        if (!armed) {
+          armed = true;
+          clear.refresh();
+          return;
+        }
+        armed = false;
+        log.clear();
+        for (const r of this.rows) r.refresh();
+      },
+      () => (armed ? t('options.playtest.clear.confirm') : null),
+    );
+    clear.el.addEventListener('blur', () => {
+      if (!armed) return;
+      armed = false;
+      clear.refresh();
+    });
+    this.addRow(clear);
   }
 
   private addRow(row: OptionRow): void {
@@ -551,6 +595,7 @@ export class Menu {
       if (arrow) row.step(arrow.dataset.step === '-1' ? -1 : 1);
       // A tap on a switch's value flips it, as on a phone's settings screen.
       else if (row.el.getAttribute('role') === 'switch' && target.closest('.opt-value')) row.activate();
+      else if (row.el.getAttribute('role') === 'button') row.activate();
       row.el.focus({ preventScroll: true });
     });
   }
@@ -560,7 +605,7 @@ export class Menu {
 
 function rowShell(
   label: StringKey,
-  role: 'slider' | 'switch',
+  role: 'slider' | 'switch' | 'button',
 ): {
   el: HTMLElement;
   labelEl: HTMLElement;
@@ -726,4 +771,27 @@ function toggleRow(
   };
   refresh();
   return { el: r.el, refresh, step: flip, activate: flip };
+}
+
+/** A row that does something when activated (Enter, A, tap). */
+function buttonRow(label: StringKey, run: () => void, hint?: () => string | null): OptionRow {
+  const r = rowShell(label, 'button');
+  r.el.classList.add('opt-button');
+  r.prev.hidden = true;
+  r.next.hidden = true;
+  const refresh = (): void => {
+    r.labelEl.textContent = t(label);
+    r.value.textContent = '›';
+    setHint(r.hint, hint ? hint() : null);
+  };
+  refresh();
+  return {
+    el: r.el,
+    refresh,
+    step: () => undefined,
+    activate: () => {
+      run();
+      refresh();
+    },
+  };
 }

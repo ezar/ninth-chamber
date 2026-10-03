@@ -16,6 +16,12 @@ export interface LookFile {
   grade: { tint: string; saturation: number; contrast: number; vignette: number };
   /** Scale on the baked bounce light while in this room (default 1): a room gone dark dims what was baked with its fires. */
   lightmap?: number;
+  /**
+   * Scale on the soft light that follows Nora (default 1). Dark rooms with no
+   * fire of their own (the Temple's boulder run) raise it so she and the floor
+   * around her read.
+   */
+  fill?: number;
   /** Rooms with water: its colours, caustics and the fog under the surface (render/water.ts). */
   water?: {
     deep: string;
@@ -51,6 +57,7 @@ export interface Look {
   contrast: number;
   vignette: number;
   lightmap: number;
+  fill: number;
 }
 
 const files = import.meta.glob<LookFile>('../../art/looks/*.json', { eager: true, import: 'default' });
@@ -91,6 +98,7 @@ export function parseLook(f: LookFile): Look {
     contrast: f.grade.contrast,
     vignette: f.grade.vignette,
     lightmap: f.lightmap ?? 1,
+    fill: f.fill ?? 1,
   };
 }
 
@@ -129,6 +137,7 @@ export function blendLook(out: Look, to: Look, k: number): void {
   out.contrast = n(out.contrast, to.contrast);
   out.vignette = n(out.vignette, to.vignette);
   out.lightmap = n(out.lightmap, to.lightmap);
+  out.fill = n(out.fill, to.fill);
 }
 
 export function cloneLook(l: Look): Look {

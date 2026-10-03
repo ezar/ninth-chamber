@@ -14,7 +14,8 @@ import type { World } from '../sim/world';
 import { surfaceParams, type SurfaceSet } from './materials';
 import { FIRE_BASE } from './fire-lights';
 import { DOOR_MODEL_HEIGHT, dressLevel, PropLibrary, type PropModel } from './prop-models';
-import { cracked } from './textures';
+import { crackMask } from './textures';
+import { materialColor, texture, uv, vec2 } from 'three/tsl';
 import { torchModel } from './torch';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
@@ -292,13 +293,12 @@ export class Props {
   }
 
   private buildCrumbleTiles(): void {
-    const crackedMap = cracked(this.mats.floor);
-    crackedMap.repeat.copy(this.mats.floor.map.repeat);
-    const mat = new THREE.MeshStandardMaterial({
-      ...surfaceParams(this.mats.floor),
-      map: crackedMap,
-      color: '#d9c6a8',
-    });
+    const floor = this.mats.floor;
+    const mat = new THREE.MeshStandardNodeMaterial({ ...surfaceParams(floor), color: '#d9c6a8' });
+    // The floor's albedo times the crack mask, both tiled as the floor is.
+    const r = floor.map.repeat;
+    const tiled = uv().mul(vec2(r.x, r.y));
+    mat.colorNode = materialColor.mul(texture(floor.map, tiled)).mul(texture(crackMask(), tiled));
     for (const s of this.level.allSectors()) {
       if (!s.flags.has('crumble')) continue;
       const geo = new RoundedBoxGeometry(BLOCK - 0.04, 0.35, BLOCK - 0.04, 2, 0.03);
