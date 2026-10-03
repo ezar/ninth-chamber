@@ -14,7 +14,7 @@
 import type { StringKey } from './i18n';
 
 /** How the end screen draws a relic's clue: eight signs and a missing ninth. */
-export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs' | 'segments';
+export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs' | 'segments' | 'notes';
 
 export interface Relic {
   name: StringKey;
@@ -154,7 +154,25 @@ export const CHAMBERS: readonly Chamber[] = [
     teaser: 'teaser.bronze_forge',
     journal: ['journal.bronze_forge.1', 'journal.bronze_forge.2', 'journal.bronze_forge.3'],
   },
-  { numeral: 'VII', name: 'chamber.7.name', line: 'chamber.7.line', status: 'sealed' },
+  {
+    numeral: 'VII',
+    level: 'wind_stair',
+    name: 'chamber.7.name',
+    line: 'chamber.7.line',
+    kicker: 'kicker.wind_stair',
+    premise: 'premise.wind_stair',
+    intro: ['intro.wind_stair.1', 'intro.wind_stair.2', 'intro.wind_stair.3'],
+    relic: {
+      name: 'relic.wind_stair.name',
+      clue: 'relic.wind_stair.clue',
+      figure: 'notes',
+      figureLabel: 'end.wind_stair.figure',
+      moment: ['end.wind_stair.1', 'end.wind_stair.2', 'end.wind_stair.3'],
+      cleared: 'end.wind_stair.kicker',
+    },
+    teaser: 'teaser.wind_stair',
+    journal: ['journal.wind_stair.1', 'journal.wind_stair.2', 'journal.wind_stair.3'],
+  },
   { numeral: 'VIII', name: 'chamber.8.name', line: 'chamber.8.line', status: 'sealed' },
   { numeral: 'IX', name: 'chamber.9.name', line: 'chamber.9.line', status: 'unknown' },
 ];
@@ -164,8 +182,8 @@ export const chamberOf = (levelId: string): Chamber | undefined => CHAMBERS.find
 /**
  * The chamber after a level's, in campaign order: the next one that can be
  * played, skipping chambers not built yet (the Forge, VI, opens after the
- * Archive, IV, until the Root Halls, V, exist); with none left, the next
- * sealed one, for the end screen's teaser.
+ * Archive, IV, until the Root Halls, V, exist; the Wind Stair, VII, follows
+ * the Forge); with none left, the next sealed one, for the end screen's teaser.
  */
 export function nextChamber(levelId: string): Chamber | undefined {
   const i = CHAMBERS.findIndex((c) => c.level === levelId);

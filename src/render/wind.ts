@@ -12,7 +12,7 @@ import type { World } from '../sim/world';
 
 /** Streaks per cell of a zone, and at most this many per zone. */
 const PER_CELL = 6;
-const MAX_PER_ZONE = 240;
+const MAX_PER_ZONE = 160;
 /** A streak travels at this many times the wind speed (it reads as gusty, not as drifting). */
 const VISUAL_SPEED = 2.4;
 

@@ -1,0 +1,36 @@
+{
+  "id": "wind_summit",
+  "background": "#2a3446",
+  "exposure": 1.12,
+  "hemi": {
+    "sky": "#c9d4e2",
+    "ground": "#2a2a30",
+    "intensity": 0.42
+  },
+  "fog": {
+    "color": "#8a96a8",
+    "density": 0.012
+  },
+  "sun": {
+    "color": "#ffe2b8",
+    "intensity": 6.0,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#f2e4d0",
+    "saturation": 0.85,
+    "contrast": 1.06,
+    "vignette": 0.3
+  },
+  "fill": 1.0
+}

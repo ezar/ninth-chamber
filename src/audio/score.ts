@@ -133,6 +133,21 @@ export const PALETTES: Record<string, Palette> = {
     fanfare: 'sun_temple.fanfare',
     stingers: STINGERS,
   },
+  /**
+   * Airy and high: the Wind Stair draws on the Cisterns' open, echoing cues
+   * and the Temple's tension until it has its own (docs/changelog.md, 0.6.0).
+   */
+  wind_stair: {
+    intro: 'cisterns.intro',
+    explore: ['cisterns.explore.2', 'cisterns.explore.1'],
+    tension: 'sun_temple.tension',
+    combat: 'cisterns.combat',
+    chase: 'chase',
+    boss: 'boss',
+    relic: 'cisterns.relic',
+    fanfare: 'fanfare',
+    stingers: { ...STINGERS, solved: 'sting.solved.2' },
+  },
 };
 
 export function paletteFor(levelId: string): Palette {

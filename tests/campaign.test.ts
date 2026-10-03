@@ -8,7 +8,7 @@ import { CHAMBERS, chamberOf, nextChamber } from '../src/ui/campaign';
 const keys = (o: object): Set<string> => new Set(Object.keys(o));
 
 describe('campaign story data', () => {
-  it('has nine chambers: five playable (VI built before V), three sealed and the ninth unknown', () => {
+  it('has nine chambers: six playable (VI and VII built before V), two sealed and the ninth unknown', () => {
     expect(CHAMBERS.map((c) => c.numeral)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
     expect(CHAMBERS.map((c) => c.level ?? null)).toEqual([
       'antechamber',
@@ -17,11 +17,11 @@ describe('campaign story data', () => {
       'clay_archive',
       null,
       'bronze_forge',
-      null,
+      'wind_stair',
       null,
       null,
     ]);
-    expect([4, 6, 7].every((i) => CHAMBERS[i]?.status === 'sealed')).toBe(true);
+    expect([4, 7].every((i) => CHAMBERS[i]?.status === 'sealed')).toBe(true);
     expect(CHAMBERS[8]?.status).toBe('unknown');
   });
 
@@ -50,13 +50,14 @@ describe('campaign story data', () => {
     expect([...placed].sort()).toEqual([...(chamberOf('antechamber')?.journal ?? [])].sort());
   });
 
-  it('chains the chambers: the Archive leads past the sealed Root Halls to the Forge, the Forge to the sealed ones', () => {
+  it('chains the chambers: the Archive leads past the sealed Root Halls to the Forge, the Forge to the Wind Stair, then the sealed ones', () => {
     expect(nextChamber('antechamber')?.level).toBe('cisterns');
     expect(nextChamber('cisterns')?.level).toBe('sun_temple');
     expect(nextChamber('sun_temple')?.level).toBe('clay_archive');
     expect(nextChamber('clay_archive')?.level).toBe('bronze_forge');
-    expect(nextChamber('bronze_forge')?.numeral).toBe('VII');
-    expect(nextChamber('bronze_forge')?.status).toBe('sealed');
+    expect(nextChamber('bronze_forge')?.level).toBe('wind_stair');
+    expect(nextChamber('wind_stair')?.numeral).toBe('VIII');
+    expect(nextChamber('wind_stair')?.status).toBe('sealed');
     expect(chamberOf('nowhere')).toBeUndefined();
   });
 });

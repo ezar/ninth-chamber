@@ -1,0 +1,36 @@
+{
+  "id": "wind_storm",
+  "background": "#151a22",
+  "exposure": 1.17,
+  "hemi": {
+    "sky": "#bfcbda",
+    "ground": "#27272d",
+    "intensity": 0.5
+  },
+  "fog": {
+    "color": "#4a5260",
+    "density": 0.03
+  },
+  "sun": {
+    "color": "#c8d2e0",
+    "intensity": 2.6,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#e9e0d4",
+    "saturation": 0.8,
+    "contrast": 1.07,
+    "vignette": 0.31
+  },
+  "fill": 1.0
+}

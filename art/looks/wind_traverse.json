@@ -1,0 +1,36 @@
+{
+  "id": "wind_traverse",
+  "background": "#1a202b",
+  "exposure": 1.13,
+  "hemi": {
+    "sky": "#a1aec0",
+    "ground": "#1d1e24",
+    "intensity": 0.43
+  },
+  "fog": {
+    "color": "#606b7c",
+    "density": 0.018
+  },
+  "sun": {
+    "color": "#e1dbd8",
+    "intensity": 4.8,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#d0d5dd",
+    "saturation": 0.66,
+    "contrast": 1.09,
+    "vignette": 0.35
+  },
+  "fill": 1.0
+}

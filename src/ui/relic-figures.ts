@@ -119,6 +119,32 @@ function segments(): string {
   );
 }
 
+/** The Wind Shell: eight notes cut around its lip, each a short sounding wave, and the ninth a silence. */
+function notes(): string {
+  const waves = Array.from({ length: 8 }, (_, i) => {
+    const a = angle(i);
+    // Three arcs opening outward, like sound leaving the shell.
+    const arcs = [10, 17, 24]
+      .map((r) => {
+        const [cx, cy] = at(a, 66);
+        const [x0, y0] = at(a - 40, r);
+        const [x1, y1] = at(a + 40, r);
+        return `M${cx + x0} ${cy + y0} A${r} ${r} 0 0 1 ${cx + x1} ${cy + y1}`;
+      })
+      .join(' ');
+    const [dx, dy] = at(a, 66);
+    return (
+      `<g class="map-star" style="--i:${i}"><circle class="glow" cx="${dx}" cy="${dy}" r="12"/>` +
+      `<circle cx="${dx}" cy="${dy}" r="2.6"/><path class="map-line" pathLength="1" d="${arcs}"/></g>`
+    );
+  }).join('');
+  const [nx, ny] = at(angle(8), 80);
+  return (
+    `<path class="map-line" pathLength="1" d="M0 0 m-8 0 a8 8 0 1 1 16 0 a14 14 0 1 1 -28 0 a22 22 0 1 1 44 0"/>` +
+    `${waves}<circle class="map-ninth" cx="${nx}" cy="${ny}" r="9"/><circle class="map-here" cx="${nx}" cy="${ny}" r="3"/>`
+  );
+}
+
 export function relicFigureSvg(figure: RelicFigure, label: string): string {
   const body =
     figure === 'moons'
@@ -129,6 +155,8 @@ export function relicFigureSvg(figure: RelicFigure, label: string): string {
           ? signs()
           : figure === 'segments'
             ? segments()
-            : stars();
+            : figure === 'notes'
+              ? notes()
+              : stars();
   return frame(label, body);
 }
