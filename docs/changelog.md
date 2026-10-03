@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 0.6.6 (2026-10-03): Anzur
+
+The second of three releases on the way to 0.7.0, chamber VIII, the Observatory (docs/roadmap.md).
+
+- **Anzur, the giant** (guardian kind `giant`, spec §19): the largest of the eight keepers, built on the guardian's code. It stands nearly twice their height, slower, with its own tuning.
+  - Rules advance its three phases (`<id>.advance`): the level ties them to the dome's rings. It reels at each change, then comes on harder. It emits `<id>.phase2` and `<id>.phase3`.
+  - **Phase 1**: a wide sweep, more than 4 m round it.
+  - **Phase 2**: its slams break the floor a stride ahead of it. Those cells crack and fall after the usual warning, leaving pits. Only floor at its own level breaks (a ledge above it holds), and never under itself or in the oculus light. It strides over the holes it opens.
+  - **Phase 3**: only the oculus light falling on it stops it (`guardian.lit`, then defeated).
+  - It never falls into a pit, and a fall onto its back does nothing.
+- **Look and sound**: the guardian's figure scaled up, in night-grey stone with a pale gaze and core. Its wind-up ring and shockwave span the wider sweep. A phase change shakes the hall, and the moonlight freezing it rings out, with subtitles.
+- **Verification**: `tests/anzur.test.ts`: waking and the sweep, the phases and their cap, a whole floor in phase 1, broken floor in phase 2 but never in the light or on a ledge above it, striding over its own holes, no falls, defeat only in phase 3 and only in the light, and the shrugged blow from above.
+
 ## Version 0.6.5 (2026-10-03): Rings, the oculus and the night sky
 
 The first of three releases on the way to 0.7.0, chamber VIII, the Observatory (docs/roadmap.md).

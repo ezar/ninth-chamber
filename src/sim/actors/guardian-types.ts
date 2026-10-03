@@ -21,14 +21,14 @@ export type GuardianMode =
 
 export interface GuardianState {
   id: string;
-  /** Stone, or bronze (molten bronze over it is a blow). */
-  kind: 'stone' | 'bronze';
+  /** Stone, bronze (molten bronze over it is a blow), or the giant (Anzur: three phases, stopped by the oculus light). */
+  kind: 'stone' | 'bronze' | 'giant';
   /** Seconds clear of hot bronze still needed before bronze can count as another blow (one pour, one blow). */
   immune: number;
   mode: GuardianMode;
   modeTime: number;
   /** 1 until its first fall or broken core, then 2; a second blow defeats it. */
-  phase: 1 | 2;
+  phase: 1 | 2 | 3;
   /** Feet position (m). */
   pos: { x: number; y: number; z: number };
   vel: { x: number; z: number };
