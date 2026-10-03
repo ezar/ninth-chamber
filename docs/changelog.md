@@ -1,5 +1,48 @@
 # Changelog
 
+## Version 0.3.0 (2026-10-03): Chamber IV, the Clay Archive
+
+The third and last release on the way to 0.3.0 (docs/roadmap.md): the second half of the campaign opens.
+
+- **The Clay Archive** (`levels/clay_archive.level.json`, spec §19): ten rooms under the Temple of the Sun.
+  1. The shaft down from the temple.
+  2. The reading room, with its first glyph lock.
+  3. The stacks, with shelves that push and pull like blocks.
+  4. The dark gallery, with darts.
+  5. The kiln, with a plate and two cylinders.
+  6. The sunlit scriptorium.
+  7. The index.
+  8. The canal, with the sluice.
+  9. Tamrit's hall.
+  10. The Hall of the Name, with three cylinders and the Tablet of the Name.
+
+  It also has:
+  - three secrets (behind a shelf, on a ledge above the scriptorium, and in a niche that floods);
+  - three journal notes whose words are the locks' sequences, which chain the first three relics into the last lock;
+  - ten room looks and a baked lightmap;
+  - Nora's ideas for seven puzzles;
+  - the campaign entry and the end screen's sign figure.
+
+- **Glyph locks** (`src/sim/mechanisms/archive.ts`):
+  - Each is a six-faced stone cylinder that turns one face per Action, from the side it is read from.
+  - The glyphs have their own shapes and colours (sun, water, reed, eye, star, mountain), so they read on a phone and with colour blindness.
+- **Dart traps:**
+  - A painted slab clicks, and a moment later a volley crosses the corridor: running over it is safe, lingering is not.
+  - Darts poison mildly; the poison drains health down to a floor and a medkit cures it.
+- **Tamrit, the clay scribe:**
+  - A new enemy type, slow and relentless. Shot to pieces, it slumps into a heap and rises again.
+  - Only water a metre deep dissolves it: the lever on the ledge floods its hall from the canal's sluice.
+- **Stand-ins until the owner's models** (`docs/art/models-brief.md`): Tamrit's body, the cylinders, the dart niches, shelves of tablets, rows of tablets along the walls (one instanced mesh) and the Tablet of the Name, all built in code.
+- **Music:** the Archive uses the quietest cues of the first three chambers until it has its own tracks.
+- **Saves:** schema 2 (migration 001) adds the new mechanisms and poison; 0.2.6 saves load.
+- **Tooling:**
+  - `pnpm smoke` loads every built level in headless Chromium, visits each room and fails on any console error. CI runs it.
+  - `pnpm shots` captures each room at each tier (into `shots/`, not committed).
+- **The old WebGL warnings are fixed.** The smoke test reproduced them in the Cisterns on the mobile tier: "bindTexture: attempt to use a deleted object" and "texture format / sampler mismatch". The static sun shadow map was never drawn while the sun was dark, so materials sampled a shadow texture that did not exist yet. It is now drawn once at the start.
+- **Release gate:**
+  - All four chambers are played end to end by the bot with every secret and no deaths, and the tests prove that each lock, the plate and the flood are needed.
+  - Still to check on the owner's iPhone: a save that survives a reload, and 30 fps or more (Options → Graphics → performance readout).
+
 ## Version 0.2.6 (2026-10-03): saving, inventory, remapping and Nora's ideas
 
 The second of the three releases on the way to 0.3.0 (docs/roadmap.md), closing the Phase 2 systems of spec §9.
