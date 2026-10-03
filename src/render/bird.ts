@@ -33,7 +33,9 @@ export class BirdView implements JackalView {
       parent.add(m);
       return m;
     };
+    // Rock birds are big enough to read against the shaft: a wingspan of about 1.4 m.
     this.root.add(this.body);
+    this.body.scale.setScalar(1.4);
     this.body.position.y = 0.22;
     // Body: a stretched sphere, pale underneath.
     const torso = piece(new THREE.SphereGeometry(0.14, 12, 8), this.feather, this.body);
