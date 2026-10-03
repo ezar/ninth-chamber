@@ -1,5 +1,33 @@
 # Changelog
 
+## Version 0.2.5 (2026-10-03): playtest tools and fixes
+
+The first of the three releases on the way to 0.3.0 (docs/roadmap.md).
+
+- **Playtest log** (`src/ui/playtest.ts`, Options → Playtest): each session is kept on the device (nothing is sent anywhere) with the device, renderer and quality tier, average and worst frame rate, time, deaths and hints per room, the room the player stopped in, whether the chamber was finished, and the script errors and renderer warnings seen. **Export playtest log** hands the file to the share sheet on phones or downloads it elsewhere; **Delete playtest log** asks for a second press.
+- **Fire light stops at walls** (`src/render/light-mask.ts`): the fire pool's plain lights cast no shadows, so a brazier next to a wall lit the room behind it. Each brazier now gets a top-down mask of the grid around it, worked out once per level with 2D rays (half-metre texels, five points across the flame for soft edges). The light is multiplied by it at every lit point. Light still spills through doorways, but stops at walls.
+- **Dark scenes:**
+  - The Temple's boulder run is brighter (ambient, bake and exposure), and a new look field, `fill`, triples the soft light that follows Nora there, so she and the steps read during the chase.
+  - Under water the fill grows threefold everywhere, and the drowned tunnels' water fog is lighter, so they are not swum blind.
+  - The fill sits closer to her centre, so a two-metre corridor no longer shows a hot spot on the wall.
+- **KTX2 textures** (`scripts/textures/ktx2.ts`, `pnpm textures:ktx2`):
+  - Level surfaces, prop models and Nora are compressed with Basis Universal and stay compressed on the GPU (ASTC, BC or ETC2):
+    - colour maps: sRGB ETC1S;
+    - normal maps: ETC1S in normal-map mode (Nora's in UASTC);
+    - data maps: linear ETC1S.
+  - On the mobile tier in the Cisterns, GPU memory goes from about 412 MB to 82 MB, well inside the 400 MB budget.
+  - The download shrinks too: models from 15 to 11 MB, surface textures from 8.5 to 3.1 MB.
+  - The scans move to `art/textures`, with their albedo softening baked into the KTX2 files, and the transcoder is precached for offline play.
+  - The crumbling tiles multiply a crack mask over the floor, since a compressed texture cannot be painted on.
+- **WebGL warnings:** the "bindTexture: attempt to use a deleted object" and "texture format / sampler mismatch" warnings did not appear in automated WebGL 2 walks of all three chambers, covering:
+  - tier, resolution, filtering and window size changes;
+  - quitting, restarting and dying.
+
+  The browser's own WebGL warnings never reach the page, so if a tester sees them, a note of what they were doing is the way to find them. Script errors and three.js warnings now go into the playtest log.
+
+- **TypeScript 7:** 7.0.2 is out, but typescript-eslint supports TypeScript only below 6.1, so the project stays on 5.9 for now.
+- **Not in this release:** the holsters on the hips need a new `nora.glb` from the owner. What each model needs is in `docs/art/models-brief.md`, along with the models for Chamber IV.
+
 ## 0.2.4 follow-up (2026-09-27): computers no longer end up on the mobile tier
 
 The owner's PC was on the mobile tier without anyone choosing it. The first-run benchmark could drop two tiers at once from a slow start (shaders still compiling), and dynamic resolution at its floor lowered the tier again; both were saved for good.
