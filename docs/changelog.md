@@ -1,5 +1,38 @@
 # Changelog
 
+## Version 0.6.0 (2026-10-03): Chamber VII, the Wind Stair
+
+The last of the three releases on the way to 0.6.0 (docs/roadmap.md): chamber VII opens.
+
+- **The Wind Stair** (`levels/wind_stair.level.json`, spec §19): ten rooms up a shaft through the whole mountain, from the forge to the summit, sixty metres of climbing.
+  1. The shaft's foot, with the first note and a pack of flares. The first gust is an updraught that lifts a jump to the ledge above, and there is nothing to fall to.
+  2. The first flute's ledges: a following gust carries a running jump over the cut. The cut is deep but not deadly, and steps lead back out.
+  3. The counterweights: two platforms rise and fall in turn, up to the next ledge.
+  4. The flute levers: a steady head gust stops the jump across a deadly cut. One lever closes its flute, another opens the flute that blows behind Nora.
+  5. The nest: rock birds dive at Nora while she climbs the ledges.
+  6. The hanging traverse: a ledge along the wall over the chasm, too low to climb onto. Tearing gusts pull at her while she hangs, with a sheltered spot in the middle.
+  7. The rope: pulling it calls a counterweight down, and it rises again with Nora on it.
+  8. The great flute: the whole shaft in view and the loudest song. Updraughts carry her up three tiers, with the camera looking up the shaft.
+  9. The storm: gusts come thick and fast. She jumps a cut on a following gust, then climbs up into the open.
+  10. The summit: the Wind Shell, the last note, and for the first time the open sky.
+
+  It also has:
+  - three secrets: a niche only a gust from the west reaches, a niche behind a flute that opens when that flute is closed, and a bird's nest with an idol at the top of the great flute;
+  - three journal notes (the mountain breathes, Suhal, the note);
+  - Nora's ideas for nine puzzles;
+  - ten room looks, from cold blue-grey stone at the foot to warm light at the summit, and a baked lightmap;
+  - a music palette drawn from the Cisterns' open, echoing cues until it has its own;
+  - the campaign entry, and the end screen's figure: eight notes around the shell's lip.
+
+- **Campaign order**: the Forge now leads to the Wind Stair.
+- **Bot moves** for the walkthrough tests: hanging from a ledge, shimmying, climbing up from a hang, pulling a rope, and fighting a single enemy by its id.
+- **Models**: the bird, the flute mouth, the rope, the counterweight and the shell are listed in docs/art/models-brief.md. Until they arrive, the game draws stand-ins.
+- **Verification**:
+  - `tests/wind-stair.test.ts`: the bot plays the whole chamber with all three secrets and no deaths.
+  - Eleven "every puzzle is needed" checks.
+  - `pnpm smoke` passes on the new level.
+  - Reference shots on the high and mobile tiers.
+
 ## Version 0.5.6 (2026-10-03): Ropes, rock birds and the shaft's camera
 
 The second of three releases on the way to 0.6.0, chamber VII, the Wind Stair (docs/roadmap.md).

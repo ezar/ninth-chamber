@@ -2,6 +2,8 @@
 
 Agreed with the owner on 2026-10-03, after 0.5.1. The owner asked for 0.6. Following the spec's production order ("Orden de producción y dependencias"), it is chamber VII, the Wind Stair. As with the Forge, Claude takes its design decisions from the spec. Each decision taken is listed below for review. The roadmap to 0.5.0 is closed; its record is in the changelog.
 
+**Status:** done. 0.5.5, 0.5.6 and 0.6.0 are released; see the changelog.
+
 **Goal:** chamber VII, the Wind Stair: an eighty-metre shaft through the mountain, gusts on a fixed rhythm that lengthen or shorten jumps and tear Nora off ledges, flute levers that change where the wind blows, the first hanging rope, rock birds that push, and a climb to the open sky.
 
 ## Decisions
