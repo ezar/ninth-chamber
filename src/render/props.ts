@@ -343,6 +343,9 @@ export class Props {
       case 'lever':
         obj = lever(this.mats);
         break;
+      case 'rope':
+        obj = rope(this.mats);
+        break;
       case 'plate':
         obj = new THREE.Mesh(new RoundedBoxGeometry(1.4, 0.08, 1.4, 2, 0.02), this.mats.bronze);
         break;
@@ -462,6 +465,22 @@ export class Props {
             const target = a.used ? on : off;
             handle.rotation.x += (target - handle.rotation.x) * Math.min(1, dt * 6);
           }
+          break;
+        }
+        case 'rope': {
+          // Hung from the ceiling to its lower end; a pulled rope stays down a little, and sways.
+          const ceil = this.level.sector(a.cx, a.cz)?.ceil ?? a.y + 8;
+          const top = Math.min(ceil, a.y + 12);
+          const drop = (v.userData.drop as number | undefined) ?? 0;
+          const next = drop + ((a.used ? 0.45 : 0) - drop) * Math.min(1, dt * 5);
+          v.userData.drop = next;
+          v.position.set(center(a.cx), top, center(a.cz));
+          const cord = v.getObjectByName('cord');
+          if (cord) cord.scale.y = top - a.y + next;
+          const knot = v.getObjectByName('knot');
+          if (knot) knot.position.y = -(top - a.y + next);
+          v.rotation.z = Math.sin(time * 0.9 + a.cx) * 0.012;
+          v.rotation.x = Math.sin(time * 0.7 + a.cz) * 0.012;
           break;
         }
         case 'plate':
@@ -711,6 +730,26 @@ function lever(m: PropMaterials): THREE.Group {
   handle.position.z = 0.1;
   handle.rotation.x = 0.9;
   g.add(handle);
+  return g;
+}
+
+/** A hanging rope (spec §8): a braided cord from the ceiling, knotted at its lower end. */
+function rope(m: PropMaterials): THREE.Group {
+  const g = new THREE.Group();
+  const fibre = new THREE.MeshStandardMaterial({ color: '#8a7350', roughness: 0.95 });
+  // One metre of cord, hanging down from the group's origin; scaled to its length.
+  const geo = new THREE.CylinderGeometry(0.035, 0.035, 1, 7);
+  geo.translate(0, -0.5, 0);
+  const cord = new THREE.Mesh(geo, fibre);
+  cord.name = 'cord';
+  cord.castShadow = true;
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), fibre);
+  knot.name = 'knot';
+  knot.scale.y = 1.4;
+  // A bronze ring where it leaves the ceiling.
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 14), m.bronze);
+  ring.rotation.x = Math.PI / 2;
+  g.add(cord, knot, ring);
   return g;
 }
 

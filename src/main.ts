@@ -1028,7 +1028,9 @@ async function main(): Promise<void> {
       z: prev.pos.z + (curr.pos.z - prev.pos.z) * alpha,
     };
     camera.aiming = p.weapon.drawn && (p.mode === 'ground' || p.mode === 'air');
-    camera.update(at, p.mode === 'hang' || p.mode === 'climb', world.grid, cameraDt, {
+    // The room's framing (the Wind Stair's shaft looks up or down, and has fixed shots).
+    camera.setFraming(world.level.roomAt(Math.floor(at.x / 2), Math.floor(at.z / 2))?.camera ?? null);
+    camera.update(at, p.mode === 'hang' || p.mode === 'rope' || p.mode === 'climb', world.grid, cameraDt, {
       vx: p.mode === 'ground' || p.mode === 'air' ? p.vel.x : 0,
       vz: p.mode === 'ground' || p.mode === 'air' ? p.vel.z : 0,
       vy: p.vel.y,

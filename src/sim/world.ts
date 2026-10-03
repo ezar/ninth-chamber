@@ -9,7 +9,7 @@ import { TICK_DT } from '../core/loop';
 import { Rng } from '../core/rng';
 import type { GridQuery } from './grid/collision';
 import { Level, sectorTop } from './grid/level';
-import { BLOCK, DIR_YAW, cellCenter } from './grid/units';
+import { BLOCK, CLICK, DIR_YAW, cellCenter } from './grid/units';
 import { compileRules, runLogic, type CompiledRule } from './logic/rules';
 import { createEnemies, resetEnemies, updateEnemies } from './actors/enemies';
 import { updateActors } from './actors/update';
@@ -65,6 +65,19 @@ function createActors(level: Level): Actor[] {
       case 'lever':
         actors.push({ kind: 'lever', id: e.id, cx, cz, wall: e.wall, used: false, spring: e.spring });
         break;
+      case 'rope': {
+        const room = level.rooms.find((r) => r.id === e.room);
+        actors.push({
+          kind: 'rope',
+          id: e.id,
+          cx,
+          cz,
+          y: (room?.originY ?? 0) + e.h * CLICK,
+          used: false,
+          spring: e.spring,
+        });
+        break;
+      }
       case 'plate':
         actors.push({ kind: 'plate', id: e.id, cx, cz, pressed: false });
         break;

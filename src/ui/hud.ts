@@ -194,6 +194,7 @@ export class Hud {
     for (const a of world.state.actors) {
       if (a.cx !== cx || a.cz !== cz) continue;
       if (a.kind === 'lever' && !a.used) return 'prompt.lever';
+      if (a.kind === 'rope' && !a.used) return 'prompt.rope';
       if ((a.kind === 'secret' || a.kind === 'relic') && !a.taken) return 'prompt.pickup';
       if (a.kind === 'note') return 'prompt.read';
       if (a.kind === 'torch' && !a.taken) return 'prompt.pickup';

@@ -12,6 +12,7 @@ import { climb, hang } from './modes/hang';
 import { block, dead, lever, moveBlock, pickup } from './modes/interact';
 import { stepTorch } from './torch';
 import { breathe, dive, swim } from './modes/swim';
+import { rope } from './modes/rope';
 import { stepFlare } from './flare';
 import { stepMedkit, stepWeapons } from './weapons';
 
@@ -24,6 +25,7 @@ const MODES: Record<PlayerMode, (c: Ctx) => void> = {
   push: moveBlock,
   pull: moveBlock,
   lever,
+  rope,
   pickup,
   dead,
   swim,

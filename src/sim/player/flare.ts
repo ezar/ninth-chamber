@@ -12,7 +12,7 @@ import type { FlareState, PlayerMode } from '../state';
 import { emit, type Ctx } from './context';
 import { flares } from './tuning';
 
-const HANDS_BUSY: ReadonlySet<PlayerMode> = new Set(['hang', 'block', 'push', 'pull', 'dead']);
+const HANDS_BUSY: ReadonlySet<PlayerMode> = new Set(['hang', 'rope', 'block', 'push', 'pull', 'dead']);
 
 function letGo(c: Ctx, f: FlareState, how: 'throw' | 'drop'): void {
   const { p } = c;

@@ -22,6 +22,8 @@ export type PlayerMode =
   | 'push'
   | 'pull'
   | 'lever'
+  // Hanging from a rope and pulling it (spec §8).
+  | 'rope'
   | 'pickup'
   | 'dead'
   // Water (spec §5.10): at the surface, and underwater.
@@ -161,6 +163,19 @@ export interface LeverActor {
   spring: boolean;
 }
 
+/** A rope hanging from the ceiling (spec §8 "Cuerda para tirar"): a lever pulled while hanging. */
+export interface RopeActor {
+  kind: 'rope';
+  id: string;
+  cx: number;
+  cz: number;
+  /** Height of its lower end (m). */
+  y: number;
+  used: boolean;
+  /** Rises again after each pull, so it can be pulled again. */
+  spring: boolean;
+}
+
 export interface PlateActor {
   kind: 'plate';
   id: string;
@@ -235,6 +250,7 @@ export type Actor =
   | BlockActor
   | DoorActor
   | LeverActor
+  | RopeActor
   | PlateActor
   | PickupActor
   | ZoneActor
@@ -310,6 +326,8 @@ export interface EnemyState {
   calm: number;
   /** Seconds until the next bite while attacking. */
   biteIn: number;
+  /** Flyers (the rock birds): vertical velocity (m/s). */
+  vy?: number;
   /** Tamrit and the automatons: ended for good by water or bronze (a crumbled heap of Tamrit reforms). */
   dissolved?: boolean;
   /** How an automaton was ended for good (the render sinks or topples it). */

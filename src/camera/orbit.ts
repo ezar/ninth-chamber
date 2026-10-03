@@ -5,10 +5,13 @@
  * expects: an over-the-shoulder offset, a lazy follow that drifts behind the
  * direction of travel when the player leaves the stick alone, a slight
  * look-ahead, a speed-driven field of view and trauma-based shake for
- * landings, falling masonry and hits.
+ * landings, falling masonry and hits. Rooms may frame the camera (the Wind
+ * Stair's shaft): a preferred pitch looking up or down, a distance, and
+ * fixed shots it eases into and out of.
  */
 import type { SimEvent } from '../core/events';
 import { raycast, type GridQuery } from '../sim/grid/collision';
+import type { CameraFraming } from '../sim/grid/level';
 
 const DEG = Math.PI / 180;
 
@@ -95,6 +98,25 @@ export class OrbitCamera {
   aiming = false;
   private aimNow = 0;
   private readonly lead = { x: 0, z: 0 };
+  /** The current room's framing, the distance eased towards it, and a fixed shot's weight. */
+  private framing: CameraFraming | null = null;
+  private framedDistance = cameraTuning.distance;
+  private shot: Vec3 | null = null;
+  private shotWeight = 0;
+
+  /** The framing of the room Nora is in (null: the free orbit). */
+  setFraming(f: CameraFraming | null): void {
+    this.framing = f;
+    if (f?.shot) this.shot = f.shot;
+  }
+
+  /** Lowest pitch allowed: a framing that looks up the shaft lets the player look up as far. */
+  private get minPitch(): number {
+    const f = this.framing?.pitch;
+    return f !== null && f !== undefined
+      ? Math.min(cameraTuning.minPitch, f - 10 * DEG)
+      : cameraTuning.minPitch;
+  }
 
   look(dx: number, dy: number, zoom: number): void {
     if (dx !== 0 || dy !== 0) {
@@ -103,7 +125,7 @@ export class OrbitCamera {
     }
     this.yaw -= dx * cameraTuning.sensitivity;
     const pitchDelta = (cameraTuning.invertY ? -dy : dy) * cameraTuning.sensitivity;
-    this.pitch = Math.max(cameraTuning.minPitch, Math.min(cameraTuning.maxPitch, this.pitch + pitchDelta));
+    this.pitch = Math.max(this.minPitch, Math.min(cameraTuning.maxPitch, this.pitch + pitchDelta));
     this.distance = Math.max(
       cameraTuning.minDistance,
       Math.min(cameraTuning.maxDistance, this.distance + zoom * 0.5),
@@ -250,6 +272,13 @@ export class OrbitCamera {
       this.pitch += (cameraTuning.restPitch - this.pitch) * Math.min(1, dt * 0.8 * ramp);
     }
 
+    // A framed room eases the pitch to its own once the player leaves the camera alone.
+    const framedPitch = this.framing?.pitch ?? null;
+    if (framedPitch !== null && !this.focus && this.sinceLook > cameraTuning.followDelay)
+      this.pitch += (framedPitch - this.pitch) * Math.min(1, dt * 1.5);
+    this.framedDistance +=
+      ((this.framing?.distance ?? this.distance) - this.framedDistance) * Math.min(1, dt * 2);
+
     const k = 1 - Math.exp(-cameraTuning.follow * dt);
     const th = hanging ? cameraTuning.hangTargetHeight : cameraTuning.targetHeight;
     // Frame slightly ahead of where the character is heading.
@@ -266,8 +295,11 @@ export class OrbitCamera {
     const shoulder = cameraTuning.shoulder + (cameraTuning.aimShoulder - cameraTuning.shoulder) * this.aimNow;
     const want0 = hanging || this.focus ? 0 : shoulder * (this.narrow ? 0.15 : 1);
     this.shoulderNow += (want0 - this.shoulderNow) * Math.min(1, dt * 3);
-    const distance =
-      this.distance + (Math.min(this.distance, cameraTuning.aimDistance) - this.distance) * this.aimNow;
+    const base =
+      this.framing?.distance !== null && this.framing?.distance !== undefined
+        ? this.framedDistance
+        : this.distance;
+    const distance = base + (Math.min(base, cameraTuning.aimDistance) - base) * this.aimNow;
     const right = { x: Math.cos(this.yaw), z: -Math.sin(this.yaw) };
     const reach = {
       x: this.target.x + right.x * (this.shoulderNow + cameraTuning.radius),
@@ -306,6 +338,15 @@ export class OrbitCamera {
     this.lookAt.x = pivot.x;
     this.lookAt.y = pivot.y;
     this.lookAt.z = pivot.z;
+
+    // A fixed shot: the camera eases to its stand and keeps watching her from there.
+    this.shotWeight += ((this.framing?.shot ? 1 : 0) - this.shotWeight) * Math.min(1, dt * 1.5);
+    if (this.shot && this.shotWeight > 1e-3) {
+      const w = this.shotWeight * this.shotWeight * (3 - 2 * this.shotWeight);
+      this.eye.x += (this.shot.x - this.eye.x) * w;
+      this.eye.y += (this.shot.y - this.eye.y) * w;
+      this.eye.z += (this.shot.z - this.eye.z) * w;
+    }
 
     // Speed widens the lens a touch; a long fall widens it further.
     const run = Math.min(1, speed / cameraTuning.runSpeed);
