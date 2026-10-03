@@ -1032,6 +1032,36 @@ export class AudioGraph {
       case 'receiver.lit':
         this.play('sfx', at, (s, t) => sfx.sunChime(s, t));
         break;
+      // The Bronze Forge: the crucible's rumble, the pour, the hiss of cooling metal, the heat.
+      case 'bronze.warn':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'rumble', { gain: 0.6, rate: 0.7, duration: 1.5, fadeOut: 0.3 }))
+            sfx.rumble(s, t, 1.5);
+        });
+        break;
+      case 'bronze.pour':
+        this.play('sfx', at, (s, t) => {
+          this.layer(s, t, 'fire', { gain: 0.8, rate: 0.55, duration: 2.4, fadeIn: 0.15, fadeOut: 0.6 });
+          sfx.fireBurst(s, t, 1.8);
+          if (!this.layer(s, t, 'rumble', { gain: 0.5, rate: 0.6, duration: 2, fadeOut: 0.5 }))
+            sfx.rumble(s, t, 2);
+        });
+        break;
+      case 'bronze.cooled':
+        this.play('sfx', at, (s, t) => {
+          if (!this.layer(s, t, 'fire', { gain: 0.3, rate: 1.6, duration: 1.2, fadeOut: 0.6 }))
+            sfx.fireHiss(s, t, 1.2);
+        });
+        break;
+      case 'player.burned':
+        this.play('sfx', at, (s, t) => sfx.fireBurst(s, t, 0.8));
+        break;
+      case 'heat.enter':
+        this.play('sfx', null, (s, t) => {
+          if (!this.layer(s, t, 'fire', { gain: 0.22, rate: 0.5, duration: 2.5, fadeIn: 0.5, fadeOut: 1 }))
+            sfx.fireHiss(s, t, 2);
+        });
+        break;
       case 'boulder.warning':
         this.play('sfx', at, (s, t) => {
           if (!this.layer(s, t, 'rumble', { gain: 0.9, duration: 1.4, fadeOut: 0.3 })) sfx.rumble(s, t, 1.4);

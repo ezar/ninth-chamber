@@ -30,6 +30,8 @@ export class Hud {
   private readonly fade = $('fade');
   /** Red edges when Nora takes damage (spec §7 "Salud"); created here so the page markup stays as is. */
   private readonly hurtFlash = document.createElement('div');
+  /** Hot edges in the Forge's open heat. */
+  private readonly heat = document.createElement('div');
   private readonly weaponsButton = document.querySelector<HTMLElement>('#touch [data-button="weapons"]');
   private weaponsDrawn = false;
   private readonly torchButton = document.querySelector<HTMLElement>('#touch [data-button="torch"]');
@@ -43,7 +45,9 @@ export class Hud {
   constructor() {
     this.hurtFlash.id = 'hurt-flash';
     this.hurtFlash.setAttribute('aria-hidden', 'true');
-    $('hud').append(this.hurtFlash);
+    this.heat.id = 'heat-haze';
+    this.heat.setAttribute('aria-hidden', 'true');
+    $('hud').append(this.hurtFlash, this.heat);
   }
 
   /** The level title, with an optional kicker line above it (e.g. the tomb and chamber). */
@@ -94,6 +98,13 @@ export class Hud {
       case 'player.respawned':
         this.fade.classList.remove('dark');
         break;
+      // The Forge's heat (spec §19): a hot shimmer at the edges while it drains her.
+      case 'heat.enter':
+        this.heat.classList.add('show');
+        break;
+      case 'heat.leave':
+        this.heat.classList.remove('show');
+        break;
       // Dispatched by the note reader when it closes.
       case 'note.closed':
         if (e.first === true)
@@ -120,7 +131,7 @@ export class Hud {
   /** Clears everything on screen (back to the title). */
   reset(): void {
     this.fade.classList.remove('dark');
-    for (const el of [this.notice, this.hint, this.prompt, this.title, this.health])
+    for (const el of [this.notice, this.hint, this.prompt, this.title, this.health, this.heat])
       el.classList.remove('show');
     this.noticeTimer = 0;
     this.hintTimer = 0;

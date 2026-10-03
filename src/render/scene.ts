@@ -39,6 +39,7 @@ import { WaterView, waterLookOf } from './water';
 import type { SimEvent } from '../core/events';
 import { TempleView } from './temple';
 import { ArchiveView } from './archive';
+import { ForgeView } from './forge';
 import { GrabEdgeView } from './grab-edges';
 import { setupKtx2 } from './ktx2';
 
@@ -115,6 +116,7 @@ export class GameRenderer {
   /** The Temple of the Sun's mechanisms and its guardian (empty for levels without them). */
   private temple: TempleView | null = null;
   private archive: ArchiveView | null = null;
+  private forge: ForgeView | null = null;
   private grabEdges: GrabEdgeView | null = null;
   private highContrast = false;
   private guardians: GuardianView | null = null;
@@ -553,6 +555,9 @@ export class GameRenderer {
     this.archive?.dispose();
     this.archive = new ArchiveView(level, new THREE.MeshStandardMaterial(surfaceParams(surf.wall)));
     this.scene.add(this.archive.group);
+    this.forge?.dispose();
+    this.forge = new ForgeView(level, new THREE.MeshStandardMaterial(surfaceParams(surf.wall)));
+    this.scene.add(this.forge.group);
     this.indexFires();
 
     this.buildShafts(meshes.skylights, sunRooms);
@@ -781,6 +786,7 @@ export class GameRenderer {
     this.adoptRoomObjects();
     this.temple?.update(world, this.time, dt, eye);
     this.archive?.update(world, dt);
+    this.forge?.update(world, dt);
     this.guardians?.update(world, this.time, dt, eye);
     this.updateFireLights(eye, dt);
     this.updateShafts(dt);
@@ -874,6 +880,7 @@ export class GameRenderer {
   /** Splashes and rings from the simulation's water events. */
   onEvent(e: SimEvent): void {
     this.archive?.onEvent(e);
+    this.forge?.onEvent(e);
     const n = (k: string, d = 0): number => (typeof e[k] === 'number' ? (e[k] as number) : d);
     const p = this.world?.state.player;
     if (!p) return;

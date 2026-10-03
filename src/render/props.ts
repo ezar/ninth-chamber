@@ -3,6 +3,7 @@
  * every frame and never write to it.
  */
 import * as THREE from 'three/webgpu';
+import { bellowsBlock } from './forge';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { glyphRows } from '../core/glyphs';
 import type { NoteStyle } from '../sim/grid/schema';
@@ -227,8 +228,10 @@ export class Props {
     let m: THREE.Object3D | null = null;
     switch (a.kind) {
       case 'block':
-        // The Archive's shelves keep their own look (no baked model yet).
+        // The Archive's shelves and the Forge's bellows keep their own look (no baked model yet).
         if (this.shelves) break;
+        if (this.level.entities.some((e) => e.id === a.id && e.type === 'block' && e.look === 'bellows'))
+          break;
         m = lib.instance('block');
         m?.scale.set((BLOCK - 0.03) / BLOCK, 1, (BLOCK - 0.03) / BLOCK);
         break;
@@ -327,9 +330,12 @@ export class Props {
     if (existing) return existing;
     let obj: THREE.Object3D | null = null;
     switch (a.kind) {
-      case 'block':
-        obj = this.shelves ? shelfBlock(this.mats) : pushBlock(this.mats);
+      case 'block': {
+        const def = this.level.entities.find((e) => e.id === a.id);
+        if (def?.type === 'block' && def.look === 'bellows') obj = bellowsBlock(mechanics.blockHeight);
+        else obj = this.shelves ? shelfBlock(this.mats) : pushBlock(this.mats);
         break;
+      }
       case 'door':
         obj = door(this.mats, a.height);
         obj.rotation.y = this.doorYaw(a.cx, a.cz);

@@ -126,6 +126,15 @@ function runAction(world: World, verb: string, args: string[]): void {
       if (changed) world.events.emit({ type: target === 1 ? 'door.opening' : 'door.closing', tick, id });
       return;
     }
+    const brazier = findActor(world, id, 'brazier');
+    if (brazier && op === 'light') {
+      if (!brazier.lit) {
+        brazier.lit = true;
+        setSignal(world, `${id}.lit`, true);
+        world.events.emit({ type: 'brazier.lit', tick, id });
+      }
+      return;
+    }
     if (op === 'reset' && findActor(world, id, 'block')) {
       resetBlock(world, id);
       return;

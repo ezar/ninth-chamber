@@ -134,6 +134,34 @@ export const mechanismEntities = [
   z
     .object({
       ...base,
+      type: z.literal('pour'),
+      /**
+       * Cells of the trench the bronze runs along, room-relative, `at` first;
+       * legs run straight along X or Z. `at` is where it leaves the crucible.
+       */
+      path: z.array(cell).min(1),
+      /** Top of the cast bronze in clicks (room-relative): usually the trench's lip, so it cools into a bridge. */
+      h: int,
+      /** Cells per second; seconds from full to cool; a repeating pour runs again every `period` seconds. */
+      speed: z.number().positive().optional(),
+      cool: z.number().positive().optional(),
+      period: z.number().positive().optional(),
+      /** Starts at load (a repeating pour); otherwise it waits for `<id>.pour`. */
+      running: z.boolean().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      type: z.literal('heat'),
+      /** Size in blocks (x, z) from `at`. Sectors flagged `shade` inside it are safe. */
+      size: cell.default([1, 1]),
+      on: z.boolean().default(true),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
       type: z.literal('glyphlock'),
       /** The side its glyph is read from (and turned from): the face shown points this way. */
       facing: FACING,
@@ -171,6 +199,7 @@ export const MECHANISM_SIGNALS: Record<string, string[]> = {
   sunbeam: ['on'],
   glyphlock: ['set'],
   darts: ['fired'],
+  pour: ['molten', 'solid', 'cast'],
 };
 
 /** Rule actions each mechanism type accepts (`<id>.<action> [args]`). */
@@ -183,6 +212,8 @@ export const MECHANISM_ACTIONS: Record<string, string[]> = {
   blade: ['start', 'stop'],
   fire: ['on', 'off'],
   glyphlock: ['turn'],
+  pour: ['pour', 'start', 'stop'],
+  heat: ['on', 'off'],
 };
 
 /** Whether `<entity of type>.<suffix>` is a signal a mechanism emits. */

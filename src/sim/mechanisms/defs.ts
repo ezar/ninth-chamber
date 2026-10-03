@@ -6,6 +6,7 @@ import type { Level } from '../grid/level';
 import { BLOCK, CLICK, DIR_VEC, type Dir } from '../grid/units';
 import { DIAGONALS } from './schema';
 import type { Facing4, Point } from './types';
+import { forge } from '../player/tuning';
 
 export interface PlatformDef {
   id: string;
@@ -125,6 +126,23 @@ export interface DartDef {
   line: { cx: number; cz: number }[];
 }
 
+export interface PourDef {
+  id: string;
+  /** Trench cells in pouring order (world cells). */
+  cells: { cx: number; cz: number }[];
+  /** Top of the cast bronze (m). */
+  y: number;
+  speed: number;
+  cool: number;
+  period: number | null;
+  running: boolean;
+}
+
+export interface HeatDef extends Rect {
+  id: string;
+  on: boolean;
+}
+
 export interface MechanismDefs {
   platforms: Map<string, PlatformDef>;
   trapdoors: Map<string, TrapdoorDef>;
@@ -138,6 +156,10 @@ export interface MechanismDefs {
   fires: Map<string, FireDef>;
   glyphs: Map<string, GlyphLockDef>;
   darts: Map<string, DartDef>;
+  pours: Map<string, PourDef>;
+  heat: Map<string, HeatDef>;
+  /** Trench cells of each pour: the pour and the cell's place in its order. */
+  pourCells: Map<number, { id: string; i: number }[]>;
   /** Cells taken by mirror drums and receiver pedestals: solid for bodies. */
   solid: Set<number>;
   /** Cells covered by trapdoors (for navigation). */
@@ -172,6 +194,9 @@ function buildDefs(level: Level): MechanismDefs {
     fires: new Map(),
     glyphs: new Map(),
     darts: new Map(),
+    pours: new Map(),
+    heat: new Map(),
+    pourCells: new Map(),
     solid: new Set(),
     trapdoorCells: new Set(),
   };
@@ -285,6 +310,44 @@ function buildDefs(level: Level): MechanismDefs {
         d.darts.set(e.id, { id: e.id, cx, cz, from: e.from, count: e.count, line });
         break;
       }
+      case 'pour': {
+        // Legs run straight between the listed cells, `at` first.
+        const pts = [e.at, ...e.path.slice(1).map(([x, z]) => [o.x + x, o.z + z] as const)];
+        const cells: { cx: number; cz: number }[] = [{ cx, cz }];
+        for (let i = 1; i < pts.length; i++) {
+          const [ax, az] = pts[i - 1] as readonly [number, number];
+          const [bx, bz] = pts[i] as readonly [number, number];
+          const n = Math.max(Math.abs(bx - ax), Math.abs(bz - az));
+          for (let k = 1; k <= n; k++)
+            cells.push({ cx: ax + Math.sign(bx - ax) * k, cz: az + Math.sign(bz - az) * k });
+        }
+        d.pours.set(e.id, {
+          id: e.id,
+          cells,
+          y: o.y + e.h * CLICK,
+          speed: e.speed ?? forge.pour.speed,
+          cool: e.cool ?? forge.pour.cool,
+          period: e.period ?? null,
+          running: e.running,
+        });
+        cells.forEach((c, i) => {
+          const k = cellKey(c.cx, c.cz);
+          const list = d.pourCells.get(k) ?? [];
+          list.push({ id: e.id, i });
+          d.pourCells.set(k, list);
+        });
+        break;
+      }
+      case 'heat':
+        d.heat.set(e.id, {
+          id: e.id,
+          minX: cx,
+          minZ: cz,
+          maxX: cx + e.size[0],
+          maxZ: cz + e.size[1],
+          on: e.on,
+        });
+        break;
       default:
         break;
     }
