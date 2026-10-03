@@ -1472,3 +1472,30 @@ body.reduce-motion #trap-cues .cue {
 body:not([data-phase='title']):not(.paused) #update-notice {
   display: none;
 }
+
+/* The Forge's heat (spec §19): hot, breathing edges while Nora stands in the open heat. */
+#heat-haze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(255, 110, 30, 0.22) 85%,
+    rgba(255, 70, 10, 0.4)
+  );
+  transition: opacity 0.8s;
+}
+#heat-haze.show {
+  opacity: 1;
+  animation: heat-breathe 1.6s ease-in-out infinite;
+}
+@keyframes heat-breathe {
+  50% {
+    opacity: 0.7;
+  }
+}
+body.reduce-motion #heat-haze.show {
+  animation: none;
+}

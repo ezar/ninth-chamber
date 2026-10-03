@@ -1,5 +1,28 @@
 # Changelog
 
+## Version 0.4.5 (2026-10-03): Bronze
+
+The first of the three releases on the way to 0.5.0 (docs/roadmap.md): the mechanisms of chamber VI, the Bronze Forge (spec §19). No chamber uses them yet; the Forge itself arrives in 0.5.0.
+
+- **Pours** (`src/sim/mechanisms/bronze.ts`, the `pour` entity):
+  - Molten bronze runs from a crucible along a trench, one cell after another (2.5 cells a second).
+  - It kills whatever stands in it while it glows, and four seconds after the trench is full it cools into solid bronze at the trench's lip: a bridge.
+  - `<id>.pour` runs it. Which trench gets the bronze is decided by rules, so a sluice is a lever.
+  - A repeating pour (`period`) rumbles, runs again, and covers its own bridge with fresh bronze: cross it while it is dark.
+  - Signals `<id>.molten`, `<id>.solid` and `<id>.cast`.
+- **Heat zones** (the `heat` entity):
+  - They drain three points of health a second in the open, so a full bar lasts about half a minute.
+  - Sectors flagged `shade` (along the walls) and water are safe, and `<id>.off` puts a furnace out.
+  - The edges of the screen breathe orange while she burns.
+- **Bellows and forges**: a block with `"look": "bellows"` is drawn as bellows. Pushed onto a plate, a rule (`<brazier>.light`, new) wakes a cold forge, and a lit forge opens its doors by rule.
+- **Render** (`src/render/forge.ts`):
+  - The bronze rises along the trench, glowing orange under a cracked skin, and darkens as it cools.
+  - The crucible, tipped over the trench's first cell, pours a stream while it runs.
+  - The bellows have boards, leather pleats and a bronze nozzle. They are stand-ins, like the rest, until the owner's models.
+- **Sound and subtitles**: the crucible's rumble (with a trap arrow), the pour, the hiss of cooling bronze, and the furnaces' roar.
+- **Saves**: schema 3. Saves from 0.4 load with no pours and no heat.
+- **Level validator**: the reachability check counts the bridge a pour cools into.
+
 ## Version 0.4.0 (2026-10-03): Publication
 
 The last of the three releases on the way to 0.4.0 (docs/roadmap.md). It closes Phase 3 of the spec (§2, "Beta y publicación") on everything that can be measured from here.
