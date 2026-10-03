@@ -125,4 +125,20 @@ describe('reachability', () => {
     });
     expect(relicError(f)).toBe(false);
   });
+
+  it('crosses a wider gap where the wind blows', () => {
+    const rows = ['#####', '#.R.#', '#___#', '#___#', '#___#', '#...#', '#.S.#', '#####'];
+    const f = file(rows);
+    expect(relicError(f)).toBe(true);
+    f.entities?.push({ id: 'w', type: 'wind', room: 'r', at: [1, 5], size: [3, 1], dir: 'N' });
+    expect(relicError(f)).toBe(false);
+  });
+
+  it('reaches a higher ledge in an updraught', () => {
+    const rows = ['#####', '#9R9#', '#999#', '#...#', '#.S.#', '#####'];
+    const f = file(rows, {}, { R: 9 });
+    expect(relicError(f)).toBe(true);
+    f.entities?.push({ id: 'w', type: 'wind', room: 'r', at: [1, 3], size: [3, 1], dir: 'up' });
+    expect(relicError(f)).toBe(false);
+  });
 });

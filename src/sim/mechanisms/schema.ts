@@ -162,6 +162,28 @@ export const mechanismEntities = [
   z
     .object({
       ...base,
+      type: z.literal('wind'),
+      /** Size in blocks (x, z) from `at`. */
+      size: cell.default([1, 1]),
+      /** Where it blows: along the floor towards a side, or up the shaft. */
+      dir: z.enum(['N', 'E', 'S', 'W', 'up']),
+      /**
+       * Cycle length (s), gust length within it (s) and start offset (s). With no
+       * period it blows steadily while on.
+       */
+      period: z.number().positive().optional(),
+      blow: z.number().positive().optional(),
+      offset: z.number().default(0),
+      /** Horizontal speed (m/s) or, blowing up, the fraction of gravity it takes away; tuning by default. */
+      strength: z.number().positive().optional(),
+      /** Hanging Nora is torn off the ledge by a gust that blows on her long enough. */
+      tear: z.boolean().default(false),
+      on: z.boolean().default(true),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
       type: z.literal('glyphlock'),
       /** The side its glyph is read from (and turned from): the face shown points this way. */
       facing: FACING,
@@ -200,6 +222,7 @@ export const MECHANISM_SIGNALS: Record<string, string[]> = {
   glyphlock: ['set'],
   darts: ['fired'],
   pour: ['molten', 'solid', 'cast'],
+  wind: ['gust'],
 };
 
 /** Rule actions each mechanism type accepts (`<id>.<action> [args]`). */
@@ -214,6 +237,7 @@ export const MECHANISM_ACTIONS: Record<string, string[]> = {
   glyphlock: ['turn'],
   pour: ['pour', 'start', 'stop'],
   heat: ['on', 'off'],
+  wind: ['on', 'off', 'toggle'],
 };
 
 /** Whether `<entity of type>.<suffix>` is a signal a mechanism emits. */

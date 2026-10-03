@@ -6,7 +6,7 @@ import type { Level } from '../grid/level';
 import { BLOCK, CLICK, DIR_VEC, type Dir } from '../grid/units';
 import { DIAGONALS } from './schema';
 import type { Facing4, Point } from './types';
-import { forge } from '../player/tuning';
+import { forge, wind as windTuning } from '../player/tuning';
 
 export interface PlatformDef {
   id: string;
@@ -143,6 +143,21 @@ export interface HeatDef extends Rect {
   on: boolean;
 }
 
+export type WindDir = 'N' | 'E' | 'S' | 'W' | 'up';
+
+export interface WindDef extends Rect {
+  id: string;
+  dir: WindDir;
+  /** Horizontal speed (m/s), or for an updraught the fraction of gravity taken away. */
+  strength: number;
+  /** Null: it blows steadily while on. */
+  period: number | null;
+  blow: number;
+  offset: number;
+  tear: boolean;
+  on: boolean;
+}
+
 export interface MechanismDefs {
   platforms: Map<string, PlatformDef>;
   trapdoors: Map<string, TrapdoorDef>;
@@ -158,6 +173,7 @@ export interface MechanismDefs {
   darts: Map<string, DartDef>;
   pours: Map<string, PourDef>;
   heat: Map<string, HeatDef>;
+  winds: Map<string, WindDef>;
   /** Trench cells of each pour: the pour and the cell's place in its order. */
   pourCells: Map<number, { id: string; i: number }[]>;
   /** Cells taken by mirror drums and receiver pedestals: solid for bodies. */
@@ -196,6 +212,7 @@ function buildDefs(level: Level): MechanismDefs {
     darts: new Map(),
     pours: new Map(),
     heat: new Map(),
+    winds: new Map(),
     pourCells: new Map(),
     solid: new Set(),
     trapdoorCells: new Set(),
@@ -345,6 +362,22 @@ function buildDefs(level: Level): MechanismDefs {
           minZ: cz,
           maxX: cx + e.size[0],
           maxZ: cz + e.size[1],
+          on: e.on,
+        });
+        break;
+      case 'wind':
+        d.winds.set(e.id, {
+          id: e.id,
+          minX: cx,
+          minZ: cz,
+          maxX: cx + e.size[0],
+          maxZ: cz + e.size[1],
+          dir: e.dir,
+          strength: e.strength ?? (e.dir === 'up' ? windTuning.lift : windTuning.speed),
+          period: e.period ?? null,
+          blow: e.blow ?? Math.min(windTuning.blow, e.period ?? windTuning.blow),
+          offset: e.offset,
+          tear: e.tear,
           on: e.on,
         });
         break;

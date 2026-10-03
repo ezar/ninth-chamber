@@ -283,6 +283,27 @@ export const forge = {
   },
 };
 
+/** The Wind Stair's gusts (spec §19, chamber VII): fixed cycles, like the Temple's fire floors. */
+export const wind = {
+  /** A horizontal gust carries her this fast in the air (m/s): about a block more or less on a running jump. */
+  speed: 3,
+  /** On the ground it pushes at this fraction of `speed`: always slower than walking against it. */
+  ground: 1 / 3,
+  /** An updraught takes this fraction of gravity away in the air. */
+  lift: 0.5,
+  /** The flutes' tone rises this long before each gust (s). */
+  warning: 1.5,
+  /** A gust builds up and dies down over this long (s). */
+  ramp: 0.3,
+  /** Default cycle (s) and gust length within it (s). */
+  period: 6,
+  blow: 2.5,
+  /** Hanging in a tearing gust, she holds on this long before it tears her off (s). */
+  grip: 0.6,
+  /** Torn off, she is thrown this fast along the wind (m/s). */
+  throw: 1.5,
+};
+
 /** Mild poison from darts (spec §19): it drains health for a while but never kills; a medkit cures it. */
 export const poison = {
   /** Seconds a dart poisons for (a second dart restarts it). */

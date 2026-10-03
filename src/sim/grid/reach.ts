@@ -4,13 +4,15 @@
  * Doors count as open, water as at its highest, a pour's trench as cooled
  * into its bridge, moving platforms as standing
  * at every height on their path, and any cell of a room with a pushable
- * block as possibly holding that block, to stand on. A cell this graph cannot reach can never be reached
+ * block as possibly holding that block, to stand on, and every wind zone as
+ * blowing whichever way helps: jumps from a windy cell reach further, and an
+ * updraught lets her reach higher ledges. A cell this graph cannot reach can never be reached
  * in play, so an exit, secret or checkpoint outside it is a broken level.
  * Being reachable here does not prove a cell is reachable in play: the bot
  * walkthroughs do that.
  */
 import type { Level, Sector } from './level';
-import { tuning } from '../player/tuning';
+import { tuning, wind as windTuning } from '../player/tuning';
 import { BLOCK, CLICK } from './units';
 
 /** Highest ledge reachable from standing: hands at full jump plus the grab window (≈3.7 m). */
@@ -23,6 +25,15 @@ const HEADROOM = 1;
 /** Running jumps: gaps of up to this many cells, landing no higher than JUMP_RISE above take-off. */
 const GAP_CELLS = 3;
 const JUMP_RISE = 1.5;
+/** A gust lengthens a running jump by about a block: count two more, to over-approximate. */
+const WIND_GAP_CELLS = 2;
+
+/** Highest ledge reachable in an updraught that takes `lift` of gravity away. */
+const climbIn = (lift: number): number =>
+  tuning.handHeight +
+  (tuning.jumpSpeed * tuning.jumpSpeed) / (2 * tuning.gravity * (1 - lift)) +
+  tuning.grabAbove +
+  0.05;
 
 export const key = (cx: number, cz: number): string => `${cx},${cz}`;
 
@@ -52,12 +63,24 @@ export function reachableCells(level: Level): Set<string> {
     extra.set(k, list);
   };
   const blockRooms = new Set<string>();
+  // Cells where a horizontal wind may blow, and the strongest updraught over each cell.
+  const windy = new Set<string>();
+  const updraught = new Map<string, number>();
   const floodTo = new Map<string, number>();
   for (const e of level.entities) {
     const room = level.rooms.find((r) => r.id === e.room);
     if (!room) continue;
     const [cx, cz] = e.at;
     if (e.type === 'block') blockRooms.add(e.room);
+    if (e.type === 'wind') {
+      const lift = Math.min(0.9, e.strength ?? windTuning.lift);
+      for (let x = 0; x < e.size[0]; x++)
+        for (let z = 0; z < e.size[1]; z++) {
+          const k = key(cx + x, cz + z);
+          if (e.dir === 'up') updraught.set(k, Math.max(updraught.get(k) ?? 0, lift));
+          else windy.add(k);
+        }
+    }
     if (e.type === 'watergate') {
       const high = room.originY + e.high * CLICK;
       for (const r of e.rooms ?? [e.room]) floodTo.set(r, Math.max(floodTo.get(r) ?? -Infinity, high));
@@ -146,7 +169,9 @@ export function reachableCells(level: Level): Set<string> {
     // Within a cell: dive from the surface, swim up from the bottom, step off a platform.
     for (const h of heights(here))
       if (h !== n.h && (h < n.h || swimming || (w !== null && h <= w))) visit({ ...n, h });
-    const reach = CLIMB + (swimming ? 1 : 0);
+    const lift = updraught.get(key(n.cx, n.cz));
+    const reach = (lift === undefined ? CLIMB : climbIn(lift)) + (swimming ? 1 : 0);
+    const gaps = GAP_CELLS + (windy.has(key(n.cx, n.cz)) ? WIND_GAP_CELLS : 0);
     for (const [dx, dz] of NEIGHBOURS) {
       const next = level.sector(n.cx + dx, n.cz + dz);
       if (next && !next.wall) {
@@ -160,7 +185,7 @@ export function reachableCells(level: Level): Set<string> {
       }
       // Running jumps over gaps: nothing taller than a grab in the way, landing not much higher.
       if (swimming) continue;
-      for (let k = 2; k <= GAP_CELLS; k++) {
+      for (let k = 2; k <= gaps; k++) {
         const mid = level.sector(n.cx + dx * (k - 1), n.cz + dz * (k - 1));
         if (!mid || mid.wall || mid.ceil - n.h < 2) break;
         const land = level.sector(n.cx + dx * k, n.cz + dz * k);
