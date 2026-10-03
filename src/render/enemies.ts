@@ -19,6 +19,7 @@ import type { EnemyState } from '../sim/state';
 import type { World } from '../sim/world';
 import { ClayView } from './clay';
 import { AutomatonView } from './automaton';
+import { BirdView } from './bird';
 
 export interface JackalView {
   readonly root: THREE.Object3D;
@@ -905,15 +906,17 @@ export class EnemyViews {
             ? new ClayView()
             : e.type === 'automaton'
               ? new AutomatonView()
-              : this.asset
-                ? new SkinnedJackal(this.asset)
-                : new ProceduralJackal(i);
+              : e.type === 'bird'
+                ? new BirdView()
+                : this.asset
+                  ? new SkinnedJackal(this.asset)
+                  : new ProceduralJackal(i);
         slot = {
           view,
           pos: new THREE.Vector3(e.pos.x, e.pos.y, e.pos.z),
           yaw: e.yaw,
           skinned: !!this.asset || e.type !== 'jackal',
-          height: e.type === 'clay' ? 1.3 : e.type === 'automaton' ? 1.2 : 0.42,
+          height: e.type === 'clay' ? 1.3 : e.type === 'automaton' ? 1.2 : e.type === 'bird' ? 0.25 : 0.42,
         };
         this.group.add(view.root);
         this.slots.set(e.id, slot);

@@ -569,6 +569,24 @@ export function fluteGust(s: Strip, t: number, dur: number, note: number): void 
   s.noiseHit(t, { type: 'bandpass', f: note * 3, q: 8, gain: 0.025, a: 0.3, hold, d: 0.5 });
 }
 
+/** A rock bird's cry (spec §19): two harsh, falling calls; `short` for one, as it is shot down. */
+export function screech(s: Strip, t: number, short = false): void {
+  const calls = short ? 1 : 2;
+  for (let i = 0; i < calls; i++) {
+    const at = t + i * 0.22;
+    s.tone(at, { wave: 'sawtooth', f: 2300, f2: 1300, gain: 0.05, a: 0.01, hold: 0.06, d: 0.12, lp: 3800 });
+    s.tone(at, { wave: 'square', f: 1150, f2: 700, gain: 0.02, a: 0.01, hold: 0.05, d: 0.1, lp: 2400 });
+    s.noiseHit(at, { type: 'bandpass', f: 2600, q: 3, gain: 0.03, a: 0.005, d: 0.15 });
+  }
+}
+
+/** Wings beating past, and the thump of the shove when it lands. */
+export function wingShove(s: Strip, t: number, hit: boolean): void {
+  for (let i = 0; i < 3; i++)
+    s.noiseHit(t + i * 0.07, { type: 'lowpass', f: 900, gain: 0.08, a: 0.01, d: 0.06 });
+  if (hit) s.tone(t + 0.16, { f: 110, f2: 70, gain: 0.12, a: 0.005, d: 0.18 });
+}
+
 /** A sun disc catching the light: a warm, shimmering chord. */
 export function sunChime(s: Strip, t: number): void {
   for (const [f, g] of [

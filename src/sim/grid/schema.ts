@@ -73,6 +73,19 @@ const room = z
     look: z.string().optional(),
     reverb: z.string().optional(),
     music: z.string().optional(),
+    /**
+     * How the camera frames the room (the Wind Stair's shaft, spec §19): a preferred pitch in
+     * degrees (negative looks up, positive down), a distance (m), and an optional fixed shot,
+     * the camera standing at [x, z, h] (room cell and height in clicks) and watching her.
+     */
+    camera: z
+      .object({
+        pitch: z.number().min(-60).max(80).optional(),
+        distance: z.number().min(2).max(14).optional(),
+        shot: z.tuple([z.number(), z.number(), z.number()]).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -97,6 +110,16 @@ const entity = z.discriminatedUnion('type', [
       type: z.literal('lever'),
       wall: z.enum(FACINGS),
       /** A spring lever returns to rest after each pull and can be pulled again (reset levers). */
+      spring: z.boolean().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('rope'),
+      /** Height of the rope's lower end in clicks (room-relative): she jumps up to it and pulls (spec §8). */
+      h: clicks,
+      /** A spring rope rises again after each pull and can be pulled again. */
       spring: z.boolean().default(false),
     })
     .strict(),

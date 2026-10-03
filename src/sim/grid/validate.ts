@@ -20,6 +20,7 @@ export interface ValidationResult {
 /** Signals each entity type emits, by suffix. */
 const SIGNALS: Record<string, string[]> = {
   lever: ['used'],
+  rope: ['pulled'],
   plate: ['pressed'],
   zone: ['entered'],
   door: ['open'],
@@ -58,6 +59,19 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
   } catch (e) {
     errors.push(`build: ${(e as Error).message}`);
     return { errors, warnings };
+  }
+
+  // A room's fixed camera shot stands in open air inside the room.
+  for (const r of level.rooms) {
+    const shot = r.camera?.shot;
+    if (!shot) continue;
+    const cx = Math.floor(shot.x / 2);
+    const cz = Math.floor(shot.z / 2);
+    const sec = level.sector(cx, cz);
+    if (!sec || sec.room !== r.id || sec.wall)
+      errors.push(`room '${r.id}': its camera shot is not in an open cell of the room`);
+    else if (shot.y < Math.max(...sec.floor) || shot.y > sec.ceil)
+      errors.push(`room '${r.id}': its camera shot is below the floor or above the ceiling`);
   }
 
   const ids = new Map<string, string>();
@@ -205,7 +219,13 @@ function checkReach(level: Level, errors: string[], warnings: string[]): void {
     const at = key(e.at[0], e.at[1]);
     if (e.type === 'relic' || e.type === 'secret' || e.type === 'note') {
       if (!reach.has(at)) errors.push(`${e.type} '${e.id}' cannot be reached from the start`);
-    } else if (e.type === 'lever' || e.type === 'medkit' || e.type === 'item' || e.type === 'torch') {
+    } else if (
+      e.type === 'lever' ||
+      e.type === 'rope' ||
+      e.type === 'medkit' ||
+      e.type === 'item' ||
+      e.type === 'torch'
+    ) {
       if (!reach.has(at)) warnings.push(`${e.type} '${e.id}' cannot be reached from the start`);
     }
   }

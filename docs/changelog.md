@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 0.5.6 (2026-10-03): Ropes, rock birds and the shaft's camera
+
+The second of three releases on the way to 0.6.0, chamber VII, the Wind Stair (docs/roadmap.md).
+
+- **Hanging ropes** (spec §8, "Cuerda para tirar"): a rope hangs from the ceiling over a cell. Nora jumps into it with Action held (or with auto-grab after a jump), pulls it halfway through the hang, and lets go. It works like a lever (`<id>.pulled`), and a spring rope rises again to be pulled once more. Action lets go early. A prompt points it out.
+- **Rock birds** (enemy type `bird`, the new `flyer` behaviour, spec §19): they perch on their nest until they see Nora, then screech as they rise and dive at her chest.
+  - Instead of biting, they shove her: a little damage and a push along the dive. The push can knock her off a ledge or a rope.
+  - After a shove they climb away and dive again.
+  - Two pistol hits bring one down, and it tumbles to the floor.
+  - Flight is free in three dimensions and keeps clear of walls, floors and ceilings.
+- **The shaft's camera**: a room can set a preferred pitch, looking up or down the shaft (and the player may then look further up than usual), a distance, and a fixed shot the camera eases into and out of while still watching her. The validator checks that each shot stands in open air in its room.
+- **Look and sound**: stand-ins for the rope (a braided cord with a knot, which drops a little when pulled) and the birds (folded on the nest, quick wingbeats on the dive, a glide while climbing away). Screeches, wingbeats and the shove, with subtitles.
+- **Verification**: `tests/rope.test.ts`, `tests/birds.test.ts` and `tests/camera-framing.test.ts`. They cover grabbing, the pull, reach, spring ropes and letting go early; the birds' sight, shove, return, a ledge knock-off, death, staying in the room and going home; and pitch, look-up, distance, the fixed shot and parsing.
+
 ## Version 0.5.5 (2026-10-03): Wind
 
 The first of three releases on the way to 0.6.0, chamber VII, the Wind Stair (docs/roadmap.md).

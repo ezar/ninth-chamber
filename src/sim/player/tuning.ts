@@ -55,6 +55,13 @@ export const tuning = {
   /** Climb-up duration (s). */
   climbTime: 0.8,
 
+  /** A hanging rope (spec §8): she holds it anywhere along this length above its lower end (m). */
+  ropeLength: 1.6,
+  /** And this far from its line, sideways (m). */
+  ropeReach: 0.7,
+  /** Hanging from a rope and pulling it (s); the rope triggers halfway, then she lets go. */
+  ropeTime: 1.0,
+
   /** Push one block (s). */
   pushTime: 0.9,
   /** Pull one block (s). */
@@ -434,9 +441,9 @@ export const noise = {
 };
 
 /** Enemy types: each is data plus a behaviour from a closed list (spec §7 "Enemigos"). */
-export const ENEMY_TYPES = ['jackal', 'clay', 'automaton'] as const;
+export const ENEMY_TYPES = ['jackal', 'clay', 'automaton', 'bird'] as const;
 export type EnemyType = (typeof ENEMY_TYPES)[number];
-export const ENEMY_BEHAVIOURS = ['packHunter'] as const;
+export const ENEMY_BEHAVIOURS = ['packHunter', 'flyer'] as const;
 export type EnemyBehaviour = (typeof ENEMY_BEHAVIOURS)[number];
 
 export interface EnemyStats {
@@ -592,6 +599,55 @@ export const enemyTypes: Record<EnemyType, EnemyStats> = {
     prowlSwing: 0.6,
     prowlRate: 0.5,
   },
+  // The Wind Stair's rock birds (spec §19): quick and fragile, they fly at Nora and shove her
+  // (a little damage) instead of biting. Two pistol hits bring one down. They never give up.
+  bird: {
+    behaviour: 'flyer',
+    health: 2,
+    runSpeed: 7,
+    trotSpeed: 3,
+    accel: 3,
+    turnSpeed: 10,
+    radius: 0.3,
+    height: 0.4,
+    eyeHeight: 0.2,
+    climb: 0,
+    maxDrop: 0,
+    dropSpeed: 9,
+    bite: { damage: 4, interval: 2.4, range: 0.9, reachUp: 99, windup: 0 },
+    sightRange: 14,
+    sightHeight: 14,
+    alertTime: 0.8,
+    hurtTime: 0.35,
+    staggerCooldown: 0.6,
+    repathTime: 1,
+    searchLimit: 0,
+    refugeTime: 1e9,
+    calmTime: 4,
+    flankDistance: 0,
+    flankUntil: 0,
+    prowlSwing: 0,
+    prowlRate: 0,
+  },
+};
+
+/**
+ * The Wind Stair's rock birds (enemy type 'bird', spec §19): they nest in the
+ * shaft, dive at Nora and shove her instead of biting, then climb away.
+ */
+export const birds = {
+  /** A shove carries her this far along the bird's dive (m): it can knock her off a ledge. */
+  shove: 0.9,
+  /** After a shove it climbs away for this long before diving again (s). */
+  retreat: 1.4,
+  /** It climbs to this height above her chest while retreating (m). */
+  retreatHeight: 3,
+  /** It keeps this far from walls, floors and ceilings (m). */
+  clearance: 0.3,
+  /** It hovers this high over its nest while it screeches (m). */
+  hover: 1,
+  /** A dead bird falls at this gravity (m/s²). */
+  gravity: 18,
 };
 
 /** The bronze automatons (enemy type 'automaton'). */

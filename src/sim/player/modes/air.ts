@@ -6,6 +6,7 @@ import { windAt } from '../../mechanisms/wind';
 import { tuning } from '../tuning';
 import { jump } from './ground';
 import { startClimb, startHang } from './hang';
+import { tryGrabRope } from './rope';
 import { enterWaterFromAir, softLanding } from './swim';
 
 export function air(c: Ctx): void {
@@ -60,6 +61,7 @@ export function air(c: Ctx): void {
   p.pos.y = y;
   p.fallFrom = Math.max(p.fallFrom, y);
 
+  if (tryGrabRope(c)) return;
   if (tryGrab(c, rising)) return;
   if (enterWaterFromAir(c, y0)) return;
 

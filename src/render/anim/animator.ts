@@ -257,7 +257,7 @@ export class NoraAnimator {
       }
       if (mode === 'air')
         this.airKind = pose.vy > 1 ? (pose.speed > RUN_JUMP_SPEED && c.jump_run ? 'run' : 'stand') : 'fall';
-      if (mode === 'hang' && this.mode !== 'hang') this.hangT = 0;
+      if ((mode === 'hang' || mode === 'rope') && this.mode !== mode) this.hangT = 0;
       const wasWet = this.mode !== null && WATER_MODES.has(this.mode);
       if (mode === 'climb') this.waterClimb = wasWet;
       this.fadeTime = wasWet || WATER_MODES.has(mode) ? WATER_FADE : FADE;
@@ -306,6 +306,7 @@ export class NoraAnimator {
         clipDriven = this.air(p);
         break;
       case 'hang':
+      case 'rope':
         clipDriven = this.hang(p, dt);
         break;
       case 'climb':

@@ -568,6 +568,7 @@ export class AudioGraph {
         break;
       }
       case 'player.grabbed':
+      case 'rope.grabbed':
         this.play('sfx', null, (s, t) => {
           if (this.ready('hand.stone', 'cloth.move')) {
             // Two hands land a few milliseconds apart, then the body swings and the gear creaks.
@@ -715,6 +716,7 @@ export class AudioGraph {
         m.duck(1.2);
         break;
       case 'lever.pulled':
+      case 'rope.pulled':
         this.play('sfx', at, (s, t) => {
           if (!this.layer(s, t, 'lever', { gain: LEVEL.lever, rateSpread: 0.02 })) sfx.lever(s, t);
         });
@@ -972,6 +974,10 @@ export class AudioGraph {
         m.duck(1);
         break;
       case 'enemy.alerted': {
+        if (e.enemy === 'bird') {
+          this.play('sfx', at, (s, t) => sfx.screech(s, t));
+          break;
+        }
         if (e.enemy === 'automaton') {
           this.play('sfx', at, (s, t) => {
             sfx.lever(s, t);
@@ -994,12 +1000,16 @@ export class AudioGraph {
         this.play('sfx', at, (s, t) => {
           if (plated) sfx.ricochet(s, t);
           else sfx.bulletHit(s, t);
-          if (!dying && !clay && !plated) sfx.yelp(s, t + 0.02, false);
+          if (!dying && !clay && !plated && e.enemy !== 'bird') sfx.yelp(s, t + 0.02, false);
         });
         break;
       }
       case 'enemy.died':
-        this.play('sfx', at, (s, t) => sfx.yelp(s, t + 0.03, true));
+        if (e.enemy === 'bird') this.play('sfx', at, (s, t) => sfx.screech(s, t + 0.03, true));
+        else this.play('sfx', at, (s, t) => sfx.yelp(s, t + 0.03, true));
+        break;
+      case 'enemy.shove':
+        this.play('sfx', at, (s, t) => sfx.wingShove(s, t, e.hit === true));
         break;
       case 'enemy.bite': {
         const hit = e.hit === true;

@@ -1858,6 +1858,7 @@ export class NoraModel {
         this.evalAir(pose, out);
         break;
       case 'hang':
+      case 'rope':
         this.evalHang(pose, out);
         break;
       case 'climb':

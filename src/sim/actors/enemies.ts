@@ -28,6 +28,7 @@ import type { EnemyMode, EnemyState, Vec3 } from '../state';
 import type { World } from '../world';
 import { findPath, walkable, type NavGrid, type Walker } from './pathfind';
 import { waterDepth } from './water';
+import { updateBird } from './birds';
 
 const EPS = 1e-6;
 
@@ -124,6 +125,7 @@ export function resetEnemy(e: EnemyState): void {
   e.outOfReach = 0;
   e.calm = 0;
   e.biteIn = 0;
+  if (statsOf(e).behaviour === 'flyer') e.vy = 0;
 }
 
 /** On respawn at a checkpoint, living enemies return to their start and forget Nora (spec §7). */
@@ -242,6 +244,10 @@ function updateEnemy(world: World, e: EnemyState, dt: number): void {
 
   if (e.type === 'clay' && updateClay(world, e)) return;
   if (e.type === 'automaton' && updateAutomaton(world, e)) return;
+  if (s.behaviour === 'flyer') {
+    updateBird(world, e, s, e.mode === 'idle' && seesNora(world, e), dt);
+    return;
+  }
   if (e.mode === 'dead') {
     brake(e, s, dt, 6);
     move(world, e, s, dt);
@@ -582,7 +588,8 @@ function move(world: World, e: EnemyState, s: EnemyStats, dt: number): void {
 
 /** Light body collision: enemies push each other apart and never overlap Nora. */
 function separate(world: World): void {
-  const list = world.state.enemies.filter((e) => e.mode !== 'dead');
+  // Flyers keep their own distance (./birds): only walkers are pushed apart.
+  const list = world.state.enemies.filter((e) => e.mode !== 'dead' && statsOf(e).behaviour !== 'flyer');
   const q = world.grid;
   const shove = (e: EnemyState, dx: number, dz: number): void => {
     const s = statsOf(e);

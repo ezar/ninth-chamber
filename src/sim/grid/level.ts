@@ -46,6 +46,14 @@ export interface RoomInfo {
   y: number;
   /** Room-wide water surface (m) from the file, if any. */
   water: number | null;
+  /** Camera framing (radians and metres, world position of a fixed shot), if the room sets one. */
+  camera: CameraFraming | null;
+}
+
+export interface CameraFraming {
+  pitch: number | null;
+  distance: number | null;
+  shot: { x: number; y: number; z: number } | null;
 }
 
 export interface Start {
@@ -88,6 +96,19 @@ export class Level {
         reverb: room.reverb ?? null,
         y: oy * CLICK,
         water: room.water !== undefined ? (oy + room.water) * CLICK : null,
+        camera: room.camera
+          ? {
+              pitch: room.camera.pitch !== undefined ? (room.camera.pitch * Math.PI) / 180 : null,
+              distance: room.camera.distance ?? null,
+              shot: room.camera.shot
+                ? {
+                    x: (ox + room.camera.shot[0] + 0.5) * BLOCK,
+                    y: (oy + room.camera.shot[2]) * CLICK,
+                    z: (oz + room.camera.shot[1] + 0.5) * BLOCK,
+                  }
+                : null,
+            }
+          : null,
       });
       const roomWater = room.water !== undefined ? (oy + room.water) * CLICK : null;
       room.rows.forEach((row, rz) => {

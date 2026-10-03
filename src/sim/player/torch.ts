@@ -22,7 +22,15 @@ import { emit, type Ctx } from './context';
 import { torch as T } from './tuning';
 
 /** Moves that need both hands: the torch goes on her belt meanwhile. */
-const TWO_HANDED: ReadonlySet<PlayerMode> = new Set(['hang', 'climb', 'block', 'push', 'pull', 'lever']);
+const TWO_HANDED: ReadonlySet<PlayerMode> = new Set([
+  'hang',
+  'climb',
+  'block',
+  'push',
+  'pull',
+  'lever',
+  'rope',
+]);
 
 /** The signal level rules read while the lit torch is in her hand. */
 export const TORCH_LIT = 'torchLit';
