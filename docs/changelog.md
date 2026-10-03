@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.5.1 (2026-10-03): Ask Nora
+
+- **Pause → Ask Nora** showed at all times and did nothing when she had no idea yet. The menu items' `display: block` overrode the `hidden` attribute. Now a global rule makes `hidden` always hide. That also fixes "Another idea", which showed after the third hint.
+- **Browser smoke test**: the pause menu of a fresh chamber must not offer to ask Nora. Without the fix it fails.
+
 ## Version 0.5.0 (2026-10-03): Chamber VI, the Bronze Forge
 
 The last of the three releases on the way to 0.5.0 (docs/roadmap.md): chamber VI opens.

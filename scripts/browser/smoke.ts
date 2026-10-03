@@ -19,6 +19,13 @@ try {
   for (const level of levels) {
     const t0 = Date.now();
     const s = await openLevel(browser, base, level, tier);
+    // Fresh in the chamber, Nora has no idea yet: the pause menu must not offer to ask her.
+    await s.page.keyboard.press('Escape');
+    await s.page.waitForSelector('#menu:not([hidden])', { timeout: 5000 });
+    if (await s.page.locator('[data-action="hint"]').isVisible())
+      s.problems.push('pause menu: "Ask Nora" visible with no idea to give');
+    await s.page.keyboard.press('Escape');
+    await s.page.waitForSelector('#menu', { state: 'hidden', timeout: 5000 });
     const rooms = await roomStands(s.page);
     for (const r of rooms) await standAt(s.page, r.cx, r.cz, 0, 1200);
     const ok = s.problems.length === 0;
