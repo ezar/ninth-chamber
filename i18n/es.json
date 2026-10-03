@@ -57,6 +57,7 @@
   "action.key.keyboard": "E",
   "action.key.gamepad": "X",
   "start.kicker": "Tumba de Qarrum · Primera cámara",
+  "start.continue": "Continuar: {chamber}",
   "start.play": "Entrar en la tumba",
   "tagline": "Se conocen ocho. Falta una.",
   "start.credits": "Créditos",

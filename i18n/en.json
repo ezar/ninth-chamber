@@ -57,6 +57,7 @@
   "action.key.keyboard": "E",
   "action.key.gamepad": "X",
   "start.kicker": "Tomb of Qarrum · First chamber",
+  "start.continue": "Continue: {chamber}",
   "start.play": "Enter the tomb",
   "tagline": "Eight are known. One is missing.",
   "start.credits": "Credits",
