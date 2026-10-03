@@ -1080,6 +1080,22 @@ export class AudioGraph {
       case 'receiver.lit':
         this.play('sfx', at, (s, t) => sfx.sunChime(s, t));
         break;
+      // The Observatory: the dome's rings grind round, a chime when one settles at the ninth place;
+      // moonlight through the oculus.
+      case 'ring.turned': {
+        const aligned = e.aligned === true;
+        this.play('sfx', at, (s, t) => {
+          sfx.grind(s, t, 0.8, 0.8, 0.12, true);
+          if (aligned) sfx.sunChime(s, t + 0.75);
+        });
+        break;
+      }
+      case 'oculus.open':
+        this.play('sfx', at, (s, t) => {
+          sfx.rumble(s, t, 1.2);
+          sfx.sunChime(s, t + 0.9);
+        });
+        break;
       // The Wind Stair: the flutes rise before each gust and sing while it blows.
       case 'wind.warn':
         this.play('sfx', at, (s, t) => sfx.fluteRise(s, t, wind.warning, fluteNote(at?.y ?? 0)));

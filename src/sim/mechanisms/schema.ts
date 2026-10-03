@@ -184,6 +184,32 @@ export const mechanismEntities = [
   z
     .object({
       ...base,
+      type: z.literal('ring'),
+      /**
+       * One of the Observatory dome's rings (spec §19, chamber VIII): what it carries (the sky's
+       * stars, the moon's phases, the horizon's sun) and, for the look, its radius in metres
+       * around `at`, the cell under the dome's centre.
+       */
+      kind: z.enum(['sky', 'moon', 'horizon']),
+      radius: z.number().positive().optional(),
+      /** Positions round the dome, where it starts, and where it is aligned (`<id>.set`). */
+      positions: int.min(3).max(12).default(9),
+      start: int.min(0).default(0),
+      target: int.min(0).default(8),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      type: z.literal('oculus'),
+      /** The pool of light under the dome's oculus: size in blocks (x, z) from `at`. */
+      size: z.tuple([int.min(1), int.min(1)]).default([1, 1]),
+      on: z.boolean().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
       type: z.literal('glyphlock'),
       /** The side its glyph is read from (and turned from): the face shown points this way. */
       facing: FACING,
@@ -223,6 +249,8 @@ export const MECHANISM_SIGNALS: Record<string, string[]> = {
   darts: ['fired'],
   pour: ['molten', 'solid', 'cast'],
   wind: ['gust'],
+  ring: ['set'],
+  oculus: ['on'],
 };
 
 /** Rule actions each mechanism type accepts (`<id>.<action> [args]`). */
@@ -238,10 +266,12 @@ export const MECHANISM_ACTIONS: Record<string, string[]> = {
   pour: ['pour', 'start', 'stop'],
   heat: ['on', 'off'],
   wind: ['on', 'off', 'toggle'],
+  ring: ['turn', 'back'],
+  oculus: ['on', 'off', 'toggle'],
 };
 
 /** Whether `<entity of type>.<suffix>` is a signal a mechanism emits. */
 export function isMechanismSignal(type: string, suffix: string): boolean {
-  if (type === 'platform' && /^at\d+$/.test(suffix)) return true;
+  if ((type === 'platform' || type === 'ring') && /^at\d+$/.test(suffix)) return true;
   return (MECHANISM_SIGNALS[type] ?? []).includes(suffix);
 }

@@ -25,6 +25,7 @@ import { turnMirror, updateUse } from './use';
 import { createDarts, createGlyphLock, turnGlyph, updateDarts, updateGlyphs, updatePoison } from './archive';
 import { createPour, pourAction, pourCovers, updateHeat, updatePour } from './bronze';
 import { createWind, updateWind, windAction } from './wind';
+import { createOculus, createRing, oculusAction, ringAction, updateRings } from './rings';
 
 export { mechanismPrompt, useMechanism } from './use';
 
@@ -62,6 +63,8 @@ export function createMechanisms(level: Level): MechanismState {
     pours: [...d.pours.values()].map(createPour),
     heat: [...d.heat.values()].map((h) => ({ id: h.id, on: h.on })),
     winds: [...d.winds.values()].map(createWind),
+    rings: [...d.rings.values()].map(createRing),
+    oculi: [...d.oculi.values()].map(createOculus),
     scorched: false,
     use: null,
   };
@@ -140,6 +143,7 @@ export function updateMechanisms(world: World, dt: number): void {
     if (def) updateWind(world, def, s, dt);
   }
   updateGlyphs(world, d.glyphs);
+  updateRings(world);
   updatePoison(world, dt);
   updateHeat(world, d.heat, dt);
 
@@ -256,6 +260,14 @@ export function mechanismAction(world: World, id: string, op: string, args: stri
 
   const wind = m.winds.find((w) => w.id === id);
   if (wind) return windAction(wind, op);
+
+  const ring = m.rings.find((r) => r.id === id);
+  const rdef = d.rings.get(id);
+  if (ring && rdef) return ringAction(world, rdef, ring, op);
+
+  const oculus = m.oculi.find((o) => o.id === id);
+  const odef = d.oculi.get(id);
+  if (oculus && odef) return oculusAction(world, odef, oculus, op);
 
   const fire = m.fires.find((f) => f.id === id);
   if (fire && (op === 'on' || op === 'off')) {
