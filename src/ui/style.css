@@ -4,6 +4,11 @@
   box-sizing: border-box;
 }
 
+/* `hidden` always hides, whatever display a class gives the element (menu items are blocks). */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
