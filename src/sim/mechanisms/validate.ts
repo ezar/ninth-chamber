@@ -130,6 +130,18 @@ export function validateMechanisms(
           for (let z = cz; z < cz + e.size[1]; z++)
             if (!open(x, z)) errors.push(`fire '${e.id}' covers a wall at ${x},${z}`);
         break;
+      case 'ring':
+        if (e.start >= e.positions || e.target >= e.positions)
+          errors.push(`ring '${e.id}': start and target must be below its ${e.positions} positions`);
+        if (e.start === e.target) warnings.push(`ring '${e.id}' starts aligned`);
+        break;
+      case 'oculus':
+        if (cx - r.x + e.size[0] > r.w || cz - r.z + e.size[1] > r.h)
+          errors.push(`oculus '${e.id}' leaves its room`);
+        for (let x = cx; x < cx + e.size[0]; x++)
+          for (let z = cz; z < cz + e.size[1]; z++)
+            if (!open(x, z)) errors.push(`oculus '${e.id}' lights a wall at ${x},${z}`);
+        break;
       case 'wind': {
         if (cx - r.x + e.size[0] > r.w || cz - r.z + e.size[1] > r.h)
           errors.push(`wind '${e.id}' leaves its room`);

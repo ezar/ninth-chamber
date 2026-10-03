@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 0.6.5 (2026-10-03): Rings, the oculus and the night sky
+
+The first of three releases on the way to 0.7.0, chamber VIII, the Observatory (docs/roadmap.md).
+
+- **Dome rings** (`src/sim/mechanisms/rings.ts`, spec §19): a ring carries the sky's stars, the moon's phases or the horizon's sun.
+  - It has nine positions, and rules turn it one position on (`<id>.turn`) or back (`<id>.back`); the rim levers are ordinary spring levers.
+  - It is aligned at its target, which is the ninth place, where the seal lacks its segment. It emits `<id>.set` and `<id>.at<N>` for its position, so a wrong position can open something too.
+- **The oculus**: a pool of light on the floor under the dome, switched by rules (`<id>.on`, `off`, `toggle`). It emits `<id>.on`, and the simulation can ask whether a cell lies in its light.
+- **Look and sound**: stand-ins for the three bronze rings, which turn smoothly to their positions, and a gold notch at the ninth place. The oculus has a moonlight shaft, a pool and a light. Night looks (`"stars": true`) draw a starfield beyond the openings, with the Amber Heart's eight stars as a constellation near the zenith. The rings grind and chime when one settles, and the oculus opens with a rumble and a chime, with subtitles.
+- **Level tools**: validation of each ring's start and target, and of the oculus's room and floor.
+- **Saves**: schema 6 (a migration adds the ring and oculus lists).
+- **Verification**: `tests/rings.test.ts`: turning and wrapping, alignment and position signals, the turn event, the oculus opening once all three are aligned, a wrong-position rule, validation and the save migration.
+
 ## Version 0.6.0 (2026-10-03): Chamber VII, the Wind Stair
 
 The last of the three releases on the way to 0.6.0 (docs/roadmap.md): chamber VII opens.

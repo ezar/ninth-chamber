@@ -166,6 +166,17 @@ export interface WindState {
   phase: WindPhase;
 }
 
+/** A dome ring's position (spec §19, chamber VIII). */
+export interface RingState {
+  id: string;
+  pos: number;
+}
+
+export interface OculusState {
+  id: string;
+  on: boolean;
+}
+
 export interface MechanismState {
   platforms: PlatformState[];
   trapdoors: TrapdoorState[];
@@ -182,6 +193,8 @@ export interface MechanismState {
   pours: PourState[];
   heat: HeatState[];
   winds: WindState[];
+  rings: RingState[];
+  oculi: OculusState[];
   /** Nora stood in open heat last tick. */
   scorched: boolean;
   /** What Nora is operating (turning a mirror, setting an item, taking one) and whether it has reacted. */

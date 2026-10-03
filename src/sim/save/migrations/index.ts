@@ -8,6 +8,7 @@ import { migrate001 } from './001';
 import { migrate002 } from './002';
 import { migrate003 } from './003';
 import { migrate004 } from './004';
+import { migrate005 } from './005';
 
 export type Migration = (save: Record<string, unknown>) => Record<string, unknown>;
 
@@ -15,4 +16,5 @@ export type Migration = (save: Record<string, unknown>) => Record<string, unknow
 /** 002: schema 2 → 3 (0.4.5, the Bronze Forge's pours and heat). */
 /** 003: schema 3 → 4 (0.4.6, the guardian's kind and bronze immunity). */
 /** 004: schema 4 → 5 (0.5.5, the Wind Stair's wind zones). */
-export const MIGRATIONS: readonly Migration[] = [migrate001, migrate002, migrate003, migrate004];
+/** 005: schema 5 → 6 (0.6.5, the Observatory's rings and oculus). */
+export const MIGRATIONS: readonly Migration[] = [migrate001, migrate002, migrate003, migrate004, migrate005];

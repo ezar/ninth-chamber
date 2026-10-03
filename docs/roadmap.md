@@ -1,48 +1,42 @@
-# Roadmap to 0.6.0
+# Roadmap to 0.7.0
 
-Agreed with the owner on 2026-10-03, after 0.5.1. The owner asked for 0.6. Following the spec's production order ("Orden de producción y dependencias"), it is chamber VII, the Wind Stair. As with the Forge, Claude takes its design decisions from the spec. Each decision taken is listed below for review. The roadmap to 0.5.0 is closed; its record is in the changelog.
+Agreed with the owner on 2026-10-03, after 0.6.0. The owner asked for 0.7, the Observatory: chamber VIII, next in the spec's production order. As before, Claude takes its design decisions from the spec. Each decision taken is listed below for review. The roadmap to 0.6.0 is closed; its record is in the changelog.
 
-**Status:** done. 0.5.5, 0.5.6 and 0.6.0 are released; see the changelog.
-
-**Goal:** chamber VII, the Wind Stair: an eighty-metre shaft through the mountain, gusts on a fixed rhythm that lengthen or shorten jumps and tear Nora off ledges, flute levers that change where the wind blows, the first hanging rope, rock birds that push, and a climb to the open sky.
+**Goal:** chamber VIII, the Observatory: a dome carved at the summit to watch the stars, three rings that turn to align the sky with the clues of the first three relics, the light of the oculus, and Anzur, the eighth keeper, the largest of them, who rises from his seat.
 
 ## Decisions
 
-| Topic         | Decision                                                                                                                                                                                                                                                                                                                                             |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Content       | Chamber VII only, as spec §19 describes it: ten rooms, three secrets, three journal notes, no boss, and the Wind Shell.                                                                                                                                                                                                                              |
-| Wind          | A wind zone is a rectangle of cells blowing one way: north, east, south, west, or up. It gusts on a fixed cycle (period, gust length, offset), like the Temple's fire floors, or blows steadily. A rising flute tone and a warning before each gust. Rules turn zones on, off or toggle them: the flute levers are ordinary levers with rules.       |
-| Gust strength | A horizontal gust carries Nora at 3 m/s in the air. That lengthens a running jump by about a block (the spec's test: with a following gust, a running jump clears a 3-block gap), and a head gust shortens it by as much. On the ground it pushes at a third of that: she can always walk against it, and walking still never drops her off an edge. |
-| Updraughts    | An upward zone holds her up: it halves gravity in the air, so she jumps higher and falls slower. Fall damage still counts the height fallen.                                                                                                                                                                                                         |
-| Ledges        | A zone may `tear`: Nora hanging in it is torn off once a gust has blown on her for 0.6 s, so she waits for the lull between gusts.                                                                                                                                                                                                                   |
-| Rope          | A rope hangs from the ceiling over a cell. Jumping into it with Action held (or with auto-grab) she grabs and pulls it: it works like a lever (`<id>.pulled`), then she drops.                                                                                                                                                                       |
-| Rock birds    | A new enemy, `bird`: fast and fragile, it flies at Nora and pushes her (a shove, little damage) instead of biting. Two or three in the nest.                                                                                                                                                                                                         |
-| Camera        | Rooms can set a vertical framing (looking up or down the shaft) and fixed shots for the hanging traverse, in the level file.                                                                                                                                                                                                                         |
-| Flute audio   | Synthesised flutes: each zone's tone rises before its gust and sounds while it blows, pitched by height in the shaft and spatialised.                                                                                                                                                                                                                |
-| Models        | Procedural stand-ins (flutes, ropes, birds, the shell) until the owner's models arrive, listed in docs/art/models-brief.md.                                                                                                                                                                                                                          |
+| Topic                 | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Content               | Chamber VIII only, as spec §19 describes it: ten rooms, three secrets, three journal notes, Anzur and the Astrolabe of the Nine.                                                                                                                                                                                                                                                                                                          |
+| Rings                 | A ring has nine positions. Spring levers on the dome's rim turn it one position per pull. It is aligned at its target position, which is the ninth place, where the seal lacks its segment: the star of the Amber Heart's map, the new moon of the Tide Glass, the uncut ray of the Sun Disc. Every ring emits `<id>.set` when aligned and `<id>.at<N>` for its position, so rules can also react to a wrong position (the secret niche). |
+| The oculus            | A pool of light on the floor under the oculus. Rules turn it on when the three rings are aligned (`sky.set and moon.set and horizon.set`). It opens the way, and it is what stops Anzur.                                                                                                                                                                                                                                                  |
+| Night sky             | The Observatory's looks are night looks: cold moonlight through the openings, and a starfield beyond them in which the Amber Heart's eight stars are drawn as a constellation.                                                                                                                                                                                                                                                            |
+| Anzur                 | The guardian's code with a third kind, `giant`: bigger, slower, three phases, and it never falls into a pit. Rules advance its phases (`<id>.advance`) as the rings are set. **Phase 1:** it sweeps the hall with a wide blow while Nora turns the first ring. **Phase 2:** its slams break the floor into pits. **Phase 3:** only the oculus light falling on it stops it. Blows from above and pistols do nothing.                      |
+| Secrets               | A constellation aligned on the wrong star opens a niche. A ledge on the outside face of the dome is reached on the wind. An idol in Anzur's empty seat is reachable only during phase 2: a gate opens on `anzur.phase2` and closes on `anzur.phase3`.                                                                                                                                                                                     |
+| Threats on the way up | Two or three jackals on the climb, as an echo of chamber I.                                                                                                                                                                                                                                                                                                                                                                               |
+| Models                | Procedural stand-ins (the rings, the oculus, Anzur, the astrolabe) until the owner's models arrive, listed in docs/art/models-brief.md.                                                                                                                                                                                                                                                                                                   |
 
-## 0.5.5 · Wind
+## 0.6.5 · Rings, the oculus and the night sky
 
-1. **Wind zones** (`src/sim/mechanisms/wind.ts`): direction, strength, cycle, `tear`. Signals `<id>.gust`, actions `<id>.on`, `<id>.off` and `<id>.toggle`. Movement tests: a running jump with a following gust clears 3 blocks, a head gust stops it clearing 2, an updraught reaches a ledge out of reach, a gust tears her from a ledge and a lull does not, and walking against the wind never drops her off an edge.
-2. **Render**: dust and leaves blown along each zone while it gusts.
-3. **Audio and captions**: the flute tone, the warning and the gust, with subtitles.
-4. The level validator's reachability counts the longer jumps and higher reach in wind.
+1. **Rings** (`src/sim/mechanisms/rings.ts`): positions, target, `turn`, signals `set` and `at<N>`. **The oculus**: a light pool switched by rules. Tests.
+2. **Render**: the three rings in the dome with their marks (stars, moon phases, the sun), the oculus shaft and its pool of light, the starfield with the Heart's constellation, and night looks.
+3. **Sound and subtitles**: the rings grinding round, and the oculus opening.
 
-## 0.5.6 · Rope, birds and camera
+## 0.6.6 · Anzur
 
-1. **The hanging rope** (sim, render), with tests.
-2. **Rock birds** (sim, render, sound), with tests: they fly, push and die to the pistols.
-3. **Vertical camera** framing and fixed shots per room.
+1. **The giant guardian** (sim), with tests: three phases advanced by rules, the wide sweep, slams that break the floor in phase 2, defeat in the oculus light in phase 3, no falls, immune to blows from above.
+2. **Render and sound**: a large seated figure that rises, stand-in until the model arrives.
 
-## 0.6.0 · Chamber VII, the Wind Stair
+## 0.7.0 · Chamber VIII, the Observatory
 
 1. **The level**, following spec §19:
-   - ten rooms (the shaft's foot, the first flute's ledges, the counterweights, the flute-lever side room, the nest, the hanging traverse, the rope room, the great flute, the storm climb, the summit);
+   - ten rooms (the outer terrace, the gallery of instruments, the first ring, the hall of moons, the hall of the horizon, the dome stairs, under the dome, the battle and the alignment, the oculus, the chamber of the astrolabe);
    - three secrets and three notes;
    - looks, a baked lightmap, a music palette, the campaign entry, hints, and texts in English, Spanish and Catalan.
 2. **Verification**: a bot walkthrough with every secret and no deaths, "every puzzle is needed" tests, `pnpm smoke`, reference shots, and the reachability check.
 
 ## How it will be built
 
-- **Three small releases** (0.5.5, 0.5.6, 0.6.0), each a PR with its own changelog entry, merged when CI is green.
+- **Three small releases** (0.6.5, 0.6.6, 0.7.0), each a PR with its own changelog entry, merged when CI is green.
 - **Commit often.** Container restarts and usage limits have cost work before.

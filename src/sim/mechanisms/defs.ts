@@ -158,6 +158,23 @@ export interface WindDef extends Rect {
   on: boolean;
 }
 
+export interface RingDef {
+  id: string;
+  kind: 'sky' | 'moon' | 'horizon';
+  /** The dome's centre (world cell) and the ring's radius (m), for the look. */
+  cx: number;
+  cz: number;
+  radius: number;
+  positions: number;
+  start: number;
+  target: number;
+}
+
+export interface OculusDef extends Rect {
+  id: string;
+  on: boolean;
+}
+
 export interface MechanismDefs {
   platforms: Map<string, PlatformDef>;
   trapdoors: Map<string, TrapdoorDef>;
@@ -174,6 +191,8 @@ export interface MechanismDefs {
   pours: Map<string, PourDef>;
   heat: Map<string, HeatDef>;
   winds: Map<string, WindDef>;
+  rings: Map<string, RingDef>;
+  oculi: Map<string, OculusDef>;
   /** Trench cells of each pour: the pour and the cell's place in its order. */
   pourCells: Map<number, { id: string; i: number }[]>;
   /** Cells taken by mirror drums and receiver pedestals: solid for bodies. */
@@ -213,6 +232,8 @@ function buildDefs(level: Level): MechanismDefs {
     pours: new Map(),
     heat: new Map(),
     winds: new Map(),
+    rings: new Map(),
+    oculi: new Map(),
     pourCells: new Map(),
     solid: new Set(),
     trapdoorCells: new Set(),
@@ -378,6 +399,28 @@ function buildDefs(level: Level): MechanismDefs {
           blow: e.blow ?? Math.min(windTuning.blow, e.period ?? windTuning.blow),
           offset: e.offset,
           tear: e.tear,
+          on: e.on,
+        });
+        break;
+      case 'ring':
+        d.rings.set(e.id, {
+          id: e.id,
+          kind: e.kind,
+          cx,
+          cz,
+          radius: e.radius ?? { sky: 5, moon: 6.2, horizon: 7.4 }[e.kind],
+          positions: e.positions,
+          start: e.start % e.positions,
+          target: e.target % e.positions,
+        });
+        break;
+      case 'oculus':
+        d.oculi.set(e.id, {
+          id: e.id,
+          minX: cx,
+          minZ: cz,
+          maxX: cx + e.size[0],
+          maxZ: cz + e.size[1],
           on: e.on,
         });
         break;

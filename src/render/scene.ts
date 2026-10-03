@@ -41,6 +41,7 @@ import { TempleView } from './temple';
 import { ArchiveView } from './archive';
 import { ForgeView } from './forge';
 import { WindView } from './wind';
+import { DomeView, StarField } from './observatory';
 import { GrabEdgeView } from './grab-edges';
 import { setupKtx2 } from './ktx2';
 
@@ -119,6 +120,8 @@ export class GameRenderer {
   private archive: ArchiveView | null = null;
   private forge: ForgeView | null = null;
   private wind: WindView | null = null;
+  private dome: DomeView | null = null;
+  private stars: StarField | null = null;
   private grabEdges: GrabEdgeView | null = null;
   private highContrast = false;
   private guardians: GuardianView | null = null;
@@ -563,6 +566,15 @@ export class GameRenderer {
     this.wind?.dispose();
     this.wind = new WindView(level);
     this.scene.add(this.wind.group);
+    this.dome?.dispose();
+    this.dome = new DomeView(level, bronze);
+    this.scene.add(this.dome.group);
+    // Night looks show the stars through the openings (the Observatory).
+    this.stars?.dispose();
+    this.stars = level.rooms.some((r) => lookFile(r.look)?.stars)
+      ? new StarField(new THREE.Vector3(), 200)
+      : null;
+    if (this.stars) this.scene.add(this.stars.group);
     this.indexFires();
 
     this.buildShafts(meshes.skylights, sunRooms);
@@ -793,6 +805,8 @@ export class GameRenderer {
     this.archive?.update(world, dt);
     this.forge?.update(world, dt);
     this.wind?.update(world, dt);
+    this.dome?.update(world, dt);
+    this.stars?.follow(new THREE.Vector3(eye.x, eye.y, eye.z));
     this.guardians?.update(world, this.time, dt, eye);
     this.updateFireLights(eye, dt);
     this.updateShafts(dt);
