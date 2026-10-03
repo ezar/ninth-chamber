@@ -51,11 +51,16 @@ export interface PlaytestSession {
   /** The room the player was in when the session ended or was last saved. */
   lastRoom: string | null;
   finished: boolean;
+  /** Script errors and renderer warnings seen during the session, by message (the first few distinct ones). */
+  problems: Record<string, number>;
 }
 
 export const LOG_KEY = 'nc.playtest';
 /** Sessions kept: the oldest go first. */
 export const MAX_SESSIONS = 30;
+/** Distinct problem messages kept per session, and their length. */
+const MAX_PROBLEMS = 20;
+const PROBLEM_LENGTH = 200;
 /** Window for the worst frame rate, in seconds. */
 const WINDOW = 0.5;
 
@@ -101,6 +106,7 @@ export class PlaytestLog {
       rooms: {},
       lastRoom: null,
       finished: false,
+      problems: {},
     };
   }
 
@@ -132,6 +138,20 @@ export class PlaytestLog {
     else if (type === 'hint') this.stats(this.room).hints++;
     else if (type === 'level.end') this.session.finished = true;
     else return;
+    this.dirty = true;
+  }
+
+  /** A script error or renderer warning (counted by message; ids and addresses are folded together). */
+  problem(message: string): void {
+    const key = message
+      .replace(/\s+/g, ' ')
+      .replace(/0x[0-9a-f]+/gi, '0x…')
+      .trim()
+      .slice(0, PROBLEM_LENGTH);
+    if (!key) return;
+    const p = this.session.problems;
+    if (p[key] === undefined && Object.keys(p).length >= MAX_PROBLEMS) return;
+    p[key] = (p[key] ?? 0) + 1;
     this.dirty = true;
   }
 

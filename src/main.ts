@@ -216,6 +216,15 @@ async function main(): Promise<void> {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   window.addEventListener('pagehide', () => playtest.save());
+  // Script errors and three.js warnings go into the log too (the browser's own WebGL
+  // warnings never reach the page, so testers' notes still matter for those).
+  window.addEventListener('error', (e) => playtest.problem(`error: ${e.message}`));
+  window.addEventListener('unhandledrejection', (e) => playtest.problem(`rejection: ${String(e.reason)}`));
+  const warn = console.warn.bind(console);
+  console.warn = (...args: unknown[]): void => {
+    warn(...args);
+    playtest.problem(`warning: ${args.map(String).join(' ')}`);
+  };
 
   audio.setEmitters(
     level.entities

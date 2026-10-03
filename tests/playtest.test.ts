@@ -78,6 +78,19 @@ describe('playtest log', () => {
     expect(list.at(-1)?.started).toBe(`s${MAX_SESSIONS + 4}`);
   });
 
+  it('counts problems by message, folding addresses, and keeps a few distinct ones', () => {
+    const storage = memory();
+    const log = new PlaytestLog(storage, init('p'));
+    log.problem('warning: GL error at 0x5a10  bind');
+    log.problem('warning: GL error at 0x77ff bind');
+    for (let i = 0; i < 40; i++) log.problem(`error: ${i}`);
+    log.frame(0.1);
+    log.save();
+    const p = loadSessions(storage)[0]?.problems ?? {};
+    expect(p['warning: GL error at 0x… bind']).toBe(2);
+    expect(Object.keys(p)).toHaveLength(20);
+  });
+
   it('survives missing, corrupt and full storage', () => {
     const log = new PlaytestLog(null, init('x'));
     log.frame(0.1);
