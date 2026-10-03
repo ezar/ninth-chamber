@@ -3,7 +3,7 @@ Renders the app icon: the nine-segment seal carved in sandstone, the ninth
 segment in glowing amber (Blender Cycles, orthographic, 1024 px).
 
 Usage (Blender as a Python module, see scripts/bake):
-    python scripts/brand/render_icon.py -- <out.png> <size> public/textures/wall
+    python scripts/brand/render_icon.py -- <out.png> <size> art/textures/wall
 
 The PNGs in public/icons (192/512 rounded, 512 maskable, 180 Apple touch,
 32 favicon) are cut from the 1024 px render.

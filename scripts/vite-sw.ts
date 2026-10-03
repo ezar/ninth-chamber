@@ -23,6 +23,7 @@ export const PRECACHE_PUBLIC = [
   /^models\/.*\.glb$/,
   /^anim\/.*\.json$/,
   /^textures\//,
+  /^basis\/.*\.(js|wasm)$/,
   /^levels\//,
   /^icons\//,
 ];

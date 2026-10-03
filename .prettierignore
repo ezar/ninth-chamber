@@ -4,3 +4,4 @@ docs/spec.md
 .claude
 public/models/*.glb
 public/anim/*.json
+public/basis/*.js

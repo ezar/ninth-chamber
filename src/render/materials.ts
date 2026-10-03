@@ -1,10 +1,11 @@
 /**
- * Surface materials. Scanned CC0 textures (public/textures, see sources.json)
- * are preferred; the procedural ones in textures.ts are the fallback when a
- * file is missing or fails to load.
+ * Surface materials. Scanned CC0 textures (art/textures, see sources.json),
+ * shipped as KTX2 in public/textures, are preferred; the procedural ones in
+ * textures.ts are the fallback when a file is missing or fails to load.
  */
 import * as THREE from 'three/webgpu';
 import { BLOCK } from '../sim/grid/units';
+import { ktx2 } from './ktx2';
 import { ashlar, flagstones, rock, sand, type PbrSet } from './textures';
 
 export interface SurfaceSet extends PbrSet {
@@ -27,70 +28,17 @@ const SCANNED_SIZE: Record<SurfaceName, number> = {
 
 /**
  * Softening of the scans, which read harsh and grainy on phone screens: the
- * albedo moves part of the way towards the texture's mean colour (lower
- * contrast and saturation in the blotches, joints and cracks still readable
- * up close) and the normal maps' relief is toned down. The busiest surfaces,
- * floor and sand, get the most.
+ * normal maps' relief is toned down, most on the busiest surfaces (floor and
+ * sand). The albedo is softened when the KTX2 files are made
+ * (scripts/textures/ktx2.ts, SURFACE_SOFTEN).
  */
-const SOFTEN: Record<SurfaceName, { albedo: number; normal: number }> = {
-  wall: { albedo: 0.18, normal: 0.8 },
-  floor: { albedo: 0.24, normal: 0.7 },
-  block: { albedo: 0.12, normal: 0.85 },
-  sand: { albedo: 0.28, normal: 0.65 },
-  ceiling: { albedo: 0.15, normal: 0.85 },
+const NORMAL_STRENGTH: Record<SurfaceName, number> = {
+  wall: 0.8,
+  floor: 0.7,
+  block: 0.85,
+  sand: 0.65,
+  ceiling: 0.85,
 };
-
-/**
- * The albedo lerped by `k` towards its own mean colour, drawn on a canvas (a
- * translucent fill over the image, so no per-pixel work on the CPU). Returns
- * the texture unchanged where there is no canvas or the image is not drawable.
- */
-export function softenAlbedo(tex: THREE.Texture, k: number): THREE.Texture {
-  const img = tex.image as (CanvasImageSource & { width?: number; height?: number }) | null;
-  const width = img?.width ?? 0;
-  const height = img?.height ?? 0;
-  if (!img || !width || !height || k <= 0 || typeof document === 'undefined') return tex;
-  try {
-    const probe = document.createElement('canvas');
-    probe.width = probe.height = 16;
-    const pg = probe.getContext('2d', { willReadFrequently: true });
-    if (!pg) return tex;
-    pg.drawImage(img, 0, 0, 16, 16);
-    const px = pg.getImageData(0, 0, 16, 16).data;
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    for (let i = 0; i < px.length; i += 4) {
-      r += px[i] ?? 0;
-      g += px[i + 1] ?? 0;
-      b += px[i + 2] ?? 0;
-    }
-    const n = px.length / 4;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const cg = canvas.getContext('2d');
-    if (!cg) return tex;
-    cg.drawImage(img, 0, 0);
-    cg.globalAlpha = k;
-    cg.fillStyle = `rgb(${Math.round(r / n)}, ${Math.round(g / n)}, ${Math.round(b / n)})`;
-    cg.fillRect(0, 0, width, height);
-    const out = new THREE.CanvasTexture(canvas);
-    out.colorSpace = tex.colorSpace;
-    out.wrapS = tex.wrapS;
-    out.wrapT = tex.wrapT;
-    out.repeat.copy(tex.repeat);
-    out.anisotropy = tex.anisotropy;
-    out.minFilter = THREE.LinearMipmapLinearFilter;
-    out.generateMipmaps = true;
-    out.name = tex.name;
-    tex.dispose();
-    return out;
-  } catch {
-    // A tainted or undecodable image: keep the scan as it is.
-    return tex;
-  }
-}
 
 function procedural(name: SurfaceName): PbrSet {
   switch (name) {
@@ -107,12 +55,14 @@ function procedural(name: SurfaceName): PbrSet {
   }
 }
 
-async function loadScanned(name: SurfaceName, loader: THREE.TextureLoader): Promise<SurfaceSet> {
+async function loadScanned(name: SurfaceName): Promise<SurfaceSet> {
+  const loader = ktx2();
+  if (!loader) throw new Error('KTX2 loader not set up');
   const base = `${import.meta.env.BASE_URL}textures/${name}/`;
   const [map, normalMap, armMap] = await Promise.all([
-    loader.loadAsync(`${base}albedo.jpg`),
-    loader.loadAsync(`${base}normal.jpg`),
-    loader.loadAsync(`${base}arm.jpg`),
+    loader.loadAsync(`${base}albedo.ktx2`),
+    loader.loadAsync(`${base}normal.ktx2`),
+    loader.loadAsync(`${base}arm.ktx2`),
   ]);
   // Level UVs run one unit per 2 m block; scale so the scan keeps its real size.
   const r = BLOCK / SCANNED_SIZE[name];
@@ -121,26 +71,19 @@ async function loadScanned(name: SurfaceName, loader: THREE.TextureLoader): Prom
     t.repeat.set(r, r);
     t.anisotropy = 8;
   }
+  // The albedo file is tagged sRGB, the others linear; the loader reads it from the file.
   map.colorSpace = THREE.SRGBColorSpace;
-  const soft = SOFTEN[name];
-  return {
-    map: softenAlbedo(map, soft.albedo),
-    normalMap,
-    roughnessMap: armMap,
-    armMap,
-    normalStrength: soft.normal,
-  };
+  return { map, normalMap, roughnessMap: armMap, armMap, normalStrength: NORMAL_STRENGTH[name] };
 }
 
 export async function loadSurfaces(): Promise<Record<SurfaceName, SurfaceSet>> {
-  const loader = new THREE.TextureLoader();
   const names: SurfaceName[] = ['wall', 'floor', 'block', 'sand', 'ceiling'];
   const sets = await Promise.all(
     names.map(async (n): Promise<SurfaceSet> => {
       try {
-        return await loadScanned(n, loader);
+        return await loadScanned(n);
       } catch {
-        return { ...procedural(n), armMap: null, normalStrength: SOFTEN[n].normal };
+        return { ...procedural(n), armMap: null, normalStrength: NORMAL_STRENGTH[n] };
       }
     }),
   );

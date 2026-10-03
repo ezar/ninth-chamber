@@ -291,32 +291,39 @@ export function rock(opts: { size?: number; seed?: number; base: string }): PbrS
   return toTextures(f, size, 6, 'rock');
 }
 
-/** Hairline crack pattern over a flagstone, for tiles that are about to give way. */
-export function cracked(src: PbrSet, seed = 21): THREE.Texture {
-  const img = src.map.image as HTMLCanvasElement | HTMLImageElement;
+/**
+ * Hairline cracks for tiles that are about to give way, as a mask to multiply
+ * over the floor's albedo (white, with dark cracks). A mask rather than a
+ * painted copy of the floor, since the floor's albedo is a compressed KTX2
+ * texture that cannot be drawn on.
+ */
+export function crackMask(seed = 21, size = 512): THREE.Texture {
   const c = document.createElement('canvas');
-  c.width = img.width;
-  c.height = img.height;
+  c.width = c.height = size;
   const g = c.getContext('2d');
-  if (!g) return src.map;
-  g.drawImage(img, 0, 0);
-  const rng = new Rng(seed);
-  g.strokeStyle = 'rgba(25, 16, 8, 0.85)';
-  g.lineCap = 'round';
-  for (let k = 0; k < 7; k++) {
-    let x = c.width * rng.range(0.3, 0.7);
-    let y = c.height * rng.range(0.3, 0.7);
-    let a = rng.range(0, Math.PI * 2);
-    g.lineWidth = rng.range(1.2, 2.6);
-    g.beginPath();
-    g.moveTo(x, y);
-    for (let s = 0; s < 14; s++) {
-      a += rng.range(-0.6, 0.6);
-      x += Math.cos(a) * c.width * 0.035;
-      y += Math.sin(a) * c.height * 0.035;
-      g.lineTo(x, y);
+  if (g) {
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, size, size);
+    const rng = new Rng(seed);
+    g.strokeStyle = 'rgba(25, 16, 8, 0.85)';
+    g.lineCap = 'round';
+    // Line widths as on the 1024 px floor scans the cracks were first drawn on.
+    const px = size / 1024;
+    for (let k = 0; k < 7; k++) {
+      let x = size * rng.range(0.3, 0.7);
+      let y = size * rng.range(0.3, 0.7);
+      let a = rng.range(0, Math.PI * 2);
+      g.lineWidth = rng.range(1.2, 2.6) * px * 2;
+      g.beginPath();
+      g.moveTo(x, y);
+      for (let s = 0; s < 14; s++) {
+        a += rng.range(-0.6, 0.6);
+        x += Math.cos(a) * size * 0.035;
+        y += Math.sin(a) * size * 0.035;
+        g.lineTo(x, y);
+      }
+      g.stroke();
     }
-    g.stroke();
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;

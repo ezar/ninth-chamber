@@ -6,6 +6,7 @@
  */
 import * as THREE from 'three/webgpu';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { ktx2 } from './ktx2';
 import { sectorTop, type Level, type Sector } from '../sim/grid/level';
 import { BLOCK, DIRS, DIR_VEC, DIR_YAW, type Dir } from '../sim/grid/units';
 
@@ -42,6 +43,9 @@ export class PropLibrary {
   static async load(baseUrl: string): Promise<PropLibrary> {
     const lib = new PropLibrary();
     const loader = new GLTFLoader();
+    // The models' textures are KTX2 (scripts/textures/ktx2.ts).
+    const k = ktx2();
+    if (k) loader.setKTX2Loader(k);
     await Promise.all(
       PROP_MODELS.map(async (name) => {
         try {

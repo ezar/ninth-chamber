@@ -28,7 +28,7 @@ Recorded sound under open licences. The full list, file by file with source link
 
 ## Textures
 
-- Surface textures from [Poly Haven](https://polyhaven.com) — CC0: `large_sandstone_blocks_01`, `sandstone_blocks_08`, `sandstone_cracks` and `sand_01` by Rob Tuytel; `rock_face_03` by Dario Barresi and Rico Cilliers. Sources in `public/textures/sources.json`.
+- Surface textures from [Poly Haven](https://polyhaven.com) — CC0: `large_sandstone_blocks_01`, `sandstone_blocks_08`, `sandstone_cracks` and `sand_01` by Rob Tuytel; `rock_face_03` by Dario Barresi and Rico Cilliers. Sources in `art/textures/sources.json` (the scans; the game ships them as KTX2 in `public/textures`).
 
 ## Models
 

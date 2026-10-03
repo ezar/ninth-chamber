@@ -38,6 +38,7 @@ import { WaterFx } from './water-fx';
 import { WaterView, waterLookOf } from './water';
 import type { SimEvent } from '../core/events';
 import { TempleView } from './temple';
+import { setupKtx2 } from './ktx2';
 
 export interface PlayerPose {
   pos: Vec3;
@@ -227,6 +228,8 @@ export class GameRenderer {
 
   async init(): Promise<void> {
     await this.renderer.init();
+    // KTX2 textures transcode for this GPU (level surfaces, prop models, Nora).
+    setupKtx2(this.renderer);
     [this.surfaces] = await Promise.all([
       loadSurfaces(),
       this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`, `${import.meta.env.BASE_URL}anim/`),
@@ -342,7 +345,11 @@ export class GameRenderer {
     const fix = (t: THREE.Texture | null | undefined): void => {
       if (!t || t.isRenderTargetTexture || !t.image) return;
       let changed = false;
-      if (t.minFilter === THREE.LinearFilter || t.minFilter === THREE.NearestFilter) {
+      // Compressed textures bring their own mips (and cannot generate them).
+      if (
+        !('isCompressedTexture' in t) &&
+        (t.minFilter === THREE.LinearFilter || t.minFilter === THREE.NearestFilter)
+      ) {
         t.minFilter = THREE.LinearMipmapLinearFilter;
         t.generateMipmaps = true;
         changed = true;
