@@ -309,5 +309,21 @@
   "hud.flares": "Bengalas: {count}",
   "touch.flare": "Bengala",
   "seal.label": "El sello de nueve segmentos",
-  "seal.whisper": "Ocho están tallados. El noveno se escribe con luz."
+  "seal.whisper": "Ocho están tallados. El noveno se escribe con luz.",
+  "pause.inventory": "Inventario",
+  "inventory.title": "Inventario",
+  "inventory.group.items": "Contigo",
+  "inventory.group.relics": "Reliquias",
+  "inventory.group.secrets": "Secretos",
+  "inventory.empty": "Nada todavía.",
+  "inventory.secrets": "Ídolos encontrados aquí: {count} de {total}",
+  "item.medkit_small": "Botiquín pequeño",
+  "item.medkit_small.desc": "Cura un poco. H, o el botón del botiquín.",
+  "item.medkit_large": "Botiquín grande",
+  "item.medkit_large.desc": "Cura del todo. H, o el botón del botiquín: si basta con el pequeño, se usa primero.",
+  "item.flare": "Bengalas",
+  "item.flare.desc": "Pulsa Bengala para encender una y otra vez para lanzarla. Una bengala encendida cerca de un brasero lo prende.",
+  "item.torch": "Antorcha",
+  "item.torch.desc": "T la enciende, la guarda o la saca. Alumbra la oscuridad.",
+  "item.bronze_ray.desc": "Un rayo de bronce del disco solar. Encaja en el hueco del muro donde debería dar el sol."
 }

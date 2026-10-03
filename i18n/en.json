@@ -309,5 +309,21 @@
   "hud.flares": "Flares: {count}",
   "touch.flare": "Flare",
   "seal.label": "The seal of nine segments",
-  "seal.whisper": "Eight are carved. The ninth is written in light."
+  "seal.whisper": "Eight are carved. The ninth is written in light.",
+  "pause.inventory": "Inventory",
+  "inventory.title": "Inventory",
+  "inventory.group.items": "Carried",
+  "inventory.group.relics": "Relics",
+  "inventory.group.secrets": "Secrets",
+  "inventory.empty": "Nothing yet.",
+  "inventory.secrets": "Idols found here: {count} of {total}",
+  "item.medkit_small": "Small medkit",
+  "item.medkit_small.desc": "Heals a little. H, or the medkit button.",
+  "item.medkit_large": "Large medkit",
+  "item.medkit_large.desc": "Heals fully. H, or the medkit button: the small one goes first when it is enough.",
+  "item.flare": "Flares",
+  "item.flare.desc": "Press Flare to light one, again to throw it. A burning flare brought close lights a brazier.",
+  "item.torch": "Torch",
+  "item.torch.desc": "T lights it, puts it away or takes it out. It lights the dark.",
+  "item.bronze_ray.desc": "A bronze ray from the sun's disc. It fits the empty slot in the wall where the sun should strike."
 }

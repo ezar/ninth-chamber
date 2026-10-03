@@ -36,6 +36,7 @@ import { ChamberMap } from './ui/chamber-map';
 import { EndScreen } from './ui/end-screen';
 import { PlaytestLog, clearSessions, exportLog, loadSessions } from './ui/playtest';
 import { browserSaveStore } from './ui/save-store';
+import { inventoryEntries } from './ui/inventory';
 import { browserProgressStorage, loadReached, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
 import { applyStaticStrings, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
@@ -455,6 +456,14 @@ async function main(): Promise<void> {
       autoGrain: () => renderer.quality.filmGrain && !settings.reducedMotion,
       autoSharpen: () => renderer.pixelRatio < (window.devicePixelRatio || 1) - 0.01,
     },
+    inventory: () =>
+      inventoryEntries(
+        world.state,
+        world.stats,
+        level.id,
+        loadReached(progress),
+        level.entities.filter((e) => e.type === 'secret').length,
+      ),
     playtest: {
       count: () => loadSessions(storage).length,
       export: exportPlaytest,

@@ -14,6 +14,7 @@ import {
   type TextureFiltering,
 } from '../render/quality';
 import type { Device } from './hud';
+import type { InventoryEntry } from './inventory';
 import { t, type StringKey } from './i18n';
 import {
   ADJUST_EVENT,
@@ -30,7 +31,7 @@ import {
 import { SENSITIVITY_RANGE, type Language, type RendererChoice, type Settings } from './settings';
 
 export type MenuContext = 'pause' | 'title';
-type PanelName = 'pause' | 'options' | 'confirm';
+type PanelName = 'pause' | 'options' | 'confirm' | 'inventory';
 type ConfirmAction = 'restart' | 'quit' | 'renderer';
 
 export interface MenuCallbacks {
@@ -54,6 +55,8 @@ export interface MenuCallbacks {
     autoGrain(): boolean;
     autoSharpen(): boolean;
   };
+  /** What Nora carries, for the inventory panel (ui/inventory.ts). */
+  inventory?(): InventoryEntry[];
   /** The playtest log kept on the device (ui/playtest.ts). No rows without it. */
   playtest?: {
     /** Sessions stored. */
@@ -140,6 +143,8 @@ export class Menu {
       this.pendingRenderer = null;
       this.rendererRow?.refresh();
       this.show('options', undefined, this.rendererRow?.el);
+    } else if (this.panel === 'inventory') {
+      this.show('pause', 'inventory');
     } else if (this.panel === 'confirm') {
       this.show('pause', this.confirming ?? undefined);
       this.confirming = null;
@@ -281,6 +286,10 @@ export class Menu {
       case 'options':
         this.show('options');
         break;
+      case 'inventory':
+        this.renderInventory();
+        this.show('inventory');
+        break;
       case 'back':
         this.back();
         break;
@@ -302,6 +311,52 @@ export class Menu {
       }
       default:
         break;
+    }
+  }
+
+  /** The inventory panel: one group per kind, each entry with its count and description. */
+  private renderInventory(): void {
+    const list = byId('inventory-list');
+    const entries = this.cb.inventory?.() ?? [];
+    list.replaceChildren();
+    if (!entries.length) {
+      const p = document.createElement('p');
+      p.className = 'menu-text';
+      p.textContent = t('inventory.empty');
+      list.append(p);
+      return;
+    }
+    for (const group of ['items', 'relics', 'secrets'] as const) {
+      const items = entries.filter((e) => e.group === group);
+      if (!items.length) continue;
+      const h = document.createElement('h3');
+      h.className = 'opt-group';
+      h.textContent = t(`inventory.group.${group}`);
+      list.append(h);
+      for (const e of items) {
+        // Focusable, so a gamepad or the keyboard can scroll through a long list.
+        const row = document.createElement('div');
+        row.className = 'inv-item';
+        row.tabIndex = 0;
+        row.dataset.nav = '';
+        const name = document.createElement('span');
+        name.className = 'inv-name';
+        name.textContent = t(e.name, e.vars);
+        row.append(name);
+        if (e.count !== null) {
+          const count = document.createElement('span');
+          count.className = 'inv-count';
+          count.textContent = `× ${e.count}`;
+          row.append(count);
+        }
+        if (e.desc) {
+          const desc = document.createElement('p');
+          desc.className = 'inv-desc';
+          desc.textContent = t(e.desc);
+          row.append(desc);
+        }
+        list.append(row);
+      }
     }
   }
 
