@@ -1,5 +1,23 @@
 # Changelog
 
+## Version 0.3.5 (2026-10-03): Accessibility
+
+The first of the three releases on the way to 0.4.0 (docs/roadmap.md), Phase 3 of the spec: what spec §13 asks of accessibility.
+
+- **Subtitles** (`src/ui/captions.ts`, `src/ui/caption-view.ts`): every sound that tells the player something gets a caption, with the side it comes from relative to the camera ("[Click in the wall, right]").
+  - Covered: traps, doors, blocks, water, moving stone, the guardian, jackals and Tamrit, and the torch and flares going out.
+  - Small, medium or large; sounds out of earshot are not captioned, and a repeating sound (a swinging blade, a ticking door) does not flood the screen.
+  - The option has existed since 0.2.0 and did nothing until now.
+- **Trap warnings**: when a trap arms (darts, a cracking floor, a boulder, a fire jet, a closing trapdoor, the guardian rearing up), an arrow at the edge of the screen points at it. On by default.
+- **Hold or toggle** for Action and Walk (`InputFramer.setToggles`): in toggle mode one press latches the button and the next lets go. The touch Walk button was already a toggle and stays one.
+- **Game speed 75 %**: play runs on a slower clock. Ticks are unchanged, so times, ranks and records are not affected (spec §13).
+- **High contrast** (`src/sim/grid/edges.ts`, `src/render/grab-edges.ts`): a bright strip along every lip Nora can grab, computed with the same rules as the controller's grab and checked against it in `tests/accessibility.test.ts`.
+- **Poison on the health bar**: the bar stays up and turns green while poison drains it. Before, poison showed nowhere.
+- **Colour-blind safe bars**: health in blue, low health in white, poison in orange with stripes.
+- **Touch buttons**: size (80 to 140 %) and opacity (30 to 100 %), positions scaled with the size so the buttons never overlap.
+
+Known: on the medium and high tiers, Chromium still logs "bindTexture: attempt to use a deleted object" (present before this release; the mobile tier was fixed in 0.3.0). It is on the list for 0.3.6.
+
 ## Version 0.3.0 (2026-10-03): Chamber IV, the Clay Archive
 
 The third and last release on the way to 0.3.0 (docs/roadmap.md): the second half of the campaign opens.

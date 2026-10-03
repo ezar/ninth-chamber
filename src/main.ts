@@ -7,7 +7,7 @@ import { OrbitCamera, cameraTuning } from './camera/orbit';
 import { EventBus, type SimEvent } from './core/events';
 import { Haptics, hapticsEnabled, setHapticsEnabled } from './core/haptics';
 import { GamepadDevice, KeyboardMouseDevice, TouchDevice, mergeDevices } from './core/input';
-import { InputFramer, emptyFrame, isPressed } from './core/input-frame';
+import { InputFramer, buttonBit, emptyFrame, isPressed } from './core/input-frame';
 import { FixedStepLoop } from './core/loop';
 import { GroundFx } from './render/fx';
 import {
@@ -41,6 +41,7 @@ import { inventoryEntries } from './ui/inventory';
 import { setLabelBindings } from './ui/control-labels';
 import { browserProgressStorage, loadReached, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
+import { CaptionView } from './ui/caption-view';
 import { applyStaticStrings, isStringKey, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
 import { Intro } from './ui/intro';
 import { LoadingScreen } from './ui/loading';
@@ -278,6 +279,7 @@ async function main(): Promise<void> {
   const touch = new TouchDevice(canvas, $('#touch'), { base: $('#stick'), knob: $('#stick-knob') });
   const devices = [keyboard, gamepad, touch];
   const framer = new InputFramer();
+  const captions = new CaptionView($('#hud'));
   const pads = new PadReader();
   const padEdges = new PadEdgeReader();
   const drs = new DynamicResolution(QUALITY[tier].minRenderScale);
@@ -345,6 +347,7 @@ async function main(): Promise<void> {
   const setDevice = (d: Device): void => {
     hud.device = d;
     menu.setDevice(d);
+    applyToggles();
   };
 
   // ───────────────────────────── Settings ─────────────────────────────
@@ -396,6 +399,24 @@ async function main(): Promise<void> {
     gamepad.setBindings(settings.bindings);
     setLabelBindings(settings.bindings);
   };
+  /** Hold or toggle for Action and Walk; the touch Walk button is a toggle of its own. */
+  const applyToggles = (): void => {
+    let mask = 0;
+    if (settings.actionMode === 'toggle') mask |= buttonBit('action');
+    if (settings.walkMode === 'toggle' && hud.device !== 'touch') mask |= buttonBit('walk');
+    framer.setToggles(mask);
+  };
+  /** Subtitles, trap arrows, high contrast, colour-safe bars and the touch buttons' size and opacity. */
+  const applyAccess = (): void => {
+    captions.subtitles = settings.subtitles;
+    captions.trapCues = settings.trapCues;
+    captions.setSize(settings.subtitleSize);
+    document.body.classList.toggle('colour-safe', settings.colourSafe);
+    renderer.setHighContrast(settings.highContrast);
+    const touchEl = $('#touch');
+    touchEl.style.setProperty('--touch-scale', String(settings.touchSize));
+    touchEl.style.setProperty('--touch-opacity', String(settings.touchOpacity));
+  };
   const applyCamera = (): void => {
     cameraTuning.sensitivity = baseSensitivity * settings.cameraSensitivity;
     cameraTuning.invertY = settings.invertY;
@@ -440,6 +461,19 @@ async function main(): Promise<void> {
         break;
       case 'bindings':
         applyBindings();
+        break;
+      case 'actionMode':
+      case 'walkMode':
+        applyToggles();
+        break;
+      case 'subtitles':
+      case 'subtitleSize':
+      case 'trapCues':
+      case 'highContrast':
+      case 'colourSafe':
+      case 'touchSize':
+      case 'touchOpacity':
+        applyAccess();
         break;
       case 'language':
         setLocale(settings.language ?? pickLocale(navigator.languages));
@@ -496,6 +530,8 @@ async function main(): Promise<void> {
   applyVolumes();
   applyBindings();
   applyCamera();
+  applyToggles();
+  applyAccess();
   applyResolution();
   applyImage();
   applyStats();
@@ -623,6 +659,7 @@ async function main(): Promise<void> {
       );
       prev = pose();
       hud.reset();
+      captions.reset();
       title.hide();
       camera.yaw = world.state.player.yaw;
       camera.recenter(world.state.player.yaw);
@@ -681,6 +718,7 @@ async function main(): Promise<void> {
     audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
     prev = pose();
     hud.reset();
+    captions.reset();
     endScreen.hide();
     camera.yaw = world.state.player.yaw;
     camera.recenter(world.state.player.yaw);
@@ -702,6 +740,7 @@ async function main(): Promise<void> {
     prev = pose();
     shots = entranceShots(level, world.state.player.pos, world.state.player.yaw);
     hud.reset();
+    captions.reset();
     endScreen.hide();
     audio.setPaused(false);
     keyboard.setEnabled(false);
@@ -800,7 +839,12 @@ async function main(): Promise<void> {
   const onEvent = (e: SimEvent): void => {
     const p = world.state.player.pos;
     playtest.onEvent(e.type);
-    audio.onEvent(e, soundAt(e));
+    const heard = soundAt(e);
+    audio.onEvent(e, heard);
+    if (phase === 'play') {
+      const at = typeof e.x === 'number' && typeof e.z === 'number' ? { x: e.x, z: e.z } : heard;
+      captions.onEvent(e, at, p, camera.yaw);
+    }
     if (e.type === 'player.respawned') {
       // The checkpoint may bring back a torch in another state: the crackle follows it.
       const t = world.state.player.torch;
@@ -1064,10 +1108,13 @@ async function main(): Promise<void> {
       if (looking) camera.look(l.x, l.y, l.zoom);
     }
 
-    alpha = loop.advance(dt).alpha;
-    draw(dt);
+    // Game speed (Options → Accessibility) slows play only: menus, the title and the intro keep time.
+    const playDt = phase === 'play' ? dt * settings.gameSpeed : dt;
+    alpha = loop.advance(playDt).alpha;
+    draw(playDt);
     redraw = false;
     if (phase === 'play') hud.update(world, dt);
+    captions.update(dt);
     // Stalls over a second (a hidden tab, a debugger) are not play.
     if (phase === 'play' && !reader.isOpen && rawDt < 1) {
       playtest.frame(rawDt);

@@ -135,9 +135,12 @@ export class Hud {
       this.lastHealth = p.health;
     }
     this.healthShownFor -= dt;
-    const showHealth = this.healthShownFor > 0 || p.health < 50;
+    const poisoned = p.poison > 0;
+    const showHealth = this.healthShownFor > 0 || p.health < 50 || poisoned;
     this.health.classList.toggle('show', showHealth);
-    this.health.classList.toggle('low', p.health < 25);
+    this.health.classList.toggle('low', p.health < 25 && !poisoned);
+    // Poison drains the bar: it changes colour and pattern while it lasts (colour-safe under Options).
+    this.health.classList.toggle('poisoned', poisoned);
     this.healthFill.style.width = `${p.health}%`;
 
     // The touch draw / holster button says what it will do and glows while armed.
