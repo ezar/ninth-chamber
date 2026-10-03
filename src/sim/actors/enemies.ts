@@ -41,7 +41,16 @@ function navOf(world: World): NavGrid {
 }
 
 function emit(world: World, type: string, e: EnemyState, data: Record<string, unknown> = {}): void {
-  world.events.emit({ type, tick: world.tick, id: e.id, x: e.pos.x, y: e.pos.y, z: e.pos.z, ...data });
+  world.events.emit({
+    type,
+    tick: world.tick,
+    id: e.id,
+    enemy: e.type,
+    x: e.pos.x,
+    y: e.pos.y,
+    z: e.pos.z,
+    ...data,
+  });
 }
 
 function setMode(e: EnemyState, mode: EnemyMode): void {

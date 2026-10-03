@@ -17,6 +17,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { TICK_DT } from '../core/loop';
 import type { EnemyState } from '../sim/state';
 import type { World } from '../sim/world';
+import { ClayView } from './clay';
 
 export interface JackalView {
   readonly root: THREE.Object3D;
@@ -844,7 +845,10 @@ interface Slot {
   /** Displayed position and yaw, smoothed between ticks. */
   pos: THREE.Vector3;
   yaw: number;
+  /** A skinned jackal, or a view the skinned model never replaces (Tamrit). */
   skinned: boolean;
+  /** Body centre above the feet, for markers (m). */
+  height: number;
 }
 
 const _look = new THREE.Vector3();
@@ -867,7 +871,7 @@ export class EnemyViews {
   center(id: string, out: THREE.Vector3): THREE.Vector3 | null {
     const s = this.slots.get(id);
     if (!s) return null;
-    return out.copy(s.pos).setY(s.pos.y + 0.42);
+    return out.copy(s.pos).setY(s.pos.y + s.height);
   }
 
   flinch(id: string): void {
@@ -888,15 +892,26 @@ export class EnemyViews {
     world.state.enemies.forEach((e, i) => {
       seen.add(e.id);
       let slot = this.slots.get(e.id);
-      if (slot && this.asset && !slot.skinned) {
+      if (slot && this.asset && !slot.skinned && e.type === 'jackal') {
         // The skinned model arrived: swap the procedural view out.
         this.group.remove(slot.view.root);
         slot.view.dispose();
         slot = undefined;
       }
       if (!slot) {
-        const view: JackalView = this.asset ? new SkinnedJackal(this.asset) : new ProceduralJackal(i);
-        slot = { view, pos: new THREE.Vector3(e.pos.x, e.pos.y, e.pos.z), yaw: e.yaw, skinned: !!this.asset };
+        const view: JackalView =
+          e.type === 'clay'
+            ? new ClayView()
+            : this.asset
+              ? new SkinnedJackal(this.asset)
+              : new ProceduralJackal(i);
+        slot = {
+          view,
+          pos: new THREE.Vector3(e.pos.x, e.pos.y, e.pos.z),
+          yaw: e.yaw,
+          skinned: !!this.asset || e.type !== 'jackal',
+          height: e.type === 'clay' ? 1.3 : 0.42,
+        };
         this.group.add(view.root);
         this.slots.set(e.id, slot);
       }
