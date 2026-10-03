@@ -23,7 +23,8 @@ import {
   type QualityTier,
 } from './render/quality';
 import { GameRenderer, type PlayerPose } from './render/scene';
-import { levelFromQuery, levelIds, levelUrl, loadPlayableLevel } from './levels';
+import { levelFromQuery, levelIds, levelUrl, loadHints, loadPlayableLevel } from './levels';
+import { HintTracker } from './sim/hints/hints';
 import type { NoteStyle } from './sim/grid/schema';
 import { BLOCK } from './sim/grid/units';
 import { torchInHand } from './sim/player/torch';
@@ -40,7 +41,7 @@ import { inventoryEntries } from './ui/inventory';
 import { setLabelBindings } from './ui/control-labels';
 import { browserProgressStorage, loadReached, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
-import { applyStaticStrings, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
+import { applyStaticStrings, isStringKey, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
 import { Intro } from './ui/intro';
 import { LoadingScreen } from './ui/loading';
 import { Menu } from './ui/menu';
@@ -202,6 +203,9 @@ async function main(): Promise<void> {
 
   let world: World = (resuming && saved ? restore(level, saved) : null) ?? createWorld(level, 1);
   renderer.setWorld(world);
+  // Nora's ideas for this chamber's puzzles (levels/<id>.hints.json).
+  const puzzles = await loadHints(level.id);
+  let hintTracker = new HintTracker(puzzles);
 
   // The playtest log (Options → Playtest): this session, kept on the device.
   const playtest = new PlaytestLog(storage, {
@@ -466,6 +470,15 @@ async function main(): Promise<void> {
       autoGrain: () => renderer.quality.filmGrain && !settings.reducedMotion,
       autoSharpen: () => renderer.pixelRatio < (window.devicePixelRatio || 1) - 0.01,
     },
+    hint: {
+      available: () => hintTracker.available(world) !== null,
+      next: () => {
+        const step = hintTracker.next(world);
+        if (!step || !isStringKey(step.key)) return null;
+        cue('hint.asked', { puzzle: step.puzzle, level: step.level });
+        return { key: step.key, level: step.level, more: step.more };
+      },
+    },
     inventory: () =>
       inventoryEntries(
         world.state,
@@ -601,6 +614,7 @@ async function main(): Promise<void> {
     window.setTimeout(() => {
       starting = false;
       world = resumed;
+      hintTracker = new HintTracker(puzzles);
       renderer.resetWorld(world);
       const t = world.state.player.torch;
       audio.onEvent(
@@ -661,6 +675,7 @@ async function main(): Promise<void> {
   const restart = (): void => {
     audio.ui('confirm');
     world = createWorld(level, 1);
+    hintTracker = new HintTracker(puzzles);
     renderer.resetWorld(world);
     // A fresh world carries no torch: its crackle stops.
     audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
@@ -680,6 +695,7 @@ async function main(): Promise<void> {
     menu.close();
     document.body.classList.remove('paused');
     world = createWorld(level, 1);
+    hintTracker = new HintTracker(puzzles);
     renderer.resetWorld(world);
     // A fresh world carries no torch: its crackle stops.
     audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
@@ -1053,7 +1069,11 @@ async function main(): Promise<void> {
     redraw = false;
     if (phase === 'play') hud.update(world, dt);
     // Stalls over a second (a hidden tab, a debugger) are not play.
-    if (phase === 'play' && !reader.isOpen && rawDt < 1) playtest.frame(rawDt);
+    if (phase === 'play' && !reader.isOpen && rawDt < 1) {
+      playtest.frame(rawDt);
+      hintTracker.update(world, rawDt);
+      if (hintTracker.takeOffer(world)) cue('hint.offer');
+    }
     audio.setHealth(world.state.player.health / tuning.maxHealth);
     audio.setUnderwater(renderer.underwater);
 
@@ -1115,6 +1135,10 @@ async function main(): Promise<void> {
     },
     get phase() {
       return phase;
+    },
+    /** Nora's ideas: `__nc.hints.idle = 200` brings one on in the current room. */
+    get hints() {
+      return hintTracker;
     },
     /** The entrance camera shots (title drift and intro path), editable for framing tests. */
     get shots() {

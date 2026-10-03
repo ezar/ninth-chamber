@@ -1326,3 +1326,11 @@ body.touch #hud-stats {
   opacity: 1;
   transition: none;
 }
+
+/* Nora's idea (Pause → Ask Nora): her own words, in her voice. */
+.hint-text {
+  max-width: 44ch;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.5;
+}

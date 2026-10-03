@@ -1,0 +1,23 @@
+{
+  "level": "cisterns",
+  "puzzles": [
+    {
+      "id": "sluice",
+      "rooms": ["sluice"],
+      "solved": "z_aqueduct.entered",
+      "hints": ["hints.cisterns.sluice.1", "hints.cisterns.sluice.2", "hints.cisterns.sluice.3"]
+    },
+    {
+      "id": "dark",
+      "rooms": ["dark"],
+      "solved": "z_landing.entered",
+      "hints": ["hints.cisterns.dark.1", "hints.cisterns.dark.2", "hints.cisterns.dark.3"]
+    },
+    {
+      "id": "tide",
+      "rooms": ["tide", "cave"],
+      "solved": "tide_glass.taken",
+      "hints": ["hints.cisterns.tide.1", "hints.cisterns.tide.2", "hints.cisterns.tide.3"]
+    }
+  ]
+}

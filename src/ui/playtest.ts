@@ -21,7 +21,10 @@ export interface RoomStats {
   /** Seconds of play in the room. */
   time: number;
   deaths: number;
+  /** Tutorial hints shown. */
   hints: number;
+  /** Nora's ideas asked for (Pause → Ask Nora). */
+  asked: number;
 }
 
 export interface PlaytestSession {
@@ -119,7 +122,7 @@ export class PlaytestLog {
   }
 
   private stats(room: string): RoomStats {
-    return (this.session.rooms[room] ??= { time: 0, deaths: 0, hints: 0 });
+    return (this.session.rooms[room] ??= { time: 0, deaths: 0, hints: 0, asked: 0 });
   }
 
   /** The room the player is in (null outside any room). */
@@ -136,6 +139,7 @@ export class PlaytestLog {
     if (!this.room) return;
     if (type === 'player.died') this.stats(this.room).deaths++;
     else if (type === 'hint') this.stats(this.room).hints++;
+    else if (type === 'hint.asked') this.stats(this.room).asked++;
     else if (type === 'level.end') this.session.finished = true;
     else return;
     this.dirty = true;

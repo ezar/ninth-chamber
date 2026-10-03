@@ -77,6 +77,10 @@ export class Hud {
       case 'hint':
         this.showHint(t(String(e.key) as StringKey));
         break;
+      // Dispatched by main when Nora first has an idea about the room's puzzle.
+      case 'hint.offer':
+        this.showHint(t('hint.offer'));
+        break;
       case 'player.hurt':
         this.hurtFlash.classList.remove('show');
         void this.hurtFlash.offsetWidth;

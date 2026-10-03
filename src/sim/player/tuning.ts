@@ -356,6 +356,9 @@ export const torch = {
 /** Health restored by each medkit size (spec §7 "Salud"). */
 export const medkits = { small: 50, large: 100 } as const;
 
+/** Nora's ideas (spec §15, pregenerated hints): seconds in a room with no progress before she offers one. */
+export const hints = { idle: 180 } as const;
+
 /** Radius (m) within which each noise alerts enemies (spec §7 "Comportamiento"). */
 export const noise = {
   run: 6,

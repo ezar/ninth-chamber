@@ -41,7 +41,7 @@ import {
 import { SENSITIVITY_RANGE, type Language, type RendererChoice, type Settings } from './settings';
 
 export type MenuContext = 'pause' | 'title';
-type PanelName = 'pause' | 'options' | 'confirm' | 'inventory';
+type PanelName = 'pause' | 'options' | 'confirm' | 'inventory' | 'hint';
 type ConfirmAction = 'restart' | 'quit' | 'renderer';
 
 export interface MenuCallbacks {
@@ -64,6 +64,11 @@ export interface MenuCallbacks {
     /** Film grain and sharpen as the tier and the resolution decide them. */
     autoGrain(): boolean;
     autoSharpen(): boolean;
+  };
+  /** Nora's ideas (sim/hints): whether she has one now, and the next one. No menu item without it. */
+  hint?: {
+    available(): boolean;
+    next(): { key: StringKey; level: number; more: boolean } | null;
   };
   /** What Nora carries, for the inventory panel (ui/inventory.ts). */
   inventory?(): InventoryEntry[];
@@ -134,6 +139,9 @@ export class Menu {
 
   open(context: MenuContext): void {
     this.context = context;
+    // Ask Nora only while she has an idea for this room.
+    const ask = this.root.querySelector<HTMLElement>('[data-action="hint"]');
+    if (ask) ask.hidden = context !== 'pause' || !this.cb.hint?.available();
     this.root.hidden = false;
     this.root.dataset.context = context;
     this.repeat.reset();
@@ -159,6 +167,8 @@ export class Menu {
       this.show('options', undefined, this.rendererRow?.el);
     } else if (this.panel === 'inventory') {
       this.show('pause', 'inventory');
+    } else if (this.panel === 'hint') {
+      this.show('pause', 'hint');
     } else if (this.panel === 'confirm') {
       this.show('pause', this.confirming ?? undefined);
       this.confirming = null;
@@ -323,6 +333,16 @@ export class Menu {
         this.renderInventory();
         this.show('inventory');
         break;
+      case 'hint':
+      case 'hint-more': {
+        const step = this.cb.hint?.next();
+        if (!step) break;
+        byId('hint-level').textContent = t('hint.level', { n: step.level });
+        byId('hint-text').textContent = t(step.key);
+        byId('hint-more').hidden = !step.more;
+        this.show('hint', step.more ? 'hint-more' : 'back');
+        break;
+      }
       case 'back':
         this.back();
         break;
