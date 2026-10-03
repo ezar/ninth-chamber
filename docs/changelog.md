@@ -1,5 +1,31 @@
 # Changelog
 
+## Version 0.2.6 (2026-10-03): saving, inventory, remapping and Nora's ideas
+
+The second of the three releases on the way to 0.3.0 (docs/roadmap.md), closing the Phase 2 systems of spec §9.
+
+- **Saving** (`src/sim/save`, `src/ui/save-store.ts`): one automatic save in IndexedDB.
+  - It is written at every checkpoint, when the page goes to the background or is closed, and when quitting to the title. It resumes from where Nora stands when that is safe (standing, nothing chasing her, no mechanism in use), otherwise from the last checkpoint, which deaths still go back to.
+  - **Continue** on the title resumes it. A save of another chamber loads that chamber and goes straight into play. After a chamber is finished, Continue starts the next one.
+  - Saves carry a schema number, with numbered migrations in `src/sim/save/migrations`. A save whose chamber has changed too much (its actors no longer match) is dropped rather than loaded wrong.
+- **Inventory** (Pause → Inventory, `src/ui/inventory.ts`):
+  - medkits and flares with counts, the torch and puzzle items;
+  - the relics of the chambers already finished;
+  - the idols found in this chamber.
+
+  Each has a name and a description in i18n.
+
+- **Control remapping** (Options → Keyboard and Gamepad, `src/core/bindings.ts`):
+  - Every game action can be bound to another key or button. A control another action uses swaps with it, and a row restores the defaults.
+  - Movement, Escape and Start stay fixed.
+  - The Action prompt and the note reader show the bound control.
+  - The flare, which had no gamepad button (the d-pad's up is the torch), gets the d-pad's left.
+- **Nora's ideas** (spec §15, offline mode; `src/sim/hints`, `levels/<id>.hints.json`):
+  - Three graded hints per puzzle (observation, direction, solution) for 16 puzzles across the three chambers. Each is in Nora's voice, at most 25 words, in English and Spanish, written for review by the owner.
+  - After three minutes in a room without progress, "Nora has an idea" appears; **Ask Nora** in the pause menu gives one level at a time.
+  - `pnpm validate:levels` checks the hint files: rooms, signals and i18n keys.
+  - The playtest log counts the ideas asked for per room.
+
 ## Version 0.2.5 (2026-10-03): playtest tools and fixes
 
 The first of the three releases on the way to 0.3.0 (docs/roadmap.md).

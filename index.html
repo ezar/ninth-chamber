@@ -313,6 +313,7 @@
         </div>
         <p class="kicker fallback" data-i18n="start.kicker">%tt:start.kicker%</p>
         <nav id="start-menu" class="title-menu">
+          <button id="start-continue" type="button" data-nav hidden disabled></button>
           <button
             id="start-button"
             type="button"
@@ -396,6 +397,21 @@
               class="menu-item"
               type="button"
               data-nav
+              data-action="inventory"
+              data-i18n="pause.inventory"
+            ></button>
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="hint"
+              data-i18n="pause.hint"
+              hidden
+            ></button>
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
               data-action="restart"
               data-i18n="pause.restart"
             ></button>
@@ -420,6 +436,42 @@
           <h2 class="menu-title" id="menu-options-title" data-i18n="options.title"></h2>
           <div class="options" id="options-list"></div>
           <div class="menu-list menu-list-foot">
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="back"
+              data-i18n="options.back"
+            ></button>
+          </div>
+        </section>
+        <section class="menu-panel menu-panel-wide" data-panel="inventory" hidden>
+          <p class="menu-kicker" data-i18n="pause.title"></p>
+          <h2 class="menu-title" id="menu-inventory-title" data-i18n="inventory.title"></h2>
+          <div class="inventory" id="inventory-list"></div>
+          <div class="menu-list menu-list-foot">
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="back"
+              data-i18n="options.back"
+            ></button>
+          </div>
+        </section>
+        <section class="menu-panel" data-panel="hint" hidden>
+          <p class="menu-kicker" id="hint-level"></p>
+          <h2 class="menu-title menu-title-small" id="menu-hint-title" data-i18n="hint.title"></h2>
+          <p class="menu-text hint-text" id="hint-text"></p>
+          <div class="menu-list">
+            <button
+              class="menu-item"
+              type="button"
+              data-nav
+              data-action="hint-more"
+              id="hint-more"
+              data-i18n="hint.more"
+            ></button>
             <button
               class="menu-item"
               type="button"

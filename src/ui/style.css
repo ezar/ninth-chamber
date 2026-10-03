@@ -947,7 +947,8 @@ body.touch #hud-stats {
 }
 
 .menu-item,
-.opt {
+.opt,
+.inv-item {
   position: relative;
   outline: none;
   transition:
@@ -957,7 +958,8 @@ body.touch #hud-stats {
 }
 
 .menu-item::before,
-.opt::before {
+.opt::before,
+.inv-item::before {
   content: '';
   position: absolute;
   left: 0;
@@ -986,7 +988,8 @@ body.touch #hud-stats {
 }
 
 .menu-item:focus,
-.opt:focus {
+.opt:focus,
+.inv-item:focus {
   background: linear-gradient(90deg, rgba(232, 163, 61, 0.15), rgba(232, 163, 61, 0) 85%);
 }
 
@@ -996,8 +999,46 @@ body.touch #hud-stats {
 }
 
 .menu-item:focus::before,
-.opt:focus::before {
+.opt:focus::before,
+.inv-item:focus::before {
   transform: scaleY(1);
+}
+
+/* Inventory (pause menu): scrolls like the options. */
+.inventory {
+  min-height: 0;
+  margin: 0 -8px;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-line) transparent;
+}
+
+.inv-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 16px;
+  padding: 8px 8px 8px 18px;
+}
+
+.inv-name {
+  color: rgba(236, 227, 208, 0.86);
+  font-weight: 500;
+}
+
+.inv-count {
+  color: var(--ui-amber);
+  font: 500 13px var(--font-mono);
+}
+
+.inv-desc {
+  grid-column: 1 / -1;
+  max-width: 54ch;
+  margin: 2px 0;
+  color: var(--ui-dust);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 /* Options */
@@ -1284,4 +1325,12 @@ body.touch #hud-stats {
 #hurt-flash.show {
   opacity: 1;
   transition: none;
+}
+
+/* Nora's idea (Pause → Ask Nora): her own words, in her voice. */
+.hint-text {
+  max-width: 44ch;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.5;
 }

@@ -1,5 +1,5 @@
 /**
- * The flare button (spec §7 "Bengalas", §13: G, d-pad up, the touch flare
+ * The flare button (spec §7 "Bengalas", §13: G, d-pad left, the touch flare
  * button): lights a flare from the inventory; pressed again it throws the
  * flare ahead, or drops it at her feet with Walk held. Nora lets go of a
  * burning flare when she needs both hands (hanging from a ledge, moving a

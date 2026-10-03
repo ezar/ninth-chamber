@@ -23,20 +23,25 @@ import {
   type QualityTier,
 } from './render/quality';
 import { GameRenderer, type PlayerPose } from './render/scene';
-import { levelFromQuery, levelIds, levelUrl, loadPlayableLevel } from './levels';
+import { levelFromQuery, levelIds, levelUrl, loadHints, loadPlayableLevel } from './levels';
+import { HintTracker } from './sim/hints/hints';
 import type { NoteStyle } from './sim/grid/schema';
 import { BLOCK } from './sim/grid/units';
 import { torchInHand } from './sim/player/torch';
 import { tuning } from './sim/player/tuning';
 import { createWorld, respawn, stepWorld, type World } from './sim/world';
+import { levelStart, migrate, restore, snapshot, type SaveData } from './sim/save/save';
 import { chamberOf, nextChamber } from './ui/campaign';
 import { waterSurface } from './sim/actors/water';
 import { ChamberMap } from './ui/chamber-map';
 import { EndScreen } from './ui/end-screen';
 import { PlaytestLog, clearSessions, exportLog, loadSessions } from './ui/playtest';
+import { browserSaveStore } from './ui/save-store';
+import { inventoryEntries } from './ui/inventory';
+import { setLabelBindings } from './ui/control-labels';
 import { browserProgressStorage, loadReached, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
-import { applyStaticStrings, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
+import { applyStaticStrings, isStringKey, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
 import { Intro } from './ui/intro';
 import { LoadingScreen } from './ui/loading';
 import { Menu } from './ui/menu';
@@ -125,6 +130,19 @@ async function main(): Promise<void> {
   const progress = browserProgressStorage();
   markReached(progress, level.id);
   const playable = new Set(levelIds());
+
+  // The automatic save (spec §9): written at checkpoints and when the page goes
+  // to the background, resumed with Continue. `?continue` (Continue pressed on
+  // another chamber's title) resumes it as soon as this chamber has loaded.
+  const saves = browserSaveStore();
+  let saved: SaveData | null = migrate(await saves.load());
+  const query = new URLSearchParams(location.search);
+  const resuming = query.has('continue') && saved?.level === level.id;
+  if (query.has('continue')) {
+    query.delete('continue');
+    const q = query.toString();
+    history.replaceState(null, '', `${location.pathname}${q ? `?${q}` : ''}${location.hash}`);
+  }
   // The title's kicker and the pause menu name the chamber being played.
   const kicker = document.querySelector<HTMLElement>('.title-block .kicker');
   if (kicker && chamber?.kicker) {
@@ -156,12 +174,16 @@ async function main(): Promise<void> {
   // The story cards over the loading reel (index.html): when they give way to the
   // title, the start button takes the focus if the tomb is ready.
   const prelude = new Prelude(() => {
-    if (loading.isReady) startButton.focus({ preventScroll: true });
+    if (loading.isReady) titleFocus().focus({ preventScroll: true });
   });
   /** Loading is over: the button wakes, and the cards finish the one on screen. */
   const loadingDone = (): void => {
     loading.ready();
+    refreshContinue();
     prelude.ready();
+    if (!prelude.running) titleFocus().focus({ preventScroll: true });
+    // Continue pressed on another chamber's title: resume as soon as this one is ready.
+    if (resuming) continueGame();
     // Offline play and fast restarts, once the first room no longer needs the bandwidth.
     registerServiceWorker();
   };
@@ -179,8 +201,11 @@ async function main(): Promise<void> {
     throw err;
   }
 
-  let world: World = createWorld(level, 1);
+  let world: World = (resuming && saved ? restore(level, saved) : null) ?? createWorld(level, 1);
   renderer.setWorld(world);
+  // Nora's ideas for this chamber's puzzles (levels/<id>.hints.json).
+  const puzzles = await loadHints(level.id);
+  let hintTracker = new HintTracker(puzzles);
 
   // The playtest log (Options → Playtest): this session, kept on the device.
   const playtest = new PlaytestLog(storage, {
@@ -282,6 +307,41 @@ async function main(): Promise<void> {
   const cue = (type: string, data: Record<string, unknown> = {}): void =>
     bus.dispatch([{ type, tick: world.tick, ...data }]);
 
+  // ───────────────────────────── Saving ─────────────────────────────
+
+  const continueButton = $<HTMLButtonElement>('#start-continue');
+  /** The title's first choice: Continue when there is a save, else Play. */
+  const titleFocus = (): HTMLButtonElement => (continueButton.hidden ? startButton : continueButton);
+  /** Continue on the title: shown while a save of a chamber in this build exists. */
+  const refreshContinue = (): void => {
+    const show = saved !== null && playable.has(saved.level);
+    continueButton.hidden = !show;
+    continueButton.disabled = !loading.isReady;
+    if (saved)
+      continueButton.textContent = t('start.continue', { chamber: t(`level.${saved.level}` as StringKey) });
+  };
+  const writeSave = (data: SaveData | null): void => {
+    saved = data;
+    void (data ? saves.save(data) : saves.clear());
+    refreshContinue();
+  };
+  /** Saves the game in play: from the checkpoint, or (`live`) from where Nora stands if that is safe. */
+  const autosave = (live: boolean): void => {
+    if (phase !== 'play' || world.ended) return;
+    writeSave(snapshot(world, version, new Date().toISOString(), live));
+  };
+  // Phones may close a tab in the background: save on the way out.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) autosave(true);
+  });
+  window.addEventListener('pagehide', () => autosave(true));
+  // A resumed game starts without the title's gesture: the first tap or key brings the sound in.
+  const playAudio = (): void => {
+    if (phase === 'play') void audio.unlock();
+  };
+  window.addEventListener('pointerdown', playAudio, { capture: true });
+  window.addEventListener('keydown', playAudio, { capture: true });
+
   const setDevice = (d: Device): void => {
     hud.device = d;
     menu.setDevice(d);
@@ -330,6 +390,12 @@ async function main(): Promise<void> {
     audio.setBusVolume('ui', m);
     audio.setBusVolume('voice', m);
   };
+  /** Options → Keyboard and Gamepad. */
+  const applyBindings = (): void => {
+    keyboard.setBindings(settings.bindings);
+    gamepad.setBindings(settings.bindings);
+    setLabelBindings(settings.bindings);
+  };
   const applyCamera = (): void => {
     cameraTuning.sensitivity = baseSensitivity * settings.cameraSensitivity;
     cameraTuning.invertY = settings.invertY;
@@ -372,9 +438,13 @@ async function main(): Promise<void> {
       case 'showStats':
         applyStats();
         break;
+      case 'bindings':
+        applyBindings();
+        break;
       case 'language':
         setLocale(settings.language ?? pickLocale(navigator.languages));
         applyStaticStrings();
+        refreshContinue();
         menu.refresh();
         loading.refresh();
         break;
@@ -400,6 +470,23 @@ async function main(): Promise<void> {
       autoGrain: () => renderer.quality.filmGrain && !settings.reducedMotion,
       autoSharpen: () => renderer.pixelRatio < (window.devicePixelRatio || 1) - 0.01,
     },
+    hint: {
+      available: () => hintTracker.available(world) !== null,
+      next: () => {
+        const step = hintTracker.next(world);
+        if (!step || !isStringKey(step.key)) return null;
+        cue('hint.asked', { puzzle: step.puzzle, level: step.level });
+        return { key: step.key, level: step.level, more: step.more };
+      },
+    },
+    inventory: () =>
+      inventoryEntries(
+        world.state,
+        world.stats,
+        level.id,
+        loadReached(progress),
+        level.entities.filter((e) => e.type === 'secret').length,
+      ),
     playtest: {
       count: () => loadSessions(storage).length,
       export: exportPlaytest,
@@ -407,6 +494,7 @@ async function main(): Promise<void> {
     },
   });
   applyVolumes();
+  applyBindings();
   applyCamera();
   applyResolution();
   applyImage();
@@ -498,6 +586,52 @@ async function main(): Promise<void> {
     (type, data) => cue(type, data),
     () => menu.isOpen || chambers.isOpen || !loading.isReady || prelude.running,
   );
+
+  /**
+   * Continue: the saved chamber, from its checkpoint (or where Nora stood),
+   * straight into play behind her. Another chamber's save loads that chamber.
+   */
+  const continueGame = (): void => {
+    if (!saved || phase !== 'title' || starting || !loading.isReady || menu.isOpen || chambers.isOpen) return;
+    if (saved.level !== level.id) {
+      goToLevel(saved.level, true);
+      return;
+    }
+    const resumed = restore(level, saved);
+    if (!resumed) {
+      // The chamber changed too much for this save: drop it and stay on the title.
+      writeSave(null);
+      return;
+    }
+    if (prelude.running) prelude.skip();
+    starting = true;
+    void audio.unlock();
+    audio.ui('confirm');
+    if (document.body.classList.contains('touch')) {
+      void document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+    }
+    curtain.classList.add('in');
+    window.setTimeout(() => {
+      starting = false;
+      world = resumed;
+      hintTracker = new HintTracker(puzzles);
+      renderer.resetWorld(world);
+      const t = world.state.player.torch;
+      audio.onEvent(
+        { type: 'torch.state', tick: world.tick, lit: t.has && t.lit, hand: !t.stowed },
+        world.state.player.pos,
+      );
+      prev = pose();
+      hud.reset();
+      title.hide();
+      camera.yaw = world.state.player.yaw;
+      camera.recenter(world.state.player.yaw);
+      beginPlay();
+      requestAnimationFrame(() => requestAnimationFrame(() => curtain.classList.remove('in')));
+    }, 480);
+  };
+  continueButton.addEventListener('click', continueGame);
+
   $('#start-chambers').addEventListener('click', () => {
     if (!menu.isOpen && !prelude.running) chambers.open(loadReached(progress), playable);
   });
@@ -541,6 +675,7 @@ async function main(): Promise<void> {
   const restart = (): void => {
     audio.ui('confirm');
     world = createWorld(level, 1);
+    hintTracker = new HintTracker(puzzles);
     renderer.resetWorld(world);
     // A fresh world carries no torch: its crackle stops.
     audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
@@ -554,10 +689,13 @@ async function main(): Promise<void> {
 
   const quitToTitle = (): void => {
     playtest.save();
+    // Continue picks up from here (or the last checkpoint if Nora is not standing safely).
+    autosave(true);
     paused = false;
     menu.close();
     document.body.classList.remove('paused');
     world = createWorld(level, 1);
+    hintTracker = new HintTracker(puzzles);
     renderer.resetWorld(world);
     // A fresh world carries no torch: its crackle stops.
     audio.onEvent({ type: 'torch.state', tick: 0, lit: false, hand: false }, world.state.player.pos);
@@ -569,19 +707,21 @@ async function main(): Promise<void> {
     keyboard.setEnabled(false);
     setPhase('title');
     title.show();
-    focusItem(startButton);
+    focusItem(titleFocus());
   };
   /**
    * Another chamber: the page loads again with its id, which releases every
    * GPU resource of this one (the WebGPU device goes with the page).
    */
-  const goToLevel = (id: string): void => {
-    if (id === level.id && phase === 'title') return;
+  const goToLevel = (id: string, resume = false): void => {
+    if (id === level.id && phase === 'title' && !resume) return;
     markReached(progress, id);
     playtest.save();
     audio.ui('confirm');
     curtain.classList.add('in');
-    window.setTimeout(() => location.assign(levelUrl(location.href, id)), 480);
+    const url = new URL(levelUrl(location.href, id));
+    if (resume) url.searchParams.set('continue', '');
+    window.setTimeout(() => location.assign(url.toString()), 480);
   };
   const chambers = new ChamberMap(goToLevel, level.id, (type) => cue(type));
   const endScreen = new EndScreen(restart, quitToTitle, cue, goToLevel);
@@ -688,7 +828,15 @@ async function main(): Promise<void> {
         total: Number(e.total),
       });
     }
+    if (e.type === 'checkpoint') autosave(false);
     if (e.type === 'level.end') {
+      // Continue now leads to the next chamber's start (none after the last).
+      const nextLevel = nextChamber(level.id)?.level;
+      writeSave(
+        nextLevel && playable.has(nextLevel)
+          ? levelStart(nextLevel, version, new Date().toISOString())
+          : null,
+      );
       setPhase('end');
       // The page owns the keyboard again (Tab, Enter on the end screen's buttons).
       keyboard.setEnabled(false);
@@ -921,7 +1069,11 @@ async function main(): Promise<void> {
     redraw = false;
     if (phase === 'play') hud.update(world, dt);
     // Stalls over a second (a hidden tab, a debugger) are not play.
-    if (phase === 'play' && !reader.isOpen && rawDt < 1) playtest.frame(rawDt);
+    if (phase === 'play' && !reader.isOpen && rawDt < 1) {
+      playtest.frame(rawDt);
+      hintTracker.update(world, rawDt);
+      if (hintTracker.takeOffer(world)) cue('hint.offer');
+    }
     audio.setHealth(world.state.player.health / tuning.maxHealth);
     audio.setUnderwater(renderer.underwater);
 
@@ -983,6 +1135,10 @@ async function main(): Promise<void> {
     },
     get phase() {
       return phase;
+    },
+    /** Nora's ideas: `__nc.hints.idle = 200` brings one on in the current room. */
+    get hints() {
+      return hintTracker;
     },
     /** The entrance camera shots (title drift and intro path), editable for framing tests. */
     get shots() {

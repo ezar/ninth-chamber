@@ -1,0 +1,41 @@
+{
+  "level": "sun_temple",
+  "puzzles": [
+    {
+      "id": "mirror_a",
+      "rooms": ["mirror_hall"],
+      "solved": "disc_a.lit",
+      "hints": ["hints.sun_temple.mirror_a.1", "hints.sun_temple.mirror_a.2", "hints.sun_temple.mirror_a.3"]
+    },
+    {
+      "id": "mirror_b",
+      "rooms": ["mirror_hall"],
+      "solved": "disc_b.lit",
+      "hints": ["hints.sun_temple.mirror_b.1", "hints.sun_temple.mirror_b.2", "hints.sun_temple.mirror_b.3"]
+    },
+    {
+      "id": "lift",
+      "rooms": ["lift_well"],
+      "solved": "z_gallery.entered",
+      "hints": ["hints.sun_temple.lift.1", "hints.sun_temple.lift.2", "hints.sun_temple.lift.3"]
+    },
+    {
+      "id": "sun_slot",
+      "rooms": ["ember_court"],
+      "solved": "slot_sun.filled",
+      "hints": ["hints.sun_temple.sun_slot.1", "hints.sun_temple.sun_slot.2", "hints.sun_temple.sun_slot.3"]
+    },
+    {
+      "id": "rays",
+      "rooms": ["ray_court"],
+      "solved": "disc_north.lit and disc_south.lit",
+      "hints": ["hints.sun_temple.rays.1", "hints.sun_temple.rays.2", "hints.sun_temple.rays.3"]
+    },
+    {
+      "id": "guardian",
+      "rooms": ["guardian_hall"],
+      "solved": "guardian.defeated",
+      "hints": ["hints.sun_temple.guardian.1", "hints.sun_temple.guardian.2", "hints.sun_temple.guardian.3"]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "level": "antechamber",
+  "puzzles": [
+    {
+      "id": "lever_door",
+      "rooms": ["brazier_hall"],
+      "solved": "z_plate_hall.entered",
+      "hints": [
+        "hints.antechamber.lever_door.1",
+        "hints.antechamber.lever_door.2",
+        "hints.antechamber.lever_door.3"
+      ]
+    },
+    {
+      "id": "weights",
+      "rooms": ["plate_hall"],
+      "solved": "z_hourglass.entered",
+      "hints": ["hints.antechamber.weights.1", "hints.antechamber.weights.2", "hints.antechamber.weights.3"]
+    },
+    {
+      "id": "hourglass",
+      "rooms": ["hourglass"],
+      "solved": "z_well.entered",
+      "hints": [
+        "hints.antechamber.hourglass.1",
+        "hints.antechamber.hourglass.2",
+        "hints.antechamber.hourglass.3"
+      ]
+    },
+    {
+      "id": "well",
+      "rooms": ["well"],
+      "solved": "z_well_top.entered",
+      "hints": ["hints.antechamber.well.1", "hints.antechamber.well.2", "hints.antechamber.well.3"]
+    },
+    {
+      "id": "causeway",
+      "rooms": ["causeway"],
+      "solved": "z_far_side.entered",
+      "hints": [
+        "hints.antechamber.causeway.1",
+        "hints.antechamber.causeway.2",
+        "hints.antechamber.causeway.3"
+      ]
+    },
+    {
+      "id": "scales",
+      "rooms": ["scales"],
+      "solved": "z_descent.entered",
+      "hints": ["hints.antechamber.scales.1", "hints.antechamber.scales.2", "hints.antechamber.scales.3"]
+    },
+    {
+      "id": "descent",
+      "rooms": ["descent"],
+      "solved": "z_ledge.entered",
+      "hints": ["hints.antechamber.descent.1", "hints.antechamber.descent.2", "hints.antechamber.descent.3"]
+    }
+  ]
+}

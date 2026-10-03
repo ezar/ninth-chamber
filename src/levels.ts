@@ -6,12 +6,31 @@
  * resource of the chamber left behind.
  */
 import { Level } from './sim/grid/level';
+import { hintFileSchema, type Puzzle } from './sim/hints/hints';
 
 const LEVELS: Record<string, () => Promise<unknown>> = {
   antechamber: () => import('../levels/antechamber.level.json').then((m) => m.default),
   cisterns: () => import('../levels/cisterns.level.json').then((m) => m.default),
   sun_temple: () => import('../levels/sun_temple.level.json').then((m) => m.default),
 };
+
+/** Nora's ideas for each level (levels/<id>.hints.json), loaded with it. */
+const HINTS: Record<string, () => Promise<unknown>> = {
+  antechamber: () => import('../levels/antechamber.hints.json').then((m) => m.default),
+  cisterns: () => import('../levels/cisterns.hints.json').then((m) => m.default),
+  sun_temple: () => import('../levels/sun_temple.hints.json').then((m) => m.default),
+};
+
+/** The level's puzzles with their hints; none when the file is missing or invalid. */
+export async function loadHints(id: string): Promise<Puzzle[]> {
+  try {
+    const raw = await HINTS[id]?.();
+    const parsed = hintFileSchema.safeParse(raw);
+    return parsed.success && parsed.data.level === id ? parsed.data.puzzles : [];
+  } catch {
+    return [];
+  }
+}
 
 export const DEFAULT_LEVEL = 'antechamber';
 

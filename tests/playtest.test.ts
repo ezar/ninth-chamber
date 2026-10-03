@@ -39,11 +39,12 @@ describe('playtest log', () => {
     for (let i = 0; i < 60; i++) log.frame(1 / 30);
     log.onEvent('player.died');
     log.onEvent('player.died');
+    log.onEvent('hint.asked');
     log.onEvent('player.hurt');
     log.save();
     const [s] = loadSessions(storage);
-    expect(s?.rooms.entrance).toEqual({ time: 2, deaths: 0, hints: 1 });
-    expect(s?.rooms.hall).toEqual({ time: 2, deaths: 2, hints: 0 });
+    expect(s?.rooms.entrance).toEqual({ time: 2, deaths: 0, hints: 1, asked: 0 });
+    expect(s?.rooms.hall).toEqual({ time: 2, deaths: 2, hints: 0, asked: 1 });
     expect(s?.lastRoom).toBe('hall');
     expect(s?.playTime).toBe(4);
     expect(s?.fps.average).toBe(45);

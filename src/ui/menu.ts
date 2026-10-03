@@ -13,7 +13,18 @@ import {
   type ResolutionMode,
   type TextureFiltering,
 } from '../render/quality';
+import {
+  REMAPPABLE,
+  keyFor,
+  keyLabel,
+  noOverrides,
+  padFor,
+  padLabel,
+  rebind,
+  type RemappableAction,
+} from '../core/bindings';
 import type { Device } from './hud';
+import type { InventoryEntry } from './inventory';
 import { t, type StringKey } from './i18n';
 import {
   ADJUST_EVENT,
@@ -30,7 +41,7 @@ import {
 import { SENSITIVITY_RANGE, type Language, type RendererChoice, type Settings } from './settings';
 
 export type MenuContext = 'pause' | 'title';
-type PanelName = 'pause' | 'options' | 'confirm';
+type PanelName = 'pause' | 'options' | 'confirm' | 'inventory' | 'hint';
 type ConfirmAction = 'restart' | 'quit' | 'renderer';
 
 export interface MenuCallbacks {
@@ -54,6 +65,13 @@ export interface MenuCallbacks {
     autoGrain(): boolean;
     autoSharpen(): boolean;
   };
+  /** Nora's ideas (sim/hints): whether she has one now, and the next one. No menu item without it. */
+  hint?: {
+    available(): boolean;
+    next(): { key: StringKey; level: number; more: boolean } | null;
+  };
+  /** What Nora carries, for the inventory panel (ui/inventory.ts). */
+  inventory?(): InventoryEntry[];
   /** The playtest log kept on the device (ui/playtest.ts). No rows without it. */
   playtest?: {
     /** Sessions stored. */
@@ -93,6 +111,9 @@ export class Menu {
   private readonly rows: OptionRow[] = [];
   private readonly repeat = new DirectionRepeat();
   private device: Device = 'keyboard';
+  /** A binding row waiting for its new key or button. */
+  private capturing: { device: 'keys' | 'pad'; action: RemappableAction; row: OptionRow } | null = null;
+  private readonly bindRows: OptionRow[] = [];
 
   constructor(
     private readonly settings: Settings,
@@ -118,6 +139,9 @@ export class Menu {
 
   open(context: MenuContext): void {
     this.context = context;
+    // Ask Nora only while she has an idea for this room.
+    const ask = this.root.querySelector<HTMLElement>('[data-action="hint"]');
+    if (ask) ask.hidden = context !== 'pause' || !this.cb.hint?.available();
     this.root.hidden = false;
     this.root.dataset.context = context;
     this.repeat.reset();
@@ -127,6 +151,7 @@ export class Menu {
   }
 
   close(): void {
+    this.endCapture();
     this.root.classList.remove('show');
     this.root.hidden = true;
     this.confirming = null;
@@ -140,6 +165,10 @@ export class Menu {
       this.pendingRenderer = null;
       this.rendererRow?.refresh();
       this.show('options', undefined, this.rendererRow?.el);
+    } else if (this.panel === 'inventory') {
+      this.show('pause', 'inventory');
+    } else if (this.panel === 'hint') {
+      this.show('pause', 'hint');
     } else if (this.panel === 'confirm') {
       this.show('pause', this.confirming ?? undefined);
       this.confirming = null;
@@ -168,6 +197,14 @@ export class Menu {
   /** Keyboard navigation; returns true when the key was used. */
   handleKey(e: KeyboardEvent): boolean {
     if (!this.isOpen) return false;
+    if (this.capturing) {
+      e.preventDefault();
+      if (e.repeat) return true;
+      const c = this.capturing;
+      if (c.device === 'keys' && e.code !== 'Escape') this.bind(c.action, 'keys', e.code);
+      this.endCapture();
+      return true;
+    }
     const panel = this.panelEl();
     switch (e.code) {
       case 'ArrowUp':
@@ -215,6 +252,17 @@ export class Menu {
   /** Gamepad navigation, once per frame while open. */
   update(pad: PadSnapshot, dt: number): void {
     if (!this.isOpen || !pad.connected) {
+      this.repeat.reset();
+      return;
+    }
+    if (this.capturing) {
+      const c = this.capturing;
+      if (pad.pressed) this.setDevice('gamepad');
+      if (!pad.pressed) return;
+      const index = Math.log2(pad.pressed & -pad.pressed);
+      // Start cancels; any other button is the new one (for a gamepad row).
+      if (c.device === 'pad' && index !== PAD.START) this.bind(c.action, 'pad', index);
+      this.endCapture();
       this.repeat.reset();
       return;
     }
@@ -281,6 +329,20 @@ export class Menu {
       case 'options':
         this.show('options');
         break;
+      case 'inventory':
+        this.renderInventory();
+        this.show('inventory');
+        break;
+      case 'hint':
+      case 'hint-more': {
+        const step = this.cb.hint?.next();
+        if (!step) break;
+        byId('hint-level').textContent = t('hint.level', { n: step.level });
+        byId('hint-text').textContent = t(step.key);
+        byId('hint-more').hidden = !step.more;
+        this.show('hint', step.more ? 'hint-more' : 'back');
+        break;
+      }
       case 'back':
         this.back();
         break;
@@ -302,6 +364,52 @@ export class Menu {
       }
       default:
         break;
+    }
+  }
+
+  /** The inventory panel: one group per kind, each entry with its count and description. */
+  private renderInventory(): void {
+    const list = byId('inventory-list');
+    const entries = this.cb.inventory?.() ?? [];
+    list.replaceChildren();
+    if (!entries.length) {
+      const p = document.createElement('p');
+      p.className = 'menu-text';
+      p.textContent = t('inventory.empty');
+      list.append(p);
+      return;
+    }
+    for (const group of ['items', 'relics', 'secrets'] as const) {
+      const items = entries.filter((e) => e.group === group);
+      if (!items.length) continue;
+      const h = document.createElement('h3');
+      h.className = 'opt-group';
+      h.textContent = t(`inventory.group.${group}`);
+      list.append(h);
+      for (const e of items) {
+        // Focusable, so a gamepad or the keyboard can scroll through a long list.
+        const row = document.createElement('div');
+        row.className = 'inv-item';
+        row.tabIndex = 0;
+        row.dataset.nav = '';
+        const name = document.createElement('span');
+        name.className = 'inv-name';
+        name.textContent = t(e.name, e.vars);
+        row.append(name);
+        if (e.count !== null) {
+          const count = document.createElement('span');
+          count.className = 'inv-count';
+          count.textContent = `× ${e.count}`;
+          row.append(count);
+        }
+        if (e.desc) {
+          const desc = document.createElement('p');
+          desc.className = 'inv-desc';
+          desc.textContent = t(e.desc);
+          row.append(desc);
+        }
+        list.append(row);
+      }
     }
   }
 
@@ -509,6 +617,8 @@ export class Menu {
       );
     }
 
+    this.buildBindings(group);
+
     group('options.group.access');
     this.addRow(
       toggleRow(
@@ -546,6 +656,58 @@ export class Menu {
     );
 
     this.buildPlaytest();
+  }
+
+  /** Options → Keyboard and Gamepad: one row per action, Enter (or A) then the new key or button. */
+  private buildBindings(group: (label: StringKey) => void): void {
+    const s = this.settings;
+    for (const device of ['keys', 'pad'] as const) {
+      group(device === 'keys' ? 'options.group.keyboard' : 'options.group.gamepad');
+      for (const action of REMAPPABLE) {
+        const row: OptionRow = buttonRow(
+          `action.${action}`,
+          () => this.startCapture(device, action, row),
+          () =>
+            this.capturing?.action === action && this.capturing.device === device
+              ? t(device === 'keys' ? 'options.bind.key' : 'options.bind.pad')
+              : null,
+          () =>
+            device === 'keys' ? keyLabel(keyFor(s.bindings, action)) : padLabel(padFor(s.bindings, action)),
+        );
+        row.el.classList.add('opt-bind');
+        this.bindRows.push(row);
+        this.addRow(row);
+      }
+    }
+    this.addRow(
+      buttonRow('options.bind.reset', () => {
+        s.bindings = noOverrides();
+        this.cb.change('bindings');
+        for (const r of this.bindRows) r.refresh();
+      }),
+    );
+  }
+
+  private startCapture(device: 'keys' | 'pad', action: RemappableAction, row: OptionRow): void {
+    const prev = this.capturing?.row;
+    this.capturing = { device, action, row };
+    prev?.refresh();
+    row.refresh();
+    row.el.classList.add('capturing');
+  }
+
+  private endCapture(): void {
+    const c = this.capturing;
+    if (!c) return;
+    this.capturing = null;
+    c.row.el.classList.remove('capturing');
+    c.row.refresh();
+  }
+
+  private bind(action: RemappableAction, device: 'keys' | 'pad', input: string | number): void {
+    this.settings.bindings = rebind(this.settings.bindings, device, action, input);
+    this.cb.change('bindings');
+    for (const r of this.bindRows) r.refresh();
   }
 
   private buildPlaytest(): void {
@@ -773,15 +935,20 @@ function toggleRow(
   return { el: r.el, refresh, step: flip, activate: flip };
 }
 
-/** A row that does something when activated (Enter, A, tap). */
-function buttonRow(label: StringKey, run: () => void, hint?: () => string | null): OptionRow {
+/** A row that does something when activated (Enter, A, tap); `value` replaces the arrow on the right. */
+function buttonRow(
+  label: StringKey,
+  run: () => void,
+  hint?: () => string | null,
+  value?: () => string,
+): OptionRow {
   const r = rowShell(label, 'button');
   r.el.classList.add('opt-button');
   r.prev.hidden = true;
   r.next.hidden = true;
   const refresh = (): void => {
     r.labelEl.textContent = t(label);
-    r.value.textContent = '›';
+    r.value.textContent = value ? value() : '›';
     setHint(r.hint, hint ? hint() : null);
   };
   refresh();

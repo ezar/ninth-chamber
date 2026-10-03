@@ -4,6 +4,7 @@
  */
 import { buttonBit, type Button, type ButtonMask, type RawInput } from './input-frame';
 import { buzz } from './haptics';
+import { keyMap, noOverrides, padMap, type BindingOverrides } from './bindings';
 
 export interface InputDevice {
   /** Current device state. */
@@ -16,24 +17,6 @@ export interface InputDevice {
 }
 
 // ───────────────────────────── Keyboard and mouse ─────────────────────────────
-
-const KEY_BUTTONS: Record<string, Button> = {
-  Space: 'jump',
-  KeyE: 'action',
-  ShiftLeft: 'walk',
-  ShiftRight: 'walk',
-  KeyF: 'fire',
-  KeyQ: 'roll',
-  KeyR: 'weapons',
-  KeyH: 'medkit',
-  KeyG: 'flare',
-  KeyT: 'torch',
-  KeyI: 'inventory',
-  // Spec §6 "Apuntado": Tab switches target (the inventory keeps I).
-  Tab: 'target',
-  Escape: 'pause',
-  KeyC: 'recenter',
-};
 
 const KEY_AXES: Record<string, [number, number]> = {
   KeyW: [0, 1],
@@ -48,6 +31,8 @@ const KEY_AXES: Record<string, [number, number]> = {
 
 export class KeyboardMouseDevice implements InputDevice {
   private keys = new Set<string>();
+  /** Key code → action (core/bindings.ts: the defaults with the player's changes). */
+  private keyButtons: Record<string, Button> = keyMap(noOverrides());
   private tapped: ButtonMask = 0;
   private look = { x: 0, y: 0, zoom: 0 };
   private dragging = false;
@@ -70,6 +55,12 @@ export class KeyboardMouseDevice implements InputDevice {
     this.rightDown = false;
   }
 
+  /** Applies the player's key bindings. */
+  setBindings(o: BindingOverrides): void {
+    this.keyButtons = keyMap(o);
+    this.keys.clear();
+  }
+
   constructor(private readonly target: HTMLElement) {
     const on = <K extends keyof WindowEventMap>(
       el: Window | HTMLElement,
@@ -83,10 +74,10 @@ export class KeyboardMouseDevice implements InputDevice {
 
     on(window, 'keydown', (e) => {
       if (!this.enabled) return;
-      if (e.code in KEY_BUTTONS || e.code in KEY_AXES) e.preventDefault();
+      if (e.code in this.keyButtons || e.code in KEY_AXES) e.preventDefault();
       if (e.repeat) return;
       this.keys.add(e.code);
-      const b = KEY_BUTTONS[e.code];
+      const b = this.keyButtons[e.code];
       if (b) this.tapped |= buttonBit(b);
     });
     on(window, 'keyup', (e) => this.keys.delete(e.code));
@@ -137,7 +128,7 @@ export class KeyboardMouseDevice implements InputDevice {
         moveX += axis[0];
         moveY += axis[1];
       }
-      const b = KEY_BUTTONS[code];
+      const b = this.keyButtons[code];
       if (b) held |= buttonBit(b);
     }
     if (this.rightDown) held |= buttonBit('fire');
@@ -163,32 +154,22 @@ export class KeyboardMouseDevice implements InputDevice {
 
 // ────────────────────────────────── Gamepad ──────────────────────────────────
 
-/** Gamepad API standard mapping (spec §13). */
-const PAD_BUTTONS: [number, Button][] = [
-  [0, 'jump'], // A
-  [2, 'action'], // X
-  [1, 'roll'], // B
-  [7, 'fire'], // RT
-  [6, 'walk'], // LT
-  [5, 'weapons'], // RB (spec §13)
-  [4, 'weapons'], // LB: draw / holster on either bumper (owner's request); Y stays the medkit
-  [12, 'torch'], // d-pad up: put the torch away / take it out (the flare slot; flares are not in yet)
-  [3, 'medkit'], // Y
-  [8, 'inventory'], // Select
-  [9, 'pause'], // Start
-  [11, 'recenter'], // right stick click
-  [15, 'target'], // d-pad right
-];
-
 const DEADZONE = 0.18;
 const deadzone = (v: number): number =>
   Math.abs(v) < DEADZONE ? 0 : (Math.sign(v) * (Math.abs(v) - DEADZONE)) / (1 - DEADZONE);
 
 export class GamepadDevice implements InputDevice {
+  /** Standard-mapping button → action (core/bindings.ts). */
+  private padButtons: [number, Button][] = padMap(noOverrides());
   private prevHeld: ButtonMask = 0;
   private tapped: ButtonMask = 0;
   private look = { x: 0, y: 0, zoom: 0 };
   private last: RawInput = { moveX: 0, moveY: 0, held: 0 };
+
+  /** Applies the player's gamepad bindings. */
+  setBindings(o: BindingOverrides): void {
+    this.padButtons = padMap(o);
+  }
 
   /** Called once per render frame with the elapsed time. */
   update(dt: number): void {
@@ -200,7 +181,7 @@ export class GamepadDevice implements InputDevice {
       return;
     }
     let held: ButtonMask = 0;
-    for (const [i, b] of PAD_BUTTONS) {
+    for (const [i, b] of this.padButtons) {
       const btn = pad.buttons[i];
       if (btn && (btn.pressed || btn.value > 0.5)) held |= buttonBit(b);
     }
