@@ -45,10 +45,10 @@ export class Bot {
     expect(this.p.mode, `waiting for ${mode} at ${this.where()}`).toBe(mode);
   }
 
-  /** Holds Fire (auto-aim) until every enemy of `pack` is dead, then holsters. */
+  /** Holds Fire (auto-aim) until every enemy of `pack` (or the enemy with that id) is dead, then holsters. */
   fight(pack: string, max = 900): void {
     const alive = (): number =>
-      this.w.state.enemies.filter((e) => e.pack === pack && e.mode !== 'dead').length;
+      this.w.state.enemies.filter((e) => (e.pack === pack || e.id === pack) && e.mode !== 'dead').length;
     this.tick(frame({ held: ['fire'], pressed: ['fire'] }));
     for (let i = 0; i < max && alive() > 0; i++) this.tick(frame({ held: ['fire'] }));
     expect(alive(), `enemies of ${pack} left at ${this.where()}`).toBe(0);
@@ -164,6 +164,49 @@ export class Bot {
       expect(this.p.mode, `turning a mirror at ${this.where()}`).toBe('lever');
       this.waitMode('ground');
     }
+  }
+
+  /** Walks into the wall in `dir`, jumps and grabs the ledge, and stays hanging. */
+  hangFrom(dir: Dir): void {
+    const v = DIRS[dir];
+    for (let i = 0; i < 30; i++) this.tick(frame({ x: v.x, y: v.y, held: ['walk'] }));
+    this.tick(frame({ pressed: ['jump'], held: ['action'] }));
+    for (let i = 0; i < 90 && this.p.mode !== 'hang'; i++) this.tick(frame({ held: ['action'] }));
+    expect(this.p.mode, `hang at ${this.where()}`).toBe('hang');
+  }
+
+  /**
+   * Hanging, shimmies towards `side` until her centre is over the middle of
+   * cell `c` along that axis (x for E/W, z for N/S).
+   */
+  shimmyTo(side: Dir, c: number, max = 900): void {
+    const v = DIRS[side];
+    const target = c * 2 + 1;
+    const at = (): number => (v.x !== 0 ? this.p.pos.x : this.p.pos.z);
+    const ahead = (): number => (v.x !== 0 ? (target - at()) * v.x : (target - at()) * -v.y);
+    for (let i = 0; i < max && ahead() > 0.05; i++) {
+      expect(this.p.mode, `shimmy at ${this.where()}`).toBe('hang');
+      this.tick(frame({ x: v.x, y: v.y }));
+    }
+    expect(this.p.mode, `shimmy at ${this.where()}`).toBe('hang');
+  }
+
+  /** Hanging, climbs up onto the ledge in front. */
+  climbUp(): void {
+    const dir = this.p.ledge?.dir;
+    expect(dir, `climb up at ${this.where()}`).toBeDefined();
+    const v = DIRS[dir as Dir];
+    for (let i = 0; i < 30 && this.p.mode === 'hang'; i++) this.tick(frame({ x: v.x, y: v.y }));
+    this.waitMode('ground');
+  }
+
+  /** Standing under a rope, jumps into it with Action held, pulls it and drops back down. */
+  pullRope(): void {
+    this.tick(frame({ pressed: ['jump'], held: ['action'] }));
+    for (let i = 0; i < 90 && this.p.mode !== 'rope'; i++) this.tick(frame({ held: ['action'] }));
+    expect(this.p.mode, `rope at ${this.where()}`).toBe('rope');
+    for (let i = 0; i < 200 && this.p.mode !== 'ground'; i++) this.tick(frame({ held: ['action'] }));
+    this.waitMode('ground');
   }
 
   /** Backs off the edge in `dir` with Walk and Action into a hang (spec §5.5), then lets go. */

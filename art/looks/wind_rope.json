@@ -1,0 +1,36 @@
+{
+  "id": "wind_rope",
+  "background": "#1e2532",
+  "exposure": 1.14,
+  "hemi": {
+    "sky": "#abb8c9",
+    "ground": "#202127",
+    "intensity": 0.47
+  },
+  "fog": {
+    "color": "#6b7687",
+    "density": 0.017
+  },
+  "sun": {
+    "color": "#e9ddd0",
+    "intensity": 5.1,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#d8d9da",
+    "saturation": 0.71,
+    "contrast": 1.08,
+    "vignette": 0.34
+  },
+  "fill": 0.6
+}

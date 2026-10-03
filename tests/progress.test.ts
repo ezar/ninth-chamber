@@ -48,17 +48,7 @@ describe('campaign progress', () => {
   it('shows reached chambers open, the rest locked or coming, the unbuilt ones sealed and IX unknown', () => {
     const playable = new Set(['antechamber', 'cisterns']);
     const states = CHAMBERS.map((c) => chamberState(c, new Set(['antechamber']), playable));
-    expect(states).toEqual([
-      'open',
-      'locked',
-      'soon',
-      'soon',
-      'sealed',
-      'soon',
-      'sealed',
-      'sealed',
-      'unknown',
-    ]);
+    expect(states).toEqual(['open', 'locked', 'soon', 'soon', 'sealed', 'soon', 'soon', 'sealed', 'unknown']);
   });
 
   it('chains the chambers: the Antechamber, then the Cisterns, then the Temple of the Sun', () => {

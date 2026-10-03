@@ -102,12 +102,13 @@ export class OrbitCamera {
   private framing: CameraFraming | null = null;
   private framedDistance = cameraTuning.distance;
   private shot: Vec3 | null = null;
+  private shotTarget: Vec3 | null = null;
   private shotWeight = 0;
 
   /** The framing of the room Nora is in (null: the free orbit). */
   setFraming(f: CameraFraming | null): void {
     this.framing = f;
-    if (f?.shot) this.shot = f.shot;
+    if (f?.shot) this.shotTarget = f.shot;
   }
 
   /** Lowest pitch allowed: a framing that looks up the shaft lets the player look up as far. */
@@ -269,7 +270,9 @@ export class OrbitCamera {
       const ramp = Math.min(1, (this.sinceLook - cameraTuning.followDelay) / 1.5);
       const rate = cameraTuning.followRate * Math.min(1, speed / cameraTuning.runSpeed) * ramp;
       this.yaw += Math.sin(d) * rate * dt;
-      this.pitch += (cameraTuning.restPitch - this.pitch) * Math.min(1, dt * 0.8 * ramp);
+      // A framed room sets the pitch itself (below); the lazy follow only turns.
+      if (this.framing?.pitch === null || this.framing?.pitch === undefined)
+        this.pitch += (cameraTuning.restPitch - this.pitch) * Math.min(1, dt * 0.8 * ramp);
     }
 
     // A framed room eases the pitch to its own once the player leaves the camera alone.
@@ -341,6 +344,16 @@ export class OrbitCamera {
 
     // A fixed shot: the camera eases to its stand and keeps watching her from there.
     this.shotWeight += ((this.framing?.shot ? 1 : 0) - this.shotWeight) * Math.min(1, dt * 1.5);
+    // From one fixed shot straight into another, the stand itself travels (no cut at the doorway).
+    if (this.shotTarget) {
+      if (!this.shot || this.shotWeight < 1e-3) this.shot = { ...this.shotTarget };
+      else {
+        const k = Math.min(1, dt * 1.5);
+        this.shot.x += (this.shotTarget.x - this.shot.x) * k;
+        this.shot.y += (this.shotTarget.y - this.shot.y) * k;
+        this.shot.z += (this.shotTarget.z - this.shot.z) * k;
+      }
+    }
     if (this.shot && this.shotWeight > 1e-3) {
       const w = this.shotWeight * this.shotWeight * (3 - 2 * this.shotWeight);
       this.eye.x += (this.shot.x - this.eye.x) * w;

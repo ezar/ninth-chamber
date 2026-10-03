@@ -1,0 +1,36 @@
+{
+  "id": "wind_ledges",
+  "background": "#090c11",
+  "exposure": 1.01,
+  "hemi": {
+    "sky": "#79889e",
+    "ground": "#0f1217",
+    "intensity": 0.24
+  },
+  "fog": {
+    "color": "#364151",
+    "density": 0.024
+  },
+  "sun": {
+    "color": "#c3d4f7",
+    "intensity": 3.5,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#bacce5",
+    "saturation": 0.52,
+    "contrast": 1.11,
+    "vignette": 0.41
+  },
+  "fill": 0.6
+}

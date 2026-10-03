@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { OrbitCamera } from '../src/camera/orbit';
 import { Level } from '../src/sim/grid/level';
+import { validateLevel } from '../src/sim/grid/validate';
 import { testLevel } from './helpers';
 
 const DEG = Math.PI / 180;
@@ -27,6 +28,28 @@ describe('camera framing', () => {
     cam.setFraming({ pitch: -35 * DEG, distance: null, shot: null });
     settle(cam, w.grid, 5);
     expect(cam.pitch).toBeCloseTo(-35 * DEG, 2);
+  });
+
+  it('keeps the room’s pitch while she runs and the lazy follow turns the camera', () => {
+    const cam = new OrbitCamera();
+    cam.setFraming({ pitch: -35 * DEG, distance: null, shot: null });
+    const at = { x: 11, y: 0, z: 13 };
+    for (let i = 0; i < 6 / DT; i++) cam.update(at, false, w.grid, DT, { vx: 5.4, vz: 0, vy: 0 });
+    expect(cam.pitch).toBeCloseTo(-35 * DEG, 2);
+  });
+
+  it('travels from one fixed shot to the next without a cut', () => {
+    const cam = new OrbitCamera();
+    const a = { x: 3, y: 6, z: 3 };
+    const b = { x: 19, y: 6, z: 3 };
+    cam.setFraming({ pitch: null, distance: null, shot: a });
+    settle(cam, w.grid, 6);
+    cam.setFraming({ pitch: null, distance: null, shot: b });
+    const x0 = cam.eye.x;
+    settle(cam, w.grid, DT);
+    expect(Math.abs(cam.eye.x - x0)).toBeLessThan(1);
+    settle(cam, w.grid, 6);
+    expect(cam.eye.x).toBeCloseTo(b.x, 1);
   });
 
   it('lets the player look further up in a room framed looking up', () => {
@@ -84,6 +107,32 @@ describe('room camera entries', () => {
     expect(cam?.distance).toBe(7);
     // Cell (4 + 1, 6 + 2) centre, height (2 + 10) clicks.
     expect(cam?.shot).toEqual({ x: 11, y: 6, z: 17 });
+  });
+
+  it('fail validation when the shot sits on the floor or the ceiling', () => {
+    const lv = (h: number): unknown => ({
+      schema: 1,
+      id: 't',
+      name: 't',
+      start: { room: 'r', at: [1, 1], face: 'N' },
+      rooms: [
+        {
+          id: 'r',
+          origin: [0, 0, 0],
+          ceil: 20,
+          legend: { '#': 'wall', '.': 0 },
+          rows: ['####', '#..#', '#..#', '####'],
+          camera: { shot: [2, 2, h] },
+        },
+      ],
+      entities: [],
+      logic: [],
+    });
+    const shotError = (h: number): boolean =>
+      validateLevel(lv(h)).errors.some((e) => e.includes('camera shot'));
+    expect(shotError(0)).toBe(true);
+    expect(shotError(20)).toBe(true);
+    expect(shotError(10)).toBe(false);
   });
 
   it('are optional', () => {

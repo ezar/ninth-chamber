@@ -1,0 +1,862 @@
+{
+  "schema": 1,
+  "id": "wind_stair",
+  "name": "level.wind_stair",
+  "par": 1500,
+  "start": {
+    "room": "foot",
+    "at": [4, 8],
+    "face": "N"
+  },
+  "rooms": [
+    {
+      "id": "foot",
+      "origin": [0, 0, 0],
+      "ceil": 40,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "u": 9
+      },
+      "rows": [
+        "####u####",
+        "#uuuuuuu#",
+        "#uuuuuuu#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#########"
+      ],
+      "look": "wind_foot",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": -18
+      }
+    },
+    {
+      "id": "ledges",
+      "origin": [0, -10, 9],
+      "ceil": 30,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "g": -8,
+        "i": 0,
+        "h": {
+          "floor": -4,
+          "flags": ["noGrab"]
+        },
+        "s": -2
+      },
+      "rows": [
+        "####.########",
+        "#.......gggi#",
+        "#.......gggi#",
+        "#ggggggggggh#",
+        "#ggggggggggg#",
+        "#sgggggggggg#",
+        "#.......#####",
+        "#.......#####",
+        "#.......#####",
+        "####.########"
+      ],
+      "look": "wind_ledges",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -8
+      }
+    },
+    {
+      "id": "counterweights",
+      "origin": [-1, -18, 9],
+      "ceil": 44,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "m": 13,
+        "u": 26
+      },
+      "rows": [
+        "#####u#####",
+        "#####u#####",
+        "#mmmmmmmmm#",
+        "#mmmmmmmmm#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#####.#####"
+      ],
+      "look": "wind_counterweights",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": -24
+      }
+    },
+    {
+      "id": "flutes",
+      "origin": [-1, -29, 35],
+      "ceil": 30,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "p": "pit",
+        "i": 0,
+        "D": 0
+      },
+      "rows": [
+        "#####.#####",
+        "#.........#",
+        "#.........#",
+        "#ppppppppp#",
+        "#ppppppppp#",
+        "#ppppppppp#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#iD.......#",
+        "#####.#####"
+      ],
+      "look": "wind_flutes",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -6
+      }
+    },
+    {
+      "id": "nest",
+      "origin": [0, -39, 35],
+      "ceil": 40,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "n": 30,
+        "v": 18,
+        "w": 12,
+        "x": 6
+      },
+      "rows": [
+        "####v####",
+        "#nnnvvvv#",
+        "#...vvvv#",
+        "#...www.#",
+        "#...xxx.#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "wind_nest",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -14
+      }
+    },
+    {
+      "id": "traverse",
+      "origin": [3, -46, 53],
+      "ceil": 30,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "L": {
+          "floor": 8,
+          "ceil": 10
+        },
+        "E": 8,
+        "e": 8,
+        "s": 1,
+        "p": "pit"
+      },
+      "rows": [
+        "#######e##",
+        "##LLLLLE##",
+        "#.sppppp##",
+        "#.pppppp##",
+        "#.pppppp##",
+        "#.########",
+        "#.########"
+      ],
+      "look": "wind_traverse",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": 10,
+        "shot": [1, 5, 14]
+      }
+    },
+    {
+      "id": "rope",
+      "origin": [6, -54, 61],
+      "ceil": 34,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "u": 13
+      },
+      "rows": [
+        "####u####",
+        "###uuu###",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "wind_rope",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -12
+      }
+    },
+    {
+      "id": "great_flute",
+      "origin": [5, -63, 74],
+      "ceil": 70,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "a": 9,
+        "b": 18,
+        "c": 27,
+        "d": 36
+      },
+      "rows": [
+        "#####c#####",
+        "#dddcccccc#",
+        "#bbbbbbbbb#",
+        "#bbbbbbbbb#",
+        "#aaaaaaaaa#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#####.#####"
+      ],
+      "look": "wind_great_flute",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": -30,
+        "distance": 7
+      }
+    },
+    {
+      "id": "storm",
+      "origin": [6, -75, 101],
+      "ceil": 40,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "b": 6,
+        "c": 12,
+        "d": 12,
+        "e": 18,
+        "p": "pit"
+      },
+      "rows": [
+        "####e####",
+        "#eeeeeee#",
+        "#ddddddd#",
+        "#ppppppp#",
+        "#ppppppp#",
+        "#ppppppp#",
+        "#ccccccc#",
+        "#ccccccc#",
+        "#bbbbbbb#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "wind_storm",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -10
+      }
+    },
+    {
+      "id": "summit",
+      "origin": [6, -81, 119],
+      "ceil": 80,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "R": 0
+      },
+      "rows": ["#########", "#...R...#", "#.......#", "#.......#", "#.......#", "####.####"],
+      "look": "wind_summit",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": -20
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "z_start",
+      "type": "zone",
+      "room": "foot",
+      "at": [2, 7],
+      "size": [5, 2]
+    },
+    {
+      "id": "z_foot",
+      "type": "zone",
+      "room": "foot",
+      "at": [3, 4],
+      "size": [3, 1]
+    },
+    {
+      "id": "updraught_foot",
+      "type": "wind",
+      "room": "foot",
+      "at": [3, 3],
+      "size": [3, 1],
+      "dir": "up",
+      "period": 5,
+      "blow": 3
+    },
+    {
+      "id": "note_breath",
+      "type": "note",
+      "room": "foot",
+      "at": [1, 5],
+      "text": "journal.wind_stair.1",
+      "style": "carving",
+      "wall": "W"
+    },
+    {
+      "id": "flares_foot",
+      "type": "flares",
+      "room": "foot",
+      "at": [7, 8],
+      "count": 2
+    },
+    {
+      "id": "z_ledges",
+      "type": "zone",
+      "room": "ledges",
+      "at": [3, 8],
+      "size": [3, 1]
+    },
+    {
+      "id": "z_ledges_n",
+      "type": "zone",
+      "room": "ledges",
+      "at": [2, 1],
+      "size": [4, 2]
+    },
+    {
+      "id": "gust_flute1",
+      "type": "wind",
+      "room": "ledges",
+      "at": [1, 3],
+      "size": [7, 4],
+      "dir": "N",
+      "period": 6,
+      "blow": 3
+    },
+    {
+      "id": "gust_niche",
+      "type": "wind",
+      "room": "ledges",
+      "at": [3, 1],
+      "size": [8, 2],
+      "dir": "E",
+      "period": 8,
+      "blow": 4,
+      "offset": 3
+    },
+    {
+      "id": "idol_jade",
+      "type": "secret",
+      "room": "ledges",
+      "at": [11, 1],
+      "idol": "jade"
+    },
+    {
+      "id": "medkit_ledges",
+      "type": "medkit",
+      "room": "ledges",
+      "at": [7, 8],
+      "size": "small"
+    },
+    {
+      "id": "z_counter",
+      "type": "zone",
+      "room": "counterweights",
+      "at": [4, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "z_counter_mid",
+      "type": "zone",
+      "room": "counterweights",
+      "at": [3, 3],
+      "size": [5, 1]
+    },
+    {
+      "id": "cw_low",
+      "type": "platform",
+      "room": "counterweights",
+      "at": [2, 4],
+      "path": [
+        [2, 4, 0],
+        [2, 4, 13]
+      ],
+      "speed": 1.4,
+      "pause": 2.5,
+      "loop": "pingpong",
+      "running": true
+    },
+    {
+      "id": "cw_high",
+      "type": "platform",
+      "room": "counterweights",
+      "at": [5, 2],
+      "path": [
+        [5, 2, 26],
+        [5, 2, 13]
+      ],
+      "speed": 1.4,
+      "pause": 2.5,
+      "loop": "pingpong",
+      "running": true
+    },
+    {
+      "id": "z_flutes",
+      "type": "zone",
+      "room": "flutes",
+      "at": [4, 8],
+      "size": [3, 1]
+    },
+    {
+      "id": "gust_head",
+      "type": "wind",
+      "room": "flutes",
+      "at": [1, 3],
+      "size": [9, 4],
+      "dir": "S"
+    },
+    {
+      "id": "gust_tail",
+      "type": "wind",
+      "room": "flutes",
+      "at": [1, 3],
+      "size": [9, 4],
+      "dir": "N",
+      "period": 6,
+      "blow": 3,
+      "on": false
+    },
+    {
+      "id": "gust_hidden",
+      "type": "wind",
+      "room": "flutes",
+      "at": [1, 9],
+      "size": [2, 1],
+      "dir": "E"
+    },
+    {
+      "id": "lever_head",
+      "type": "lever",
+      "room": "flutes",
+      "at": [1, 7],
+      "wall": "W",
+      "spring": true
+    },
+    {
+      "id": "lever_tail",
+      "type": "lever",
+      "room": "flutes",
+      "at": [9, 7],
+      "wall": "E",
+      "spring": true
+    },
+    {
+      "id": "lever_hidden",
+      "type": "lever",
+      "room": "flutes",
+      "at": [9, 9],
+      "wall": "E"
+    },
+    {
+      "id": "door_hidden",
+      "type": "door",
+      "room": "flutes",
+      "at": [2, 9],
+      "height": 6
+    },
+    {
+      "id": "idol_stone",
+      "type": "secret",
+      "room": "flutes",
+      "at": [1, 9],
+      "idol": "stone"
+    },
+    {
+      "id": "z_nest",
+      "type": "zone",
+      "room": "nest",
+      "at": [3, 8],
+      "size": [3, 1]
+    },
+    {
+      "id": "b1",
+      "type": "enemy",
+      "enemy": "bird",
+      "room": "nest",
+      "at": [1, 1],
+      "face": "S",
+      "pack": "nest"
+    },
+    {
+      "id": "b2",
+      "type": "enemy",
+      "enemy": "bird",
+      "room": "nest",
+      "at": [3, 1],
+      "face": "S",
+      "pack": "nest"
+    },
+    {
+      "id": "medkit_nest",
+      "type": "medkit",
+      "room": "nest",
+      "at": [7, 5],
+      "size": "small"
+    },
+    {
+      "id": "z_traverse",
+      "type": "zone",
+      "room": "traverse",
+      "at": [1, 4],
+      "size": [1, 2]
+    },
+    {
+      "id": "tear_west",
+      "type": "wind",
+      "room": "traverse",
+      "at": [3, 2],
+      "size": [2, 1],
+      "dir": "S",
+      "period": 7,
+      "blow": 2,
+      "tear": true
+    },
+    {
+      "id": "tear_east",
+      "type": "wind",
+      "room": "traverse",
+      "at": [6, 2],
+      "size": [2, 1],
+      "dir": "S",
+      "period": 7,
+      "blow": 2,
+      "tear": true
+    },
+    {
+      "id": "z_rope",
+      "type": "zone",
+      "room": "rope",
+      "at": [3, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "rope_call",
+      "type": "rope",
+      "room": "rope",
+      "at": [2, 4],
+      "h": 6,
+      "spring": true
+    },
+    {
+      "id": "cw_rope",
+      "type": "platform",
+      "room": "rope",
+      "at": [4, 2],
+      "path": [
+        [4, 2, 13],
+        [4, 2, 0]
+      ],
+      "speed": 1.6,
+      "pause": 0,
+      "loop": "once",
+      "running": false
+    },
+    {
+      "id": "z_great",
+      "type": "zone",
+      "room": "great_flute",
+      "at": [4, 7],
+      "size": [3, 1]
+    },
+    {
+      "id": "z_great_top",
+      "type": "zone",
+      "room": "great_flute",
+      "at": [5, 1],
+      "size": [4, 1]
+    },
+    {
+      "id": "up_1",
+      "type": "wind",
+      "room": "great_flute",
+      "at": [4, 5],
+      "size": [3, 1],
+      "dir": "up",
+      "period": 6,
+      "blow": 3
+    },
+    {
+      "id": "up_2",
+      "type": "wind",
+      "room": "great_flute",
+      "at": [4, 4],
+      "size": [3, 1],
+      "dir": "up",
+      "period": 6,
+      "blow": 3,
+      "offset": 2
+    },
+    {
+      "id": "up_3",
+      "type": "wind",
+      "room": "great_flute",
+      "at": [4, 2],
+      "size": [3, 1],
+      "dir": "up",
+      "period": 6,
+      "blow": 3,
+      "offset": 4
+    },
+    {
+      "id": "up_nest",
+      "type": "wind",
+      "room": "great_flute",
+      "at": [4, 1],
+      "size": [1, 1],
+      "dir": "up",
+      "period": 6,
+      "blow": 3
+    },
+    {
+      "id": "b3",
+      "type": "enemy",
+      "enemy": "bird",
+      "room": "great_flute",
+      "at": [2, 1],
+      "face": "E"
+    },
+    {
+      "id": "idol_gold",
+      "type": "secret",
+      "room": "great_flute",
+      "at": [1, 1],
+      "idol": "gold"
+    },
+    {
+      "id": "note_suhal",
+      "type": "note",
+      "room": "great_flute",
+      "at": [1, 6],
+      "text": "journal.wind_stair.2",
+      "style": "carving",
+      "wall": "W"
+    },
+    {
+      "id": "medkit_great",
+      "type": "medkit",
+      "room": "great_flute",
+      "at": [9, 6],
+      "size": "large"
+    },
+    {
+      "id": "z_storm",
+      "type": "zone",
+      "room": "storm",
+      "at": [3, 10],
+      "size": [3, 1]
+    },
+    {
+      "id": "z_storm_c",
+      "type": "zone",
+      "room": "storm",
+      "at": [2, 7],
+      "size": [5, 1]
+    },
+    {
+      "id": "z_storm_d",
+      "type": "zone",
+      "room": "storm",
+      "at": [2, 2],
+      "size": [5, 1]
+    },
+    {
+      "id": "storm_jump",
+      "type": "wind",
+      "room": "storm",
+      "at": [1, 3],
+      "size": [7, 5],
+      "dir": "N",
+      "period": 4,
+      "blow": 2
+    },
+    {
+      "id": "storm_push",
+      "type": "wind",
+      "room": "storm",
+      "at": [1, 8],
+      "size": [7, 3],
+      "dir": "E",
+      "period": 3,
+      "blow": 1,
+      "offset": 1
+    },
+    {
+      "id": "storm_top",
+      "type": "wind",
+      "room": "storm",
+      "at": [1, 1],
+      "size": [7, 2],
+      "dir": "W",
+      "period": 5,
+      "blow": 2,
+      "offset": 2
+    },
+    {
+      "id": "medkit_storm",
+      "type": "medkit",
+      "room": "storm",
+      "at": [7, 9],
+      "size": "small"
+    },
+    {
+      "id": "z_summit",
+      "type": "zone",
+      "room": "summit",
+      "at": [3, 4],
+      "size": [3, 1]
+    },
+    {
+      "id": "wind_shell",
+      "type": "relic",
+      "room": "summit",
+      "at": [4, 1]
+    },
+    {
+      "id": "note_ear",
+      "type": "note",
+      "room": "summit",
+      "at": [7, 3],
+      "text": "journal.wind_stair.3",
+      "style": "carving",
+      "wall": "E"
+    },
+    {
+      "id": "breeze_summit",
+      "type": "wind",
+      "room": "summit",
+      "at": [1, 1],
+      "size": [7, 4],
+      "dir": "W",
+      "period": 7,
+      "blow": 3
+    }
+  ],
+  "logic": [
+    {
+      "when": "z_start.entered",
+      "do": ["hint hint.wind.start", "music vista"]
+    },
+    {
+      "when": "z_foot.entered",
+      "do": ["hint hint.wind.updraught"]
+    },
+    {
+      "when": "z_ledges.entered",
+      "do": ["checkpoint", "hint hint.wind.gust", "music calm"]
+    },
+    {
+      "when": "z_ledges_n.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "z_counter.entered",
+      "do": ["checkpoint", "hint hint.wind.counterweights"]
+    },
+    {
+      "when": "z_counter_mid.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "z_flutes.entered",
+      "do": ["checkpoint", "hint hint.wind.flutes", "music tension"]
+    },
+    {
+      "when": "lever_head.used",
+      "do": ["gust_head.toggle"],
+      "once": false
+    },
+    {
+      "when": "lever_tail.used",
+      "do": ["gust_tail.toggle"],
+      "once": false
+    },
+    {
+      "when": "lever_hidden.used",
+      "do": ["gust_hidden.off", "door_hidden.open", "camera.focus door_hidden 2s"]
+    },
+    {
+      "when": "z_nest.entered",
+      "do": ["checkpoint", "hint hint.wind.birds", "music tension"]
+    },
+    {
+      "when": "z_traverse.entered",
+      "do": ["checkpoint", "hint hint.wind.traverse"]
+    },
+    {
+      "when": "z_rope.entered",
+      "do": ["checkpoint", "hint hint.wind.rope"]
+    },
+    {
+      "when": "rope_call.pulled",
+      "do": ["cw_rope.goto 1"],
+      "once": false
+    },
+    {
+      "when": "cw_rope.at1",
+      "do": ["wait 3s", "cw_rope.goto 0"],
+      "once": false
+    },
+    {
+      "when": "z_great.entered",
+      "do": ["checkpoint", "hint hint.wind.great", "music vista"]
+    },
+    {
+      "when": "z_great_top.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "z_storm.entered",
+      "do": ["checkpoint", "hint hint.wind.storm", "music tension"]
+    },
+    {
+      "when": "z_storm_c.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "z_storm_d.entered",
+      "do": ["checkpoint"]
+    },
+    {
+      "when": "z_summit.entered",
+      "do": ["checkpoint", "music relic", "hint hint.wind.summit"]
+    },
+    {
+      "when": "wind_shell.taken",
+      "do": ["camera.focus wind_shell 3s", "music fanfare", "wait 3s", "level.end"]
+    }
+  ]
+}

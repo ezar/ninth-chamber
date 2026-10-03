@@ -164,7 +164,7 @@ export const mechanismEntities = [
       ...base,
       type: z.literal('wind'),
       /** Size in blocks (x, z) from `at`. */
-      size: cell.default([1, 1]),
+      size: z.tuple([int.min(1), int.min(1)]).default([1, 1]),
       /** Where it blows: along the floor towards a side, or up the shaft. */
       dir: z.enum(['N', 'E', 'S', 'W', 'up']),
       /**

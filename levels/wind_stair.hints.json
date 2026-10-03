@@ -1,0 +1,67 @@
+{
+  "level": "wind_stair",
+  "puzzles": [
+    {
+      "id": "foot",
+      "rooms": ["foot"],
+      "solved": "z_ledges.entered",
+      "hints": ["hints.wind_stair.foot.1", "hints.wind_stair.foot.2", "hints.wind_stair.foot.3"]
+    },
+    {
+      "id": "ledges",
+      "rooms": ["ledges"],
+      "solved": "z_counter.entered",
+      "hints": ["hints.wind_stair.ledges.1", "hints.wind_stair.ledges.2", "hints.wind_stair.ledges.3"]
+    },
+    {
+      "id": "counterweights",
+      "rooms": ["counterweights"],
+      "solved": "z_flutes.entered",
+      "hints": [
+        "hints.wind_stair.counterweights.1",
+        "hints.wind_stair.counterweights.2",
+        "hints.wind_stair.counterweights.3"
+      ]
+    },
+    {
+      "id": "flutes",
+      "rooms": ["flutes"],
+      "solved": "z_nest.entered",
+      "hints": ["hints.wind_stair.flutes.1", "hints.wind_stair.flutes.2", "hints.wind_stair.flutes.3"]
+    },
+    {
+      "id": "nest",
+      "rooms": ["nest"],
+      "solved": "z_traverse.entered",
+      "hints": ["hints.wind_stair.nest.1", "hints.wind_stair.nest.2", "hints.wind_stair.nest.3"]
+    },
+    {
+      "id": "traverse",
+      "rooms": ["traverse"],
+      "solved": "z_rope.entered",
+      "hints": ["hints.wind_stair.traverse.1", "hints.wind_stair.traverse.2", "hints.wind_stair.traverse.3"]
+    },
+    {
+      "id": "rope",
+      "rooms": ["rope"],
+      "solved": "z_great.entered",
+      "hints": ["hints.wind_stair.rope.1", "hints.wind_stair.rope.2", "hints.wind_stair.rope.3"]
+    },
+    {
+      "id": "great_flute",
+      "rooms": ["great_flute"],
+      "solved": "z_storm.entered",
+      "hints": [
+        "hints.wind_stair.great_flute.1",
+        "hints.wind_stair.great_flute.2",
+        "hints.wind_stair.great_flute.3"
+      ]
+    },
+    {
+      "id": "storm",
+      "rooms": ["storm"],
+      "solved": "z_summit.entered",
+      "hints": ["hints.wind_stair.storm.1", "hints.wind_stair.storm.2", "hints.wind_stair.storm.3"]
+    }
+  ]
+}

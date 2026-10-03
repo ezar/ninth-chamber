@@ -1,0 +1,36 @@
+{
+  "id": "wind_counterweights",
+  "background": "#0d1117",
+  "exposure": 1.03,
+  "hemi": {
+    "sky": "#8392a7",
+    "ground": "#13151a",
+    "intensity": 0.26
+  },
+  "fog": {
+    "color": "#414b5c",
+    "density": 0.023
+  },
+  "sun": {
+    "color": "#cbd6ef",
+    "intensity": 3.8,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#becee4",
+    "saturation": 0.55,
+    "contrast": 1.11,
+    "vignette": 0.39
+  },
+  "fill": 0.6
+}

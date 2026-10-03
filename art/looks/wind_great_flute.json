@@ -1,0 +1,36 @@
+{
+  "id": "wind_great_flute",
+  "background": "#222a39",
+  "exposure": 1.15,
+  "hemi": {
+    "sky": "#b5c1d1",
+    "ground": "#23242a",
+    "intensity": 0.56
+  },
+  "fog": {
+    "color": "#758192",
+    "density": 0.015
+  },
+  "sun": {
+    "color": "#f0dec8",
+    "intensity": 5.4,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#e0dcd7",
+    "saturation": 0.75,
+    "contrast": 1.07,
+    "vignette": 0.33
+  },
+  "fill": 0.6
+}

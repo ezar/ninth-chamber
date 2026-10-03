@@ -10,6 +10,7 @@ import { TICK_DT } from '../src/core/loop';
 import type { LevelFileInput } from '../src/sim/grid/schema';
 import { tuning, wind } from '../src/sim/player/tuning';
 import { migrate } from '../src/sim/save/save';
+import { validateLevel } from '../src/sim/grid/validate';
 import { stepWorld, type World } from '../src/sim/world';
 import { cellZ, frame, run, runUntil, testLevel } from './helpers';
 
@@ -230,6 +231,42 @@ describe('the gust cycle', () => {
     const gust = seen[1]?.t ?? 0;
     expect(gust - warn).toBeCloseTo(wind.warning, 1);
     expect(w.state.signals['gust.gust']).toBeDefined();
+  });
+
+  it('a steady wind announces its gust once, so its sound starts', () => {
+    const w = testLevel(room, { entities: [zone({ size: [3, 3] })] });
+    const types: string[] = [];
+    for (let i = 0; i < ticks(3); i++) {
+      stepWorld(w, frame());
+      types.push(
+        ...w.events
+          .drain()
+          .map((e) => e.type)
+          .filter((t) => t.startsWith('wind.')),
+      );
+    }
+    expect(types).toEqual(['wind.gust']);
+  });
+
+  it('a zone with no cells is a level error', () => {
+    const lv = {
+      schema: 1,
+      id: 't',
+      name: 't',
+      start: { room: 'r', at: [2, 3], face: 'N' },
+      rooms: [
+        {
+          id: 'r',
+          origin: [0, 0, 0],
+          ceil: 24,
+          legend: { '#': 'wall', '.': 0 },
+          rows: room.map((r) => r.replace('S', '.')),
+        },
+      ],
+      entities: [{ id: 'gust', type: 'wind', room: 'r', at: [1, 1], size: [0, 3], dir: 'N' }],
+      logic: [],
+    };
+    expect(validateLevel(lv).errors.some((e) => e.includes('size'))).toBe(true);
   });
 
   it('rules turn a zone on and off (the flute levers)', () => {

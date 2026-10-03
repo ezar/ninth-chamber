@@ -1,0 +1,36 @@
+{
+  "id": "wind_flutes",
+  "background": "#11161e",
+  "exposure": 1.04,
+  "hemi": {
+    "sky": "#8d9baf",
+    "ground": "#16181d",
+    "intensity": 0.29
+  },
+  "fog": {
+    "color": "#4b5667",
+    "density": 0.021
+  },
+  "sun": {
+    "color": "#d2d7e7",
+    "intensity": 4.1,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#c3d0e2",
+    "saturation": 0.58,
+    "contrast": 1.1,
+    "vignette": 0.38
+  },
+  "fill": 0.6
+}

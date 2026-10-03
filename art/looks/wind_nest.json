@@ -1,0 +1,36 @@
+{
+  "id": "wind_nest",
+  "background": "#151b25",
+  "exposure": 1.11,
+  "hemi": {
+    "sky": "#97a5b8",
+    "ground": "#191b20",
+    "intensity": 0.41
+  },
+  "fog": {
+    "color": "#566172",
+    "density": 0.02
+  },
+  "sun": {
+    "color": "#dad9df",
+    "intensity": 4.4,
+    "direction": [-0.12, 0.97, 0.18]
+  },
+  "fire": {
+    "color": "#ffa45a",
+    "intensity": 30,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.5,
+    "radius": 0.6,
+    "threshold": 0.82
+  },
+  "grade": {
+    "tint": "#c9d2df",
+    "saturation": 0.62,
+    "contrast": 1.09,
+    "vignette": 0.37
+  },
+  "fill": 0.6
+}
