@@ -211,8 +211,9 @@ export class GameRenderer {
     this.scene.add(this.torch.group);
     for (const b of this.bounceLights) this.scene.add(b.light);
     // A soft fill that follows Nora so she reads against backlight (a common
-    // character-lighting cheat); short range, so it barely touches the set.
-    this.characterFill.position.set(0.6, 2.2, 1.6);
+    // character-lighting cheat); short range, so it barely touches the set. Only
+    // 0.3 m to the side, so in a two-metre corridor it leaves no hot spot on the wall.
+    this.characterFill.position.set(0.3, 2.3, 1.6);
     this.nora.root.add(this.characterFill);
     const contact = makeContactShadow();
     this.contactShadow = contact.mesh;
@@ -941,6 +942,11 @@ export class GameRenderer {
     this.hemi.color.copy(l.hemiSky);
     this.hemi.groundColor.copy(l.hemiGround);
     this.hemi.intensity = l.hemiIntensity * (this.hasLightmap ? 0.6 : 1);
+    // Dark rooms raise the fill (the look's scale): brighter and reaching a little further.
+    // Under water it grows threefold, so the drowned tunnels are not swum blind.
+    const fill = l.fill * (1 + 2 * this.underwaterMix);
+    this.characterFill.intensity = 1.6 * fill;
+    this.characterFill.distance = 4.5 * Math.sqrt(fill);
     if (this.hasLightmap && Math.abs(l.lightmap - this.lightmapScale) > 1e-3) {
       this.lightmapScale = l.lightmap;
       for (const m of this.levelMeshes)
