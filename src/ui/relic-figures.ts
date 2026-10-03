@@ -99,8 +99,36 @@ function signs(): string {
   return `${cols}<circle class="map-ninth" cx="${nx}" cy="${ny}" r="9"/><circle class="map-here" cx="${nx}" cy="${ny}" r="3"/>`;
 }
 
+/** The Ninth Segment: the seal's ring of eight cast segments, and the ninth, cast at last by Nora. */
+function segments(): string {
+  const arc = (i: number, r: number): string => {
+    const [x0, y0] = at(angle(i) - 16, r);
+    const [x1, y1] = at(angle(i) + 16, r);
+    return `M${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1}`;
+  };
+  const eight = Array.from(
+    { length: 8 },
+    (_, i) =>
+      `<g class="map-star" style="--i:${i}"><path class="map-line" pathLength="1" d="${arc(i, 84)}"/>` +
+      `<path class="map-line" pathLength="1" d="${arc(i, 70)}"/></g>`,
+  ).join('');
+  const [nx, ny] = at(angle(8), 77);
+  return (
+    `${eight}<path class="map-gap" d="${arc(8, 84)} ${arc(8, 70)}"/>` +
+    `<circle class="map-ninth" cx="${nx}" cy="${ny}" r="10"/><circle class="map-here" cx="${nx}" cy="${ny}" r="4"/>`
+  );
+}
+
 export function relicFigureSvg(figure: RelicFigure, label: string): string {
   const body =
-    figure === 'moons' ? moons() : figure === 'rays' ? rays() : figure === 'signs' ? signs() : stars();
+    figure === 'moons'
+      ? moons()
+      : figure === 'rays'
+        ? rays()
+        : figure === 'signs'
+          ? signs()
+          : figure === 'segments'
+            ? segments()
+            : stars();
   return frame(label, body);
 }

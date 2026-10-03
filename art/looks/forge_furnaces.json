@@ -1,0 +1,31 @@
+{
+  "id": "forge_furnaces",
+  "background": "#120402",
+  "exposure": 0.96,
+  "hemi": {
+    "sky": "#b8501c",
+    "ground": "#200804",
+    "intensity": 0.24
+  },
+  "fog": {
+    "color": "#4a1a08",
+    "density": 0.032
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ff7426",
+    "intensity": 60,
+    "flicker": 0.36
+  },
+  "bloom": {
+    "strength": 0.85,
+    "radius": 0.6,
+    "threshold": 0.74
+  },
+  "grade": {
+    "tint": "#ffb88a",
+    "saturation": 1.12,
+    "contrast": 1.2,
+    "vignette": 0.52
+  }
+}

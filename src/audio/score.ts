@@ -118,6 +118,21 @@ export const PALETTES: Record<string, Palette> = {
     fanfare: 'fanfare',
     stingers: { ...STINGERS, solved: 'sting.solved.2' },
   },
+  /**
+   * Heavy, metallic, hot: the Bronze Forge draws on the Temple of the Sun's
+   * weightier cues until it has its own (docs/changelog.md, 0.5.0).
+   */
+  bronze_forge: {
+    intro: 'sun_temple.intro',
+    explore: ['sun_temple.explore.2', 'antechamber.explore.1'],
+    tension: 'sun_temple.tension',
+    combat: 'sun_temple.combat',
+    chase: 'chase',
+    boss: 'boss',
+    relic: 'sun_temple.relic',
+    fanfare: 'sun_temple.fanfare',
+    stingers: STINGERS,
+  },
 };
 
 export function paletteFor(levelId: string): Palette {

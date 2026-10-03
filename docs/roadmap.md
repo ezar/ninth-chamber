@@ -15,6 +15,7 @@ Agreed with the owner on 2026-10-03, after 0.4.0. The owner chose chamber VI, th
 | Heat            | Heat zones drain health slowly outside the shade of their walls (sectors flagged `shade`), with a screen warning and a sound. Heat can kill, so checkpoints sit before each zone.                                                                                      |
 | Automatons      | A new enemy, `automaton`: slow, armoured (pistols do a tenth of their damage), and destroyed for good by quench water (1 m or deeper) or by molten bronze over it.                                                                                                     |
 | Bazûr           | The stone guardian's code with a bronze variant. A pour over it costs it a phase (it climbs out cooled and slower to start), a blow from above to its core still works, and two blows defeat it. In phase 2 its rules turn the hall's side pours towards Nora.         |
+| Campaign order  | The story order stays (V, the Root Halls, before VI), but the next chamber is the next one that can be played: the Clay Archive leads to the Forge until V is built.                                                                                                   |
 | Models          | Procedural stand-ins (crucibles, channels, bellows, automatons, Bazûr) until the owner's models arrive, listed in docs/art/models-brief.md.                                                                                                                            |
 
 ## 0.4.5 · Bronze

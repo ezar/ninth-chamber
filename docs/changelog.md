@@ -1,5 +1,37 @@
 # Changelog
 
+## Version 0.5.0 (2026-10-03): Chamber VI, the Bronze Forge
+
+The last of the three releases on the way to 0.5.0 (docs/roadmap.md): chamber VI opens.
+
+- **The Bronze Forge** (`levels/bronze_forge.level.json`, spec §19): ten rooms deep under the mountain, where the builders cast the seals of the nine chambers.
+  1. The gallery of cold moulds, with the first note and a pack of flares.
+  2. The first pour: safe, nothing to fall to. A lever tips a crucible, and the bronze cools into a bridge over the cut.
+  3. The bellows: pushed onto the plate before the cold forge, they wake it, and its heat opens the door. A second cold forge lights only with a flare.
+  4. The main channel: three sluices over two bottomless cuts. Two pour the way across, and the third pours a bridge to a hidden ledge.
+  5. The automaton workshop: taking the founder's key wakes the automaton in its alcove.
+  6. The quench pit: up on the ledge, out of its reach, the sluice floods the room and quenches it.
+  7. The furnaces: open heat, fire jets across the room, and shade under the hoods to wait in.
+  8. The bronze bridge: a crucible pours across the chasm every twelve seconds. Cross while the bridge is dark.
+  9. The casting hall: Bazûr. From the ledge, pour the gutter onto it while it pounds the wall below, twice. In its second phase the side crucibles pour on their own.
+  10. The mould of the seal: the founder's key opens the crucible, and Nora casts the Ninth Segment herself.
+
+  It also has:
+  - three secrets: in the mould behind the flare-lit forge, on the ledge only the third bridge reaches, and at the top of the old vent above the furnaces;
+  - three journal notes (the nine seals, the one who still works, the ninth that was never cast);
+  - Nora's ideas for eight puzzles;
+  - ten room looks in black and bronze, and a baked lightmap;
+  - a music palette drawn from the Temple of the Sun's weightier cues until it has its own;
+  - the campaign entry, and the end screen's figure: the seal's ring with the ninth segment cast.
+
+- **Campaign order**: the chambers keep their story order, but the next chamber is now the next one that can be played. The Clay Archive leads to the Forge until the Root Halls (V) are built. The Archive's closing line now points below, to the forge.
+- **Engine, for the Forge**: rules can wake an enemy with `<enemy>.alert` (the automaton, when the key is taken).
+- **Verification**:
+  - `tests/bronze-forge.test.ts`: the bot plays the whole chamber with all three secrets and no deaths.
+  - "Every puzzle is needed" tests: the cut before the pour, the bellows door, the quench door, the casting hall door and the mould gate.
+  - The level validator's reachability check, the smoke test, and reference shots per room on the high and mobile tiers.
+- **Models**: docs/art/models-brief.md lists the Forge's models for the owner (Bazûr, the automaton, the crucible, the bellows, the forge, the mould and the segment). Until they arrive, the stand-ins built in code are used.
+
 ## Version 0.4.6 (2026-10-03): Automatons and Bazûr
 
 The second of the three releases on the way to 0.5.0 (docs/roadmap.md): the Bronze Forge's foes (spec §19). Like 0.4.5, no chamber uses them yet.

@@ -14,7 +14,7 @@
 import type { StringKey } from './i18n';
 
 /** How the end screen draws a relic's clue: eight signs and a missing ninth. */
-export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs';
+export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs' | 'segments';
 
 export interface Relic {
   name: StringKey;
@@ -135,7 +135,25 @@ export const CHAMBERS: readonly Chamber[] = [
     journal: ['journal.clay_archive.1', 'journal.clay_archive.2', 'journal.clay_archive.3'],
   },
   { numeral: 'V', name: 'chamber.5.name', line: 'chamber.5.line', status: 'sealed' },
-  { numeral: 'VI', name: 'chamber.6.name', line: 'chamber.6.line', status: 'sealed' },
+  {
+    numeral: 'VI',
+    level: 'bronze_forge',
+    name: 'chamber.6.name',
+    line: 'chamber.6.line',
+    kicker: 'kicker.bronze_forge',
+    premise: 'premise.bronze_forge',
+    intro: ['intro.bronze_forge.1', 'intro.bronze_forge.2', 'intro.bronze_forge.3'],
+    relic: {
+      name: 'relic.bronze_forge.name',
+      clue: 'relic.bronze_forge.clue',
+      figure: 'segments',
+      figureLabel: 'end.bronze_forge.figure',
+      moment: ['end.bronze_forge.1', 'end.bronze_forge.2', 'end.bronze_forge.3'],
+      cleared: 'end.bronze_forge.kicker',
+    },
+    teaser: 'teaser.bronze_forge',
+    journal: ['journal.bronze_forge.1', 'journal.bronze_forge.2', 'journal.bronze_forge.3'],
+  },
   { numeral: 'VII', name: 'chamber.7.name', line: 'chamber.7.line', status: 'sealed' },
   { numeral: 'VIII', name: 'chamber.8.name', line: 'chamber.8.line', status: 'sealed' },
   { numeral: 'IX', name: 'chamber.9.name', line: 'chamber.9.line', status: 'unknown' },
@@ -143,8 +161,14 @@ export const CHAMBERS: readonly Chamber[] = [
 
 export const chamberOf = (levelId: string): Chamber | undefined => CHAMBERS.find((c) => c.level === levelId);
 
-/** The chamber after a level's, in campaign order. */
+/**
+ * The chamber after a level's, in campaign order: the next one that can be
+ * played, skipping chambers not built yet (the Forge, VI, opens after the
+ * Archive, IV, until the Root Halls, V, exist); with none left, the next
+ * sealed one, for the end screen's teaser.
+ */
 export function nextChamber(levelId: string): Chamber | undefined {
   const i = CHAMBERS.findIndex((c) => c.level === levelId);
-  return i < 0 ? undefined : CHAMBERS[i + 1];
+  if (i < 0) return undefined;
+  return CHAMBERS.slice(i + 1).find((c) => c.level) ?? CHAMBERS[i + 1];
 }

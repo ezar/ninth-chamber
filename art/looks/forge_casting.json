@@ -1,0 +1,31 @@
+{
+  "id": "forge_casting",
+  "background": "#080402",
+  "exposure": 1.06,
+  "hemi": {
+    "sky": "#8a4a22",
+    "ground": "#120804",
+    "intensity": 0.16
+  },
+  "fog": {
+    "color": "#341408",
+    "density": 0.026
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ff8030",
+    "intensity": 58,
+    "flicker": 0.3
+  },
+  "bloom": {
+    "strength": 1.1,
+    "radius": 0.7,
+    "threshold": 0.64
+  },
+  "grade": {
+    "tint": "#ffc090",
+    "saturation": 1.1,
+    "contrast": 1.26,
+    "vignette": 0.54
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "forge_canal",
+  "background": "#080402",
+  "exposure": 1.04,
+  "hemi": {
+    "sky": "#8a4a22",
+    "ground": "#120804",
+    "intensity": 0.16
+  },
+  "fog": {
+    "color": "#2c1208",
+    "density": 0.022
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ff8a3a",
+    "intensity": 46,
+    "flicker": 0.28
+  },
+  "bloom": {
+    "strength": 1.05,
+    "radius": 0.65,
+    "threshold": 0.66
+  },
+  "grade": {
+    "tint": "#ffc79a",
+    "saturation": 1.06,
+    "contrast": 1.22,
+    "vignette": 0.5
+  }
+}
