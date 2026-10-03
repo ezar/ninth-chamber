@@ -127,4 +127,20 @@ describe('rock birds', () => {
     run(w, frame(), ticks(1));
     expect(['flee', 'idle']).toContain(bird(w).mode);
   });
+
+  it('never fly into a cell too low for their body', () => {
+    // A strip of low ceiling (1.5 m) between the nest and Nora: the bird dives at her chest, where
+    // its back would scrape that ceiling, so it must not cross (rather than snap down under it).
+    const w = testLevel(['#######', '#..N..#', '#.....#', '#lllll#', '#..S..#', '#######'], {
+      legend: { N: 0, l: { floor: 0, ceil: 3 } },
+      entities: [{ id: 'b1', type: 'enemy', enemy: 'bird', room: 'r', at: [3, 1], face: 'S' }],
+    });
+    for (let i = 0; i < ticks(8); i++) {
+      stepWorld(w, frame());
+      const e = bird(w);
+      // It flies at her chest height, where its body and clearance do not fit under the strip.
+      expect(Math.floor(e.pos.z / 2)).not.toBe(3);
+      expect(e.pos.y).toBeGreaterThanOrEqual(0);
+    }
+  });
 });

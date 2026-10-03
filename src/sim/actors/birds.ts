@@ -34,13 +34,13 @@ function setMode(e: EnemyState, mode: EnemyMode): void {
 const yawTowards = (from: { x: number; z: number }, to: { x: number; z: number }): number =>
   Math.atan2(-(to.x - from.x), -(to.z - from.z));
 
-/** Free space at a point: not in a wall or a closed door, between floor and ceiling. */
-function openAt(world: World, x: number, y: number, z: number): boolean {
+/** Room for its body at a point: not in a wall or a closed door, its feet over the floor and its top clear of the ceiling. */
+function openAt(world: World, x: number, y: number, z: number, height: number): boolean {
   const cx = Math.floor(x / BLOCK);
   const cz = Math.floor(z / BLOCK);
   const floor = world.grid.cellFloor(cx, cz);
   if (!Number.isFinite(floor)) return false;
-  return y >= floor && y <= world.grid.cellCeil(cx, cz);
+  return y >= floor && y + height + birds.clearance <= world.grid.cellCeil(cx, cz);
 }
 
 /** Steers its velocity towards `target` at `speed` (3D). */
@@ -72,10 +72,10 @@ function fly(
 function move(world: World, e: EnemyState, s: EnemyStats, dt: number): void {
   const c = birds.clearance;
   const nx = e.pos.x + e.vel.x * dt;
-  if (openAt(world, nx + Math.sign(e.vel.x) * c, e.pos.y, e.pos.z)) e.pos.x = nx;
+  if (openAt(world, nx + Math.sign(e.vel.x) * c, e.pos.y, e.pos.z, s.height)) e.pos.x = nx;
   else e.vel.x = 0;
   const nz = e.pos.z + e.vel.z * dt;
-  if (openAt(world, e.pos.x, e.pos.y, nz + Math.sign(e.vel.z) * c)) e.pos.z = nz;
+  if (openAt(world, e.pos.x, e.pos.y, nz + Math.sign(e.vel.z) * c, s.height)) e.pos.z = nz;
   else e.vel.z = 0;
   const cx = Math.floor(e.pos.x / BLOCK);
   const cz = Math.floor(e.pos.z / BLOCK);

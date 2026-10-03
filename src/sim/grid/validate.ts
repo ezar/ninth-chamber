@@ -70,8 +70,8 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
     const sec = level.sector(cx, cz);
     if (!sec || sec.room !== r.id || sec.wall)
       errors.push(`room '${r.id}': its camera shot is not in an open cell of the room`);
-    else if (shot.y < Math.max(...sec.floor) || shot.y > sec.ceil)
-      errors.push(`room '${r.id}': its camera shot is below the floor or above the ceiling`);
+    else if (shot.y <= Math.max(...sec.floor) || shot.y >= sec.ceil)
+      errors.push(`room '${r.id}': its camera shot is not between the floor and the ceiling`);
   }
 
   const ids = new Map<string, string>();

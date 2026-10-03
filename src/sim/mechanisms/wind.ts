@@ -38,10 +38,9 @@ export function windFactor(def: WindDef, st: Pick<WindState, 'on' | 'time'>): nu
   return t * t * (3 - 2 * t);
 }
 
+/** Starts calm, so the first update announces a zone that is already blowing (a steady wind's sound). */
 export function createWind(def: WindDef): WindState {
-  const st: WindState = { id: def.id, on: def.on, time: 0, phase: 'idle' };
-  st.phase = windPhase(def, st);
-  return st;
+  return { id: def.id, on: def.on, time: 0, phase: 'idle' };
 }
 
 export function updateWind(world: World, def: WindDef, st: WindState, dt: number): void {
