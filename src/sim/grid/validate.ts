@@ -8,6 +8,7 @@ import { exprNames, parseExpr } from '../logic/expr';
 import { MECHANISM_ACTIONS, isMechanismSignal } from '../mechanisms/schema';
 import { validateMechanisms } from '../mechanisms/validate';
 import { enemyTypes } from '../player/tuning';
+import { key, reachableCells } from './reach';
 import { Level } from './level';
 import { levelSchema } from './schema';
 
@@ -162,10 +163,62 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
     if (e.type === 'enemy' && e.pack) packs.set(e.pack, (packs.get(e.pack) ?? 0) + 1);
   for (const [pack, n] of packs) if (n < 2) warnings.push(`pack '${pack}' has a single member`);
 
+  checkReach(level, errors, warnings);
+
   if (i18nKeys && !i18nKeys.has(file.name)) errors.push(`missing i18n key '${file.name}' for the level name`);
   if (!file.entities.some((e) => e.type === 'relic')) warnings.push('the level has no relic');
   const secrets = file.entities.filter((e) => e.type === 'secret').length;
   if (secrets !== 3) warnings.push(`the level has ${secrets} secrets (the spec asks for 3)`);
 
   return { errors, warnings };
+}
+
+/**
+ * Exits, relics, secrets, notes and checkpoints the controller can never
+ * reach (reach.ts), and checkpoints that would respawn Nora on a deadly
+ * sector or inside a trap (spec §16).
+ */
+function checkReach(level: Level, errors: string[], warnings: string[]): void {
+  const reach = reachableCells(level);
+  const zones = new Map<string, [number, number][]>();
+  for (const e of level.entities) {
+    if (e.type !== 'zone') continue;
+    const cells: [number, number][] = [];
+    for (let x = 0; x < e.size[0]; x++)
+      for (let z = 0; z < e.size[1]; z++) cells.push([e.at[0] + x, e.at[1] + z]);
+    zones.set(e.id, cells);
+  }
+  // Cells a trap sweeps: dart lines, boulder paths, fire jets, deadly sectors.
+  const trapped = new Set<string>();
+  for (const e of level.entities) {
+    if (e.type === 'darts') trapped.add(key(e.at[0], e.at[1]));
+    if (e.type === 'boulder') {
+      const room = level.rooms.find((r) => r.id === e.room);
+      if (room) for (const [x, z] of e.path) trapped.add(key(room.minX + x, room.minZ + z));
+    }
+  }
+  for (const s of level.allSectors()) if (s.flags.has('death')) trapped.add(key(s.cx, s.cz));
+
+  for (const e of level.entities) {
+    const at = key(e.at[0], e.at[1]);
+    if (e.type === 'relic' || e.type === 'secret' || e.type === 'note') {
+      if (!reach.has(at)) errors.push(`${e.type} '${e.id}' cannot be reached from the start`);
+    } else if (e.type === 'lever' || e.type === 'medkit' || e.type === 'item' || e.type === 'torch') {
+      if (!reach.has(at)) warnings.push(`${e.type} '${e.id}' cannot be reached from the start`);
+    }
+  }
+  level.logic.forEach((rule, i) => {
+    const ends = rule.do.includes('level.end');
+    const saves = rule.do.includes('checkpoint');
+    if (!ends && !saves) return;
+    for (const [, id] of rule.when.matchAll(/([A-Za-z0-9_]+)\.entered/g)) {
+      const cells = id ? zones.get(id) : undefined;
+      if (!cells) continue;
+      const kind = ends ? 'exit' : 'checkpoint';
+      if (!cells.some(([x, z]) => reach.has(key(x, z))))
+        errors.push(`rule ${i}: ${kind} zone '${id}' cannot be reached from the start`);
+      if (saves && cells.some(([x, z]) => trapped.has(key(x, z))))
+        errors.push(`rule ${i}: checkpoint zone '${id}' lies on a deadly sector or in a trap's path`);
+    }
+  });
 }

@@ -67,7 +67,7 @@ describe('the story prelude over the loading reel', () => {
     expect(cards.match(/class="prelude-card/g)).toHaveLength(4);
     expect(cards).toContain('<span lang="es">Se conocen ocho cámaras.');
     expect(allLocales(locales, 'prelude.skip')).toBe(
-      '<span lang="en">Skip</span><span lang="es">Saltar</span>',
+      '<span lang="en">Skip</span><span lang="ca">Saltar</span><span lang="es">Saltar</span>',
     );
     expect(allLocales({ en: { k: 'a < b & "c"' } }, 'k')).toBe(
       '<span lang="en">a &lt; b &amp; &quot;c&quot;</span>',

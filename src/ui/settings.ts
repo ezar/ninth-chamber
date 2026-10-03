@@ -14,7 +14,8 @@ import {
 import { noOverrides, sanitizeBindings, type BindingOverrides } from '../core/bindings';
 import { CAPTION_SIZES, type CaptionSize } from './captions';
 
-export type Language = 'en' | 'es';
+export type Language = 'en' | 'es' | 'ca';
+export const LANGUAGES: readonly Language[] = ['en', 'es', 'ca'];
 
 /** Options → Renderer. Both draw on the GPU; 'auto' is WebGPU where available. */
 export type RendererChoice = 'auto' | 'webgpu' | 'webgl2';
@@ -203,7 +204,7 @@ export function loadSettings(
       TOUCH_OPACITY_RANGE.max,
       defaults.touchOpacity,
     ),
-    language: r.language === 'en' || r.language === 'es' ? r.language : defaults.language,
+    language: LANGUAGES.includes(r.language as Language) ? (r.language as Language) : defaults.language,
     bindings: r.bindings === undefined ? defaults.bindings : sanitizeBindings(r.bindings),
   };
 }

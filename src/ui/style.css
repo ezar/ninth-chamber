@@ -354,9 +354,10 @@ body.loading .panel button.ghost {
   visibility: hidden;
 }
 
-/* Bilingual fallbacks in index.html, shown before the game's own strings arrive. */
-html:not([lang='es']) .fallback > [lang='es'],
-html[lang='es'] .fallback > [lang='en'] {
+/* Fallbacks in every locale in index.html, shown before the game's own strings arrive: the page's language, else English. */
+html:not([lang='es']):not([lang='ca']) .fallback > [lang]:not([lang='en']),
+html[lang='es'] .fallback > [lang]:not([lang='es']),
+html[lang='ca'] .fallback > [lang]:not([lang='ca']) {
   display: none;
 }
 

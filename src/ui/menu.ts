@@ -25,7 +25,7 @@ import {
 } from '../core/bindings';
 import type { Device } from './hud';
 import type { InventoryEntry } from './inventory';
-import { t, type StringKey } from './i18n';
+import { currentLocale, t, type StringKey } from './i18n';
 import {
   ADJUST_EVENT,
   DirectionRepeat,
@@ -40,6 +40,7 @@ import {
 } from './pad';
 import {
   GAME_SPEEDS,
+  LANGUAGES,
   SENSITIVITY_RANGE,
   TOUCH_OPACITY_RANGE,
   TOUCH_SIZE_RANGE,
@@ -747,8 +748,8 @@ export class Menu {
     this.addRow(
       choiceRow<Language>(
         'options.language',
-        ['en', 'es'],
-        () => s.language ?? (document.documentElement.lang === 'es' ? 'es' : 'en'),
+        LANGUAGES,
+        () => s.language ?? LANGUAGES.find((l) => l === currentLocale()) ?? 'en',
         (v) => {
           s.language = v;
           this.cb.change('language');

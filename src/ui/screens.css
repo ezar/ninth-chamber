@@ -118,7 +118,9 @@ body:not([data-phase='play']) #touch,
 .title-block {
   position: relative;
   max-width: 760px;
-  margin-top: -3vh;
+  /* Centred in the space above the footer, nudged up a little. */
+  margin: auto 0;
+  top: -3vh;
   padding: 0 24px 0 max(40px, 7vw);
 }
 
@@ -308,11 +310,9 @@ body.reduce-motion #start-seal.open .seal-svg path {
   line-height: 1.5;
 }
 
+/* In the flow under the title block, so a long help line in any language pushes it down instead of overlapping it. */
 #start .legal {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -326,6 +326,24 @@ body.reduce-motion #start-seal.open .seal-svg path {
   font: 500 11px var(--font-mono);
   letter-spacing: 0.08em;
   white-space: nowrap;
+}
+
+/* Short desktop windows: a smaller seal and a wider help line, so the help clears the footer in every language. */
+@media (max-height: 820px) and (min-width: 721px) {
+  #start-seal {
+    width: 48px;
+    margin-bottom: 10px;
+  }
+  .title-block {
+    max-width: 860px;
+  }
+  .title-block h1 {
+    font-size: clamp(36px, 8vh, 64px);
+  }
+  .title-block .help {
+    max-width: 760px;
+    margin-top: 14px;
+  }
 }
 
 @media (max-width: 720px), (max-height: 520px) {
