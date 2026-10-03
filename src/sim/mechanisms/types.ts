@@ -133,6 +133,28 @@ export interface DartState {
   time: number;
 }
 
+/** idle: never poured; warn: a repeating pour rumbles; flowing: running down the trench; hot: full and cooling; solid: a bridge. */
+export type PourPhase = 'idle' | 'warn' | 'flowing' | 'hot' | 'solid';
+
+export interface PourState {
+  id: string;
+  phase: PourPhase;
+  /** Seconds in the current phase. */
+  time: number;
+  /** Cells the bronze has reached while flowing (fractional). */
+  front: number;
+  /** It has cooled into a bridge at least once (the bridge stays under later pours). */
+  cast: boolean;
+  /** A repeating pour is running, and how far it is into its period (s). */
+  running: boolean;
+  cycle: number;
+}
+
+export interface HeatState {
+  id: string;
+  on: boolean;
+}
+
 export interface MechanismState {
   platforms: PlatformState[];
   trapdoors: TrapdoorState[];
@@ -146,6 +168,10 @@ export interface MechanismState {
   fires: FireState[];
   glyphs: GlyphLockState[];
   darts: DartState[];
+  pours: PourState[];
+  heat: HeatState[];
+  /** Nora stood in open heat last tick. */
+  scorched: boolean;
   /** What Nora is operating (turning a mirror, setting an item, taking one) and whether it has reacted. */
   use: { id: string; done: boolean } | null;
 }

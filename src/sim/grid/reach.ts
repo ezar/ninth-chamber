@@ -1,7 +1,8 @@
 /**
  * Where the controller can possibly go (spec §16 "Validador de niveles"): a
  * graph over the level's cells, built to over-approximate Nora's movement.
- * Doors count as open, water as at its highest, moving platforms as standing
+ * Doors count as open, water as at its highest, a pour's trench as cooled
+ * into its bridge, moving platforms as standing
  * at every height on their path, and any cell of a room with a pushable
  * block as possibly holding that block, to stand on. A cell this graph cannot reach can never be reached
  * in play, so an exit, secret or checkpoint outside it is a broken level.
@@ -64,6 +65,20 @@ export function reachableCells(level: Level): Set<string> {
     if (e.type === 'trapdoor') {
       for (let x = 0; x < e.size[0]; x++)
         for (let z = 0; z < e.size[1]; z++) add(cx + x, cz + z, room.originY + e.h * CLICK);
+    }
+    if (e.type === 'pour') {
+      // The bridge a pour cools into, along its whole trench (legs between the listed cells).
+      const y = room.originY + e.h * CLICK;
+      let [px, pz] = [cx, cz];
+      add(px, pz, y);
+      for (const [x, z] of e.path.slice(1)) {
+        const [tx, tz] = [room.minX + x, room.minZ + z];
+        while (px !== tx || pz !== tz) {
+          px += Math.sign(tx - px);
+          pz += Math.sign(tz - pz);
+          add(px, pz, y);
+        }
+      }
     }
     if (e.type === 'platform') {
       // Every cell of every leg, at both ends' heights: a rising leg reaches between them.

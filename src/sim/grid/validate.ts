@@ -37,6 +37,7 @@ const ACTIONS_ON: Record<string, string[]> = {
   door: ['open', 'close', 'toggle'],
   block: ['reset'],
   watergate: ['raise', 'lower', 'toggle'],
+  brazier: ['light'],
 };
 
 export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): ValidationResult {

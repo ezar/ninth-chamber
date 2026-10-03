@@ -10,7 +10,16 @@ import { mechanismEntities } from '../mechanisms/schema';
 import { ENEMY_TYPES } from '../player/tuning';
 
 export const MATERIALS = ['sand', 'stone', 'metal', 'wood', 'water'] as const;
-export const SECTOR_FLAGS = ['climbN', 'climbE', 'climbS', 'climbW', 'death', 'crumble', 'noGrab'] as const;
+export const SECTOR_FLAGS = [
+  'climbN',
+  'climbE',
+  'climbS',
+  'climbW',
+  'death',
+  'crumble',
+  'noGrab',
+  'shade',
+] as const;
 export const FACINGS = ['N', 'E', 'S', 'W'] as const;
 /** How a journal note is presented: a typed expedition log, a handwritten page or a carving. */
 export const NOTE_STYLES = ['diary', 'letter', 'carving'] as const;
@@ -74,7 +83,14 @@ const entityBase = {
 };
 
 const entity = z.discriminatedUnion('type', [
-  z.object({ ...entityBase, type: z.literal('block') }).strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('block'),
+      /** What the block is drawn as: a stone block, or the Forge's bellows (which wake a forge from its plate). */
+      look: z.enum(['stone', 'bellows']).default('stone'),
+    })
+    .strict(),
   z
     .object({
       ...entityBase,

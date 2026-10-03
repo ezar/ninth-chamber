@@ -107,4 +107,22 @@ describe('reachability', () => {
     const cells = reachableCells(lv);
     for (let x = 1; x <= 3; x++) for (let z = 1; z <= 3; z++) expect(cells.has(key(x, z))).toBe(true);
   });
+
+  it('crosses a trench on the bridge its pour cools into', () => {
+    const rows = ['#####', '#.R.#', '#ttt#', '#ttt#', '#ttt#', '#.S.#', '#####'];
+    const f = file(rows, {}, { t: -12 });
+    expect(relicError(f)).toBe(true);
+    f.entities?.push({
+      id: 'p',
+      type: 'pour',
+      room: 'r',
+      at: [2, 4],
+      path: [
+        [2, 4],
+        [2, 2],
+      ],
+      h: 0,
+    });
+    expect(relicError(f)).toBe(false);
+  });
 });

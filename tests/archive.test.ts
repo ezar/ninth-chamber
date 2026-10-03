@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TICK_DT } from '../src/core/loop';
-import { migrate, restore, snapshot } from '../src/sim/save/save';
+import { SAVE_SCHEMA, migrate, restore, snapshot } from '../src/sim/save/save';
 import { poison, traps, tuning } from '../src/sim/player/tuning';
 import { stepWorld } from '../src/sim/world';
 import { Level } from '../src/sim/grid/level';
@@ -143,7 +143,7 @@ describe('saves from before the Clay Archive', () => {
     }
     save.schema = 1;
     const migrated = migrate(save);
-    expect(migrated?.schema).toBe(2);
+    expect(migrated?.schema).toBe(SAVE_SCHEMA);
     if (!migrated) throw new Error('not migrated');
     const back = restore(w.level as Level, migrated);
     expect(back?.state.mechanisms.glyphs).toEqual([]);

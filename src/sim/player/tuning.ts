@@ -261,6 +261,28 @@ export const traps = {
   },
 };
 
+/**
+ * The Bronze Forge (spec §19, chamber VI): molten bronze poured along a
+ * trench, which kills while it glows and cools into a bridge; heat that
+ * drains health away from the walls' shade.
+ */
+export const forge = {
+  pour: {
+    /** How fast the bronze runs along its trench (cells/s). */
+    speed: 2.5,
+    /** From the trench filling up to solid, walkable bronze (s): red, then dark. */
+    cool: 4,
+    /** A repeating pour rumbles this long before it runs again (s). */
+    warning: 1.5,
+    /** Feet within this height above hot bronze burn (m). */
+    reach: 0.3,
+  },
+  heat: {
+    /** Health lost per second in the open heat (a full bar in about half a minute). */
+    rate: 3,
+  },
+};
+
 /** Mild poison from darts (spec §19): it drains health for a while but never kills; a medkit cures it. */
 export const poison = {
   /** Seconds a dart poisons for (a second dart restarts it). */

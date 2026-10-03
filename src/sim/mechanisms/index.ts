@@ -23,6 +23,7 @@ import {
 import type { MechanismState } from './types';
 import { turnMirror, updateUse } from './use';
 import { createDarts, createGlyphLock, turnGlyph, updateDarts, updateGlyphs, updatePoison } from './archive';
+import { createPour, pourAction, pourCovers, updateHeat, updatePour } from './bronze';
 
 export { mechanismPrompt, useMechanism } from './use';
 
@@ -57,6 +58,9 @@ export function createMechanisms(level: Level): MechanismState {
     })),
     glyphs: [...d.glyphs.values()].map(createGlyphLock),
     darts: [...d.darts.values()].map(createDarts),
+    pours: [...d.pours.values()].map(createPour),
+    heat: [...d.heat.values()].map((h) => ({ id: h.id, on: h.on })),
+    scorched: false,
     use: null,
   };
 }
@@ -81,6 +85,11 @@ export function mechanismFloor(
     if (t.open >= devices.trapdoorGives) continue;
     const def = d.trapdoors.get(t.id);
     if (def && inRect(def, cx, cz)) h = Math.max(h, def.y);
+  }
+  for (const c of d.pourCells.get(cellKey(cx, cz)) ?? []) {
+    const st = m.pours.find((s) => s.id === c.id);
+    const def = d.pours.get(c.id);
+    if (st && def && pourCovers(st, c.i)) h = Math.max(h, def.y);
   }
   for (const p of m.platforms) {
     const on =
@@ -120,8 +129,13 @@ export function updateMechanisms(world: World, dt: number): void {
     const def = d.darts.get(s.id);
     if (def) updateDarts(world, def, s, dt);
   }
+  for (const s of m.pours) {
+    const def = d.pours.get(s.id);
+    if (def) updatePour(world, def, s, dt);
+  }
   updateGlyphs(world, d.glyphs);
   updatePoison(world, dt);
+  updateHeat(world, d.heat, dt);
 
   // Sunlight last, once everything that can stand in its way has moved.
   const lit = new Set<string>();
@@ -221,6 +235,16 @@ export function mechanismAction(world: World, id: string, op: string, args: stri
   const blade = m.blades.find((b) => b.id === id);
   if (blade && (op === 'start' || op === 'stop')) {
     blade.on = op === 'start';
+    return true;
+  }
+
+  const pour = m.pours.find((s) => s.id === id);
+  const podef = d.pours.get(id);
+  if (pour && podef) return pourAction(world, podef, pour, op);
+
+  const heat = m.heat.find((h) => h.id === id);
+  if (heat && (op === 'on' || op === 'off')) {
+    heat.on = op === 'on';
     return true;
   }
 
