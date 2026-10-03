@@ -1,5 +1,22 @@
 # Changelog
 
+## Version 0.4.6 (2026-10-03): Automatons and Bazûr
+
+The second of the three releases on the way to 0.5.0 (docs/roadmap.md): the Bronze Forge's foes (spec §19). Like 0.4.5, no chamber uses them yet.
+
+- **Bronze automatons** (enemy type `automaton`):
+  - Slow and heavy, with a mallet blow that hurts.
+  - Plated: only a twentieth of each hit gets through, so pistols need about thirty seconds of steady fire.
+  - Ended for good by quench water (a metre or more over its floor) or by molten bronze poured over it.
+  - Rules can wake one with `<enemy>.alert`: in the Forge, taking the founder's key wakes the automaton in its alcove.
+  - A procedural view (`src/render/automaton.ts`): cast plates, a furnace glow behind the slits of its face and chest, and a stiff walk. Quenched, its glow dies and it keels over; melted, it sinks into the bronze.
+  - Sounds and subtitles: clanking into motion, bullets ringing off its plates, steam, the melt.
+- **Bazûr** (the guardian's `bronze` kind):
+  - Molten bronze poured over it costs it a phase. The same pour counts once: it must stand clear of hot bronze for a second before another pour can.
+  - A blow from above to its core still works, and two blows defeat it. The signal `<id>.burned` lets rules react.
+  - Drawn as darkened cast bronze instead of carved stone, until the owner's model.
+- **Saves**: schema 4. Guardians saved before are stone.
+
 ## Version 0.4.5 (2026-10-03): Bronze
 
 The first of the three releases on the way to 0.5.0 (docs/roadmap.md): the mechanisms of chamber VI, the Bronze Forge (spec §19). No chamber uses them yet; the Forge itself arrives in 0.5.0.

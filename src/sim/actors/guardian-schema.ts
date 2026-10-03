@@ -16,10 +16,12 @@ export const guardianEntity = z
     face: z.enum(['N', 'E', 'S', 'W']).default('S'),
     /** The hall it keeps, [x, z, w, h] in room cells: it wakes when Nora enters and never leaves it. */
     arena: z.tuple([int, int, int, int]),
+    /** Stone (Ubara, the Temple of the Sun) or bronze (Bazûr, the Forge): molten bronze over a bronze one costs it a phase. */
+    kind: z.enum(['stone', 'bronze']).default('stone'),
   })
   .strict();
 
 /** Signals the guardian emits: `<id>.awake`, `<id>.phase2` (after its first fall or broken core), `<id>.defeated`. */
-export const GUARDIAN_SIGNALS = ['awake', 'phase2', 'fell', 'defeated'];
+export const GUARDIAN_SIGNALS = ['awake', 'phase2', 'fell', 'burned', 'defeated'];
 /** Rule actions: `<id>.wake` rouses it early. */
 export const GUARDIAN_ACTIONS = ['wake'];

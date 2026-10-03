@@ -2,6 +2,7 @@
  * Declarative level logic (spec §8): `when → do` rules over named signals
  * and flags. Rules fire on the rising edge of their condition.
  */
+import { alertEnemy } from '../actors/enemies';
 import { guardianAction } from '../actors/guardian';
 import type { RuleFile } from '../grid/schema';
 import { extinguishTorch } from '../player/torch';
@@ -133,6 +134,12 @@ function runAction(world: World, verb: string, args: string[]): void {
         setSignal(world, `${id}.lit`, true);
         world.events.emit({ type: 'brazier.lit', tick, id });
       }
+      return;
+    }
+    // `<enemy>.alert`: something (a relic taken, a door opened) wakes it and sets it on Nora.
+    const enemy = op === 'alert' ? world.state.enemies.find((x) => x.id === id) : undefined;
+    if (enemy) {
+      if (enemy.mode !== 'dead') alertEnemy(world, enemy, 'rule');
       return;
     }
     if (op === 'reset' && findActor(world, id, 'block')) {

@@ -942,7 +942,35 @@ export class AudioGraph {
         });
         m.duck(1.2);
         break;
+      // The Forge's automatons are cast bronze: clanks, ringing plates, steam.
+      case 'enemy.quenched':
+        this.play('sfx', at, (s, t) => {
+          sfx.fireHiss(s, t, 2.2);
+          sfx.heavyImpact(s, t + 0.9, 0.5);
+        });
+        break;
+      case 'enemy.melted':
+        this.play('sfx', at, (s, t) => {
+          sfx.fireBurst(s, t, 1.2);
+          sfx.rumble(s, t, 1.4);
+        });
+        break;
+      case 'guardian.burned':
+        this.play('sfx', at, (s, t) => {
+          sfx.fireBurst(s, t, 1.6);
+          if (!this.layer(s, t, 'stone.impact', { gain: LEVEL.impact * 0.8, rate: 0.45 }))
+            sfx.heavyImpact(s, t, 0.8);
+        });
+        m.duck(1);
+        break;
       case 'enemy.alerted': {
+        if (e.enemy === 'automaton') {
+          this.play('sfx', at, (s, t) => {
+            sfx.lever(s, t);
+            sfx.rumble(s, t + 0.1, 0.7);
+          });
+          break;
+        }
         if (e.enemy === 'clay') {
           this.play('sfx', at, (s, t) => sfx.rumble(s, t, 0.9));
           break;
@@ -954,9 +982,11 @@ export class AudioGraph {
       case 'enemy.hit': {
         const dying = num(e, 'health', 1) <= 0;
         const clay = e.enemy === 'clay';
+        const plated = e.enemy === 'automaton';
         this.play('sfx', at, (s, t) => {
-          sfx.bulletHit(s, t);
-          if (!dying && !clay) sfx.yelp(s, t + 0.02, false);
+          if (plated) sfx.ricochet(s, t);
+          else sfx.bulletHit(s, t);
+          if (!dying && !clay && !plated) sfx.yelp(s, t + 0.02, false);
         });
         break;
       }
@@ -965,8 +995,8 @@ export class AudioGraph {
         break;
       case 'enemy.bite': {
         const hit = e.hit === true;
-        if (e.enemy === 'clay') {
-          // The stylus arm comes down like a club.
+        if (e.enemy === 'clay' || e.enemy === 'automaton') {
+          // The stylus arm (or the automaton's mallet) comes down like a club.
           this.play('sfx', at, (s, t) => {
             sfx.whoosh(s, t);
             if (hit) sfx.weight(s, t + 0.12, 0.5);

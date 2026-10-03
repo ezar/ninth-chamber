@@ -39,6 +39,7 @@ const CAPTIONS: Record<string, CaptionDef> = {
   'platform.started': { key: 'caption.platformStarted', quiet: 4 },
   'guardian.windup': { key: 'caption.guardianWindup', trap: true, quiet: 1 },
   'guardian.step': { key: 'caption.guardianStep', quiet: 10 },
+  'guardian.burned': { key: 'caption.guardianBurned' },
   'bronze.warn': { key: 'caption.bronzeWarn', trap: true, quiet: 4 },
   'bronze.pour': { key: 'caption.bronzePour', quiet: 3 },
   'bronze.cooled': { key: 'caption.bronzeCooled', quiet: 3 },
@@ -48,7 +49,13 @@ const CAPTIONS: Record<string, CaptionDef> = {
 };
 
 const ENEMY_CAPTIONS: Record<string, Partial<Record<string, StringKey>>> = {
-  'enemy.alerted': { jackal: 'caption.jackalAlerted', clay: 'caption.clayAlerted' },
+  'enemy.alerted': {
+    jackal: 'caption.jackalAlerted',
+    clay: 'caption.clayAlerted',
+    automaton: 'caption.automatonAlerted',
+  },
+  'enemy.quenched': { automaton: 'caption.automatonQuenched' },
+  'enemy.melted': { automaton: 'caption.automatonMelted' },
   'enemy.crumbled': { clay: 'caption.clayCrumbled' },
   'enemy.reformed': { clay: 'caption.clayReformed' },
   'enemy.dissolved': { clay: 'caption.clayDissolved' },

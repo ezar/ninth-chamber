@@ -14,7 +14,16 @@ import type { Level } from '../grid/level';
 import { BLOCK, DIR_YAW, cellCenter, wrapAngle } from '../grid/units';
 import { setSignal } from '../logic/rules';
 import { damagePlayer } from '../player/context';
-import { clayGuardian, enemyTypes, noise, tuning, weapons, type EnemyStats } from '../player/tuning';
+import {
+  automaton,
+  clayGuardian,
+  enemyTypes,
+  noise,
+  tuning,
+  weapons,
+  type EnemyStats,
+} from '../player/tuning';
+import { bronzeBurnsAt } from '../mechanisms/bronze';
 import type { EnemyMode, EnemyState, Vec3 } from '../state';
 import type { World } from '../world';
 import { findPath, walkable, type NavGrid, type Walker } from './pathfind';
@@ -153,7 +162,11 @@ export function seesNora(world: World, e: EnemyState): boolean {
 }
 
 /** Makes an enemy hunt Nora; its pack mates join in. */
-export function alertEnemy(world: World, e: EnemyState, cause: 'sight' | 'noise' | 'pack' | 'hit'): void {
+export function alertEnemy(
+  world: World,
+  e: EnemyState,
+  cause: 'sight' | 'noise' | 'pack' | 'hit' | 'rule',
+): void {
   if (e.mode === 'dead' || e.aware) return;
   e.aware = true;
   e.calm = 0;
@@ -177,7 +190,7 @@ export function makeNoise(world: World, at: { x: number; z: number }, radius: nu
 
 export function damageEnemy(world: World, e: EnemyState, amount: number): void {
   if (e.mode === 'dead' || amount <= 0) return;
-  e.health = Math.max(0, e.health - amount);
+  e.health = Math.max(0, e.health - amount * (statsOf(e).armour ?? 1));
   emit(world, 'enemy.hit', e, { health: e.health, amount });
   if (e.health === 0 && e.type === 'clay') {
     // Tamrit falls apart into wet clay, and reforms (updateClay).
@@ -228,6 +241,7 @@ function updateEnemy(world: World, e: EnemyState, dt: number): void {
   const p = world.state.player;
 
   if (e.type === 'clay' && updateClay(world, e)) return;
+  if (e.type === 'automaton' && updateAutomaton(world, e)) return;
   if (e.mode === 'dead') {
     brake(e, s, dt, 6);
     move(world, e, s, dt);
@@ -290,6 +304,28 @@ function updateClay(world: World, e: EnemyState): boolean {
     emit(world, 'enemy.reformed', e);
   }
   return false;
+}
+
+/**
+ * A bronze automaton: quench water (1 m or deeper) or hot bronze over its
+ * cell ends it for good, whatever it is doing. True when it is gone.
+ */
+function updateAutomaton(world: World, e: EnemyState): boolean {
+  if (e.dissolved) return true;
+  const [cx, cz] = cellOfPos(e.pos);
+  const quenched = waterDepth(world, cx, cz) >= automaton.quenchDepth;
+  const melted = !quenched && bronzeBurnsAt(world, cx, cz, e.pos.y);
+  if (!quenched && !melted) return false;
+  e.dissolved = true;
+  e.fate = quenched ? 'quenched' : 'melted';
+  e.health = 0;
+  e.aware = false;
+  e.path = [];
+  setMode(e, 'dead');
+  world.stats.kills++;
+  setSignal(world, `${e.id}.dead`, true);
+  emit(world, quenched ? 'enemy.quenched' : 'enemy.melted', e);
+  return true;
 }
 
 /** Idle at home, or walking back home after giving up. Sight may alert it. */

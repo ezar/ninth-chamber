@@ -17,7 +17,7 @@ import { killPlayer } from '../player/context';
 import { forge } from '../player/tuning';
 import type { World } from '../world';
 import type { HeatDef, PourDef } from './defs';
-import { inRect } from './defs';
+import { cellKey, defsOf, inRect } from './defs';
 import type { PourState } from './types';
 
 export function createPour(d: PourDef): PourState {
@@ -31,6 +31,17 @@ export const pourCovers = (st: PourState, i: number): boolean =>
 /** Whether cell `i` of a pour holds hot bronze. */
 export const pourBurns = (st: PourState, i: number): boolean =>
   st.phase === 'hot' || (st.phase === 'flowing' && st.front > i);
+
+/** Whether hot bronze over a cell reaches feet at height `y` (enemies, the guardian). */
+export function bronzeBurnsAt(world: World, cx: number, cz: number, y: number): boolean {
+  const d = defsOf(world.level);
+  for (const c of d.pourCells.get(cellKey(cx, cz)) ?? []) {
+    const st = world.state.mechanisms.pours.find((s) => s.id === c.id);
+    const def = d.pours.get(c.id);
+    if (st && def && pourBurns(st, c.i) && y - def.y < forge.pour.reach) return true;
+  }
+  return false;
+}
 
 /** How hot the bronze glows (1 just poured … 0 cold), for the render. */
 export function pourGlow(d: PourDef, st: PourState): number {

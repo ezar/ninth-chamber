@@ -18,6 +18,7 @@ import { TICK_DT } from '../core/loop';
 import type { EnemyState } from '../sim/state';
 import type { World } from '../sim/world';
 import { ClayView } from './clay';
+import { AutomatonView } from './automaton';
 
 export interface JackalView {
   readonly root: THREE.Object3D;
@@ -902,15 +903,17 @@ export class EnemyViews {
         const view: JackalView =
           e.type === 'clay'
             ? new ClayView()
-            : this.asset
-              ? new SkinnedJackal(this.asset)
-              : new ProceduralJackal(i);
+            : e.type === 'automaton'
+              ? new AutomatonView()
+              : this.asset
+                ? new SkinnedJackal(this.asset)
+                : new ProceduralJackal(i);
         slot = {
           view,
           pos: new THREE.Vector3(e.pos.x, e.pos.y, e.pos.z),
           yaw: e.yaw,
           skinned: !!this.asset || e.type !== 'jackal',
-          height: e.type === 'clay' ? 1.3 : 0.42,
+          height: e.type === 'clay' ? 1.3 : e.type === 'automaton' ? 1.2 : 0.42,
         };
         this.group.add(view.root);
         this.slots.set(e.id, slot);
