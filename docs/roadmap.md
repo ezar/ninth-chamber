@@ -1,6 +1,6 @@
 # Roadmap to 0.4.0
 
-Agreed with the owner on 2026-10-03, after 0.3.0 passed its gate on the owner's iPhone (saves survive a reload, 30 fps or more, WebGPU works). The owner chose Phase 3 of the spec (§2, "Beta y publicación") over a new chamber: chamber VI, the Bronze Forge, waits. The owner left the open design decisions to Claude, following the spec; each one taken is listed below for review.
+Agreed with the owner on 2026-10-03, after 0.3.0 passed its gate on the owner's iPhone (saves survive a reload, 30 fps or more, WebGPU works). The owner chose Phase 3 of the spec (§2, "Beta y publicación") over a new chamber: chamber VI, the Bronze Forge, waits. The owner left the open design decisions to Claude, following the spec; each one taken is listed below for review. All three releases were built on 2026-10-03; the gate's state is in the changelog under 0.4.0.
 
 **Goal:** close Phase 3: accessibility (spec §13), Spanish, English and Catalan (§13, "Localización"), an installable PWA that plays offline (§14), and the Phase 3 gate: no known softlocks and an initial load under 4 s on 4G (§2).
 

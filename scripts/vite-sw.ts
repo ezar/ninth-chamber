@@ -11,7 +11,9 @@
  * - The engine and the assets the first room needs are precached on install;
  *   the rest (music, far rooms' sounds) is cached as it is first played.
  * - A new worker waits for open tabs to close instead of taking over a game
- *   in progress, so a running page never mixes two builds.
+ *   in progress, so a running page never mixes two builds. The page offers
+ *   the update on the title and in the pause menu, and only then asks the
+ *   waiting worker to take over (src/ui/service-worker.ts).
  */
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -49,6 +51,11 @@ self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)));
 });
 
+// The page asks a waiting worker to take over only when the player chooses to update
+// (on the title or in the pause menu, never in the middle of play).
+self.addEventListener('message', (event) => {
+  if (event.data === 'take-over') self.skipWaiting();
+});
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches

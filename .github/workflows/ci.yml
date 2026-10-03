@@ -29,6 +29,9 @@ jobs:
       - run: pnpm smoke
       # The medium tier draws fire and sun shadow maps that the mobile tier does not.
       - run: pnpm smoke --tier medium
+      # Phase 3 gate (spec §2): the game plays offline once loaded, and the title answers within 4 s on 4G.
+      - run: pnpm offline
+      - run: pnpm loadtime --runs 1
       - uses: actions/upload-artifact@v4
         with:
           name: dist

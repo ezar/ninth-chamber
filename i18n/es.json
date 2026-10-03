@@ -216,6 +216,7 @@
   "loading.prepare": "Preparando luces y sombras…",
   "loading.calibrate": "Ajustando los gráficos a este dispositivo…",
   "loading.ready": "Listo",
+  "loading.queued": "Abriendo la tumba…",
   "pause.button": "Pausa",
   "pause.title": "Pausa",
   "pause.resume": "Continuar",
@@ -498,5 +499,7 @@
   "options.colourSafe": "Barras para daltonismo",
   "options.colourSafe.hint": "Salud y veneno en azul y naranja, con rayas para el veneno.",
   "options.touchSize": "Tamaño de los botones táctiles",
-  "options.touchOpacity": "Opacidad de los botones táctiles"
+  "options.touchOpacity": "Opacidad de los botones táctiles",
+  "update.ready": "Hay una versión nueva del juego.",
+  "update.apply": "Actualizar"
 }

@@ -50,7 +50,7 @@ import { PadEdgeReader } from './ui/nav';
 import { PAD, PadReader, focusItem, padHas } from './ui/pad';
 import { Prelude } from './ui/prelude';
 import { Reader } from './ui/reader';
-import { registerServiceWorker } from './ui/service-worker';
+import { applyUpdate, registerServiceWorker } from './ui/service-worker';
 import { browserStorage, defaultSettings, loadSettings, saveSettings, type Settings } from './ui/settings';
 import { TitleScreen } from './ui/title';
 import { version } from '../package.json';
@@ -177,6 +177,53 @@ async function main(): Promise<void> {
   const prelude = new Prelude(() => {
     if (loading.isReady) titleFocus().focus({ preventScroll: true });
   });
+  /**
+   * The title is usable before the tomb has loaded (spec §2, Phase 3 gate):
+   * Enter or Continue pressed while it loads answers at once, takes the
+   * gesture for sound and fullscreen, and the game starts once it is ready.
+   */
+  let queued: 'start' | 'continue' | null = null;
+  const queuePress = (what: 'start' | 'continue', button: HTMLButtonElement): void => {
+    if (loading.isReady || queued || phase !== 'title') return;
+    queued = what;
+    void audio.unlock();
+    audio.ui('confirm');
+    if (document.body.classList.contains('touch'))
+      void document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+    loading.queue(button);
+  };
+  startButton.addEventListener('click', () => queuePress('start', startButton));
+  const earlyContinue = $<HTMLButtonElement>('#start-continue');
+  earlyContinue.addEventListener('click', () => queuePress('continue', earlyContinue));
+  // From here a press on the title is taken (pnpm loadtime measures up to this point).
+  startButton.disabled = false;
+  earlyContinue.disabled = false;
+  $('#start').classList.add('live');
+
+  /**
+   * A new build is waiting (spec §14 "PWA"): a quiet notice on the title and
+   * in the pause menu, never over play. Updating saves first, then reloads.
+   */
+  const showUpdate = (): void => {
+    if (document.getElementById('update-notice')) return;
+    const box = document.createElement('div');
+    box.id = 'update-notice';
+    box.setAttribute('role', 'status');
+    const text = document.createElement('span');
+    text.dataset.i18n = 'update.ready';
+    text.textContent = t('update.ready');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.i18n = 'update.apply';
+    button.textContent = t('update.apply');
+    button.addEventListener('click', () => {
+      autosave(true);
+      applyUpdate();
+    });
+    box.append(text, button);
+    document.body.append(box);
+  };
+
   /** Loading is over: the button wakes, and the cards finish the one on screen. */
   const loadingDone = (): void => {
     loading.ready();
@@ -185,8 +232,13 @@ async function main(): Promise<void> {
     if (!prelude.running) titleFocus().focus({ preventScroll: true });
     // Continue pressed on another chamber's title: resume as soon as this one is ready.
     if (resuming) continueGame();
+    // Enter or Continue pressed while loading.
+    const press = queued;
+    queued = null;
+    if (press === 'start') start();
+    else if (press === 'continue') continueGame();
     // Offline play and fast restarts, once the first room no longer needs the bandwidth.
-    registerServiceWorker();
+    registerServiceWorker(showUpdate);
   };
 
   // Quality: the stored tier, or on first run the device heuristic until the benchmark decides.
@@ -318,7 +370,6 @@ async function main(): Promise<void> {
   const refreshContinue = (): void => {
     const show = saved !== null && playable.has(saved.level);
     continueButton.hidden = !show;
-    continueButton.disabled = !loading.isReady;
     if (saved)
       continueButton.textContent = t('start.continue', { chamber: t(`level.${saved.level}` as StringKey) });
   };

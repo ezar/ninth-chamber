@@ -1381,7 +1381,8 @@ body.reduce-motion #start-seal.open .seal-svg path {
 .title-menu button:disabled::before {
   transform: scaleY(0);
 }
-body.loading #start-options {
+/* While the tomb loads only Enter (and Continue) answer: the other choices arrive with the game. */
+body.loading :is(#start-options, #start-chambers, #credits-button) {
   visibility: hidden;
 }
 

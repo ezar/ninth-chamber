@@ -216,6 +216,7 @@
   "loading.prepare": "Preparing light and shadow…",
   "loading.calibrate": "Tuning the graphics to this device…",
   "loading.ready": "Ready",
+  "loading.queued": "Opening the tomb…",
   "pause.button": "Pause",
   "pause.title": "Paused",
   "pause.resume": "Resume",
@@ -498,5 +499,7 @@
   "options.colourSafe": "Colour-blind safe bars",
   "options.colourSafe.hint": "Health and poison in blue and orange, with stripes for poison.",
   "options.touchSize": "Touch button size",
-  "options.touchOpacity": "Touch button opacity"
+  "options.touchOpacity": "Touch button opacity",
+  "update.ready": "A new version of the game is ready.",
+  "update.apply": "Update"
 }
