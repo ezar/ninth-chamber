@@ -23,7 +23,7 @@ export interface GuardianState {
   id: string;
   /** Stone, or bronze (molten bronze over it is a blow). */
   kind: 'stone' | 'bronze';
-  /** Seconds before molten bronze can count as another blow (one pour, one blow). */
+  /** Seconds clear of hot bronze still needed before bronze can count as another blow (one pour, one blow). */
   immune: number;
   mode: GuardianMode;
   modeTime: number;

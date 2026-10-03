@@ -164,13 +164,15 @@ function updateGuardian(world: World, g: GuardianState, dt: number): void {
   g.modeTime += dt;
   g.cooldown = Math.max(0, g.cooldown - dt);
   g.repathIn = Math.max(0, g.repathIn - dt);
-  g.immune = Math.max(0, g.immune - dt);
   const ph = g.phase - 1;
   const p = world.state.player;
 
-  // Bazûr (the bronze guardian): molten bronze poured over it cools its plates, a blow.
+  // Bazûr (the bronze guardian): molten bronze poured over it cools its plates, a blow. The
+  // same pour counts once: it must stand clear of hot bronze for a moment before the next.
+  const burning = g.kind === 'bronze' && bronzeBurnsAt(world, ...cellOf(g.pos), g.pos.y);
+  if (!burning) g.immune = Math.max(0, g.immune - dt);
   const awake = g.mode !== 'dormant' && g.mode !== 'falling' && g.mode !== 'fallen' && g.mode !== 'climbing';
-  if (g.kind === 'bronze' && awake && g.immune <= 0 && bronzeBurnsAt(world, ...cellOf(g.pos), g.pos.y)) {
+  if (burning && awake && g.immune <= 0) {
     g.immune = G.bronzeImmune;
     setSignal(world, `${g.id}.burned`, true);
     emit(world, 'guardian.burned', g, { phase: g.phase });

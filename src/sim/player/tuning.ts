@@ -338,8 +338,8 @@ export const guardianTuning = {
   bounceOut: 2.8,
   /** Stagger after a core strike (s). */
   stunTime: 2.4,
-  /** Bazûr: after molten bronze has cost it a phase, the same pour cannot count again for this long (s). */
-  bronzeImmune: 8,
+  /** Bazûr: after molten bronze has cost it a phase, it must stand this long clear of hot bronze before another pour counts (s). */
+  bronzeImmune: 1,
   /** Fall speed limit and gravity in a pit (m/s, m/s²). */
   gravity: 24,
   /** Lies stunned at the bottom of a pit (s), then drags itself out (s). */

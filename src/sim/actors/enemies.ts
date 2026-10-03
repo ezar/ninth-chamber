@@ -162,7 +162,11 @@ export function seesNora(world: World, e: EnemyState): boolean {
 }
 
 /** Makes an enemy hunt Nora; its pack mates join in. */
-export function alertEnemy(world: World, e: EnemyState, cause: 'sight' | 'noise' | 'pack' | 'hit'): void {
+export function alertEnemy(
+  world: World,
+  e: EnemyState,
+  cause: 'sight' | 'noise' | 'pack' | 'hit' | 'rule',
+): void {
   if (e.mode === 'dead' || e.aware) return;
   e.aware = true;
   e.calm = 0;

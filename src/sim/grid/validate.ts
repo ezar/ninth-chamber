@@ -38,6 +38,7 @@ const ACTIONS_ON: Record<string, string[]> = {
   block: ['reset'],
   watergate: ['raise', 'lower', 'toggle'],
   brazier: ['light'],
+  enemy: ['alert'],
 };
 
 export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): ValidationResult {

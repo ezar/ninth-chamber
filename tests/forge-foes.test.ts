@@ -164,7 +164,7 @@ describe('Bazûr, the bronze guardian', () => {
     runActions(w, ['bazur.wake']);
     run(w, frame(), 10);
     pourOver(w);
-    run(w, frame(), ticks(G.bronzeImmune));
+    run(w, frame(), ticks(forge.pour.cool + G.bronzeImmune));
     // The trench has cast into a bridge by now: Bazûr stands on it when the next pour covers it.
     pourOver(w);
     expect(bazur(w).mode).toBe('defeated');
