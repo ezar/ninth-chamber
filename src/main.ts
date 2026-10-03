@@ -37,6 +37,7 @@ import { EndScreen } from './ui/end-screen';
 import { PlaytestLog, clearSessions, exportLog, loadSessions } from './ui/playtest';
 import { browserSaveStore } from './ui/save-store';
 import { inventoryEntries } from './ui/inventory';
+import { setLabelBindings } from './ui/control-labels';
 import { browserProgressStorage, loadReached, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
 import { applyStaticStrings, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
@@ -385,6 +386,12 @@ async function main(): Promise<void> {
     audio.setBusVolume('ui', m);
     audio.setBusVolume('voice', m);
   };
+  /** Options → Keyboard and Gamepad. */
+  const applyBindings = (): void => {
+    keyboard.setBindings(settings.bindings);
+    gamepad.setBindings(settings.bindings);
+    setLabelBindings(settings.bindings);
+  };
   const applyCamera = (): void => {
     cameraTuning.sensitivity = baseSensitivity * settings.cameraSensitivity;
     cameraTuning.invertY = settings.invertY;
@@ -426,6 +433,9 @@ async function main(): Promise<void> {
         break;
       case 'showStats':
         applyStats();
+        break;
+      case 'bindings':
+        applyBindings();
         break;
       case 'language':
         setLocale(settings.language ?? pickLocale(navigator.languages));
@@ -471,6 +481,7 @@ async function main(): Promise<void> {
     },
   });
   applyVolumes();
+  applyBindings();
   applyCamera();
   applyResolution();
   applyImage();

@@ -11,6 +11,7 @@ import {
   type ResolutionMode,
   type TextureFiltering,
 } from '../render/quality';
+import { noOverrides, sanitizeBindings, type BindingOverrides } from '../core/bindings';
 
 export type Language = 'en' | 'es';
 
@@ -49,6 +50,8 @@ export interface Settings {
   subtitles: boolean;
   /** Null follows the browser. */
   language: Language | null;
+  /** The player's key and gamepad bindings over the defaults (core/bindings.ts). */
+  bindings: BindingOverrides;
 }
 
 export const SETTINGS_KEY = 'nc.settings';
@@ -76,6 +79,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     reducedMotion: prefersReducedMotion,
     subtitles: false,
     language: null,
+    bindings: noOverrides(),
   };
 }
 
@@ -152,6 +156,7 @@ export function loadSettings(
     reducedMotion: bool(r.reducedMotion, defaults.reducedMotion),
     subtitles: bool(r.subtitles, defaults.subtitles),
     language: r.language === 'en' || r.language === 'es' ? r.language : defaults.language,
+    bindings: r.bindings === undefined ? defaults.bindings : sanitizeBindings(r.bindings),
   };
 }
 

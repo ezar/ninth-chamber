@@ -4,6 +4,7 @@
  * death fade. It only listens to sim events (the end of the level has its own
  * screen, ui/end-screen.ts).
  */
+import { actionLabel } from './control-labels';
 import type { SimEvent } from '../core/events';
 import { BLOCK, DIR_VEC, yawToDir } from '../sim/grid/units';
 import { blockAt, type World } from '../sim/world';
@@ -158,7 +159,7 @@ export class Hud {
 
     const key = this.promptFor(world);
     if (key) {
-      const button = this.device === 'gamepad' ? 'X' : this.device === 'touch' ? '◉' : 'E';
+      const button = actionLabel(this.device);
       this.prompt.innerHTML = `<kbd>${button}</kbd>${t(key)}`;
       this.prompt.classList.add('show');
     } else {

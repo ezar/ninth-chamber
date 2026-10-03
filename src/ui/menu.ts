@@ -13,6 +13,16 @@ import {
   type ResolutionMode,
   type TextureFiltering,
 } from '../render/quality';
+import {
+  REMAPPABLE,
+  keyFor,
+  keyLabel,
+  noOverrides,
+  padFor,
+  padLabel,
+  rebind,
+  type RemappableAction,
+} from '../core/bindings';
 import type { Device } from './hud';
 import type { InventoryEntry } from './inventory';
 import { t, type StringKey } from './i18n';
@@ -96,6 +106,9 @@ export class Menu {
   private readonly rows: OptionRow[] = [];
   private readonly repeat = new DirectionRepeat();
   private device: Device = 'keyboard';
+  /** A binding row waiting for its new key or button. */
+  private capturing: { device: 'keys' | 'pad'; action: RemappableAction; row: OptionRow } | null = null;
+  private readonly bindRows: OptionRow[] = [];
 
   constructor(
     private readonly settings: Settings,
@@ -130,6 +143,7 @@ export class Menu {
   }
 
   close(): void {
+    this.endCapture();
     this.root.classList.remove('show');
     this.root.hidden = true;
     this.confirming = null;
@@ -173,6 +187,14 @@ export class Menu {
   /** Keyboard navigation; returns true when the key was used. */
   handleKey(e: KeyboardEvent): boolean {
     if (!this.isOpen) return false;
+    if (this.capturing) {
+      e.preventDefault();
+      if (e.repeat) return true;
+      const c = this.capturing;
+      if (c.device === 'keys' && e.code !== 'Escape') this.bind(c.action, 'keys', e.code);
+      this.endCapture();
+      return true;
+    }
     const panel = this.panelEl();
     switch (e.code) {
       case 'ArrowUp':
@@ -220,6 +242,17 @@ export class Menu {
   /** Gamepad navigation, once per frame while open. */
   update(pad: PadSnapshot, dt: number): void {
     if (!this.isOpen || !pad.connected) {
+      this.repeat.reset();
+      return;
+    }
+    if (this.capturing) {
+      const c = this.capturing;
+      if (pad.pressed) this.setDevice('gamepad');
+      if (!pad.pressed) return;
+      const index = Math.log2(pad.pressed & -pad.pressed);
+      // Start cancels; any other button is the new one (for a gamepad row).
+      if (c.device === 'pad' && index !== PAD.START) this.bind(c.action, 'pad', index);
+      this.endCapture();
       this.repeat.reset();
       return;
     }
@@ -564,6 +597,8 @@ export class Menu {
       );
     }
 
+    this.buildBindings(group);
+
     group('options.group.access');
     this.addRow(
       toggleRow(
@@ -601,6 +636,58 @@ export class Menu {
     );
 
     this.buildPlaytest();
+  }
+
+  /** Options → Keyboard and Gamepad: one row per action, Enter (or A) then the new key or button. */
+  private buildBindings(group: (label: StringKey) => void): void {
+    const s = this.settings;
+    for (const device of ['keys', 'pad'] as const) {
+      group(device === 'keys' ? 'options.group.keyboard' : 'options.group.gamepad');
+      for (const action of REMAPPABLE) {
+        const row: OptionRow = buttonRow(
+          `action.${action}`,
+          () => this.startCapture(device, action, row),
+          () =>
+            this.capturing?.action === action && this.capturing.device === device
+              ? t(device === 'keys' ? 'options.bind.key' : 'options.bind.pad')
+              : null,
+          () =>
+            device === 'keys' ? keyLabel(keyFor(s.bindings, action)) : padLabel(padFor(s.bindings, action)),
+        );
+        row.el.classList.add('opt-bind');
+        this.bindRows.push(row);
+        this.addRow(row);
+      }
+    }
+    this.addRow(
+      buttonRow('options.bind.reset', () => {
+        s.bindings = noOverrides();
+        this.cb.change('bindings');
+        for (const r of this.bindRows) r.refresh();
+      }),
+    );
+  }
+
+  private startCapture(device: 'keys' | 'pad', action: RemappableAction, row: OptionRow): void {
+    const prev = this.capturing?.row;
+    this.capturing = { device, action, row };
+    prev?.refresh();
+    row.refresh();
+    row.el.classList.add('capturing');
+  }
+
+  private endCapture(): void {
+    const c = this.capturing;
+    if (!c) return;
+    this.capturing = null;
+    c.row.el.classList.remove('capturing');
+    c.row.refresh();
+  }
+
+  private bind(action: RemappableAction, device: 'keys' | 'pad', input: string | number): void {
+    this.settings.bindings = rebind(this.settings.bindings, device, action, input);
+    this.cb.change('bindings');
+    for (const r of this.bindRows) r.refresh();
   }
 
   private buildPlaytest(): void {
@@ -828,15 +915,20 @@ function toggleRow(
   return { el: r.el, refresh, step: flip, activate: flip };
 }
 
-/** A row that does something when activated (Enter, A, tap). */
-function buttonRow(label: StringKey, run: () => void, hint?: () => string | null): OptionRow {
+/** A row that does something when activated (Enter, A, tap); `value` replaces the arrow on the right. */
+function buttonRow(
+  label: StringKey,
+  run: () => void,
+  hint?: () => string | null,
+  value?: () => string,
+): OptionRow {
   const r = rowShell(label, 'button');
   r.el.classList.add('opt-button');
   r.prev.hidden = true;
   r.next.hidden = true;
   const refresh = (): void => {
     r.labelEl.textContent = t(label);
-    r.value.textContent = '›';
+    r.value.textContent = value ? value() : '›';
     setHint(r.hint, hint ? hint() : null);
   };
   refresh();

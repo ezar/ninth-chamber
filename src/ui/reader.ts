@@ -4,6 +4,7 @@
  * a carving with Nora's translation. The game pauses while it is open (main
  * stops stepping the simulation). Closing dispatches `note.closed`.
  */
+import { actionKey, actionLabel } from './control-labels';
 import { glyphRows } from '../core/glyphs';
 import type { NoteStyle } from '../sim/grid/schema';
 import type { Device } from './hud';
@@ -24,7 +25,7 @@ export interface NoteView {
 
 /** Ignore closing input for this long after opening, so the Action press that opened it does not close it. */
 const OPEN_GRACE = 0.35;
-const CLOSE_KEYS = new Set(['Escape', 'Enter', 'Space', 'KeyE', 'Backspace', 'NumpadEnter']);
+const CLOSE_KEYS = new Set(['Escape', 'Enter', 'Space', 'Backspace', 'NumpadEnter']);
 
 const $ = (id: string): HTMLElement => {
   const el = document.getElementById(id);
@@ -48,7 +49,7 @@ export class Reader {
         this.close();
     });
     window.addEventListener('keydown', (e) => {
-      if (!this.isOpen || e.repeat || !CLOSE_KEYS.has(e.code)) return;
+      if (!this.isOpen || e.repeat || !(CLOSE_KEYS.has(e.code) || e.code === actionKey())) return;
       e.preventDefault();
       this.close();
     });
@@ -94,7 +95,7 @@ export class Reader {
     $('reader-counter').textContent = t('reader.counter', { n: note.count, total: note.total });
     const device = this.device();
     const kbd = $('reader-key');
-    kbd.textContent = device === 'gamepad' ? 'X' : 'E';
+    kbd.textContent = actionLabel(device);
     kbd.hidden = device === 'touch';
 
     const rubbing = $('reader-rubbing');
