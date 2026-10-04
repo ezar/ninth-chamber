@@ -17,11 +17,12 @@ export const guardianEntity = z
     /** The hall it keeps, [x, z, w, h] in room cells: it wakes when Nora enters and never leaves it. */
     arena: z.tuple([int, int, int, int]),
     /** Stone (Ubara, the Temple of the Sun) or bronze (Bazûr, the Forge): molten bronze over a bronze one costs it a phase. */
-    kind: z.enum(['stone', 'bronze']).default('stone'),
+    /** Anzur (the Observatory) is the giant: rules advance its three phases and only the oculus light stops it. */
+    kind: z.enum(['stone', 'bronze', 'giant']).default('stone'),
   })
   .strict();
 
 /** Signals the guardian emits: `<id>.awake`, `<id>.phase2` (after its first fall or broken core), `<id>.defeated`. */
-export const GUARDIAN_SIGNALS = ['awake', 'phase2', 'fell', 'burned', 'defeated'];
-/** Rule actions: `<id>.wake` rouses it early. */
-export const GUARDIAN_ACTIONS = ['wake'];
+export const GUARDIAN_SIGNALS = ['awake', 'phase2', 'phase3', 'fell', 'burned', 'defeated'];
+/** Rule actions: `<id>.wake` rouses it early; `<id>.advance` moves the giant to its next phase. */
+export const GUARDIAN_ACTIONS = ['wake', 'advance'];

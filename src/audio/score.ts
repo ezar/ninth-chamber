@@ -134,6 +134,21 @@ export const PALETTES: Record<string, Palette> = {
     stingers: STINGERS,
   },
   /**
+   * Night and bronze, with a boss: the Observatory draws on the Temple of the
+   * Sun's majestic cues until it has its own (docs/changelog.md, 0.7.0).
+   */
+  observatory: {
+    intro: 'sun_temple.intro',
+    explore: ['antechamber.explore.1', 'cisterns.explore.2'],
+    tension: 'sun_temple.tension',
+    combat: 'sun_temple.combat',
+    chase: 'chase',
+    boss: 'boss',
+    relic: 'sun_temple.relic',
+    fanfare: 'sun_temple.fanfare',
+    stingers: STINGERS,
+  },
+  /**
    * Airy and high: the Wind Stair draws on the Cisterns' open, echoing cues
    * and the Temple's tension until it has its own (docs/changelog.md, 0.6.0).
    */

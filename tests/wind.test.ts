@@ -248,6 +248,13 @@ describe('the gust cycle', () => {
     expect(types).toEqual(['wind.gust']);
   });
 
+  it('a cyclic zone that starts mid-gust does not announce it on the first tick', () => {
+    const w = testLevel(room, { entities: [zone({ size: [3, 3], period: 6, blow: 3 })] });
+    stepWorld(w, frame());
+    expect(w.events.drain().filter((e) => e.type === 'wind.gust')).toHaveLength(0);
+    expect(w.state.signals['gust.gust']).toBe(true);
+  });
+
   it('a zone with no cells is a level error', () => {
     const lv = {
       schema: 1,

@@ -381,6 +381,42 @@ export const guardianTuning = {
   shrugLift: 3,
 };
 
+/**
+ * Anzur, the Observatory's keeper (guardian kind 'giant', spec §19): the
+ * largest of the eight, three phases advanced by the dome's rings. It
+ * sweeps wide and slow; in phase 2 its slams break the floor; in phase 3
+ * only the oculus light stops it.
+ */
+export const giantTuning: typeof guardianTuning = {
+  ...guardianTuning,
+  bodyRadius: 2.0,
+  radius: 0.9,
+  height: 5.2,
+  coreTop: 3.8,
+  speed: [1.2, 1.4, 1.6],
+  turnSpeed: [1.2, 1.5, 1.8],
+  stride: 2.0,
+  slamRange: 3.6,
+  poundRange: 4.2,
+  /** The sweep: a wide blow round it. */
+  slamRadius: 4.2,
+  slamDamage: 35,
+  slamPush: 7,
+  windup: [1.4, 1.2, 1.0],
+  recover: [1.4, 1.2, 1.0],
+  cooldown: 1.1,
+  stunTime: 1.8,
+  searchLimit: 2000,
+};
+
+/** How Anzur breaks the floor in phase 2: the cells within this many of the impact, a stride ahead of it, crack and fall. */
+export const giantFloor = {
+  /** Impact point ahead of its feet (m). */
+  ahead: 2.4,
+  /** Cells round the impact cell that break (Chebyshev distance). */
+  radius: 1,
+};
+
 export type Tuning = typeof tuning;
 
 /** Weapons and aiming (spec §7 "Armas" and "Reglas de apuntado"). */

@@ -145,6 +145,30 @@ function notes(): string {
   );
 }
 
+/** The Astrolabe of the Nine: three rings, each with eight ticks, turned so their marks meet at the ninth place. */
+function astrolabe(): string {
+  const rings = [56, 76, 96]
+    .map((r, k) => {
+      const ticks = Array.from({ length: 8 }, (_, i) => {
+        const [x0, y0] = at(angle(i), r - 5);
+        const [x1, y1] = at(angle(i), r + 5);
+        return `M${x0} ${y0} L${x1} ${y1}`;
+      }).join(' ');
+      return (
+        `<g class="map-star" style="--i:${k}"><circle class="map-line" pathLength="1" r="${r}"/>` +
+        `<path class="map-line" pathLength="1" d="${ticks}"/></g>`
+      );
+    })
+    .join('');
+  const [x0, y0] = at(angle(8), 40);
+  const [x1, y1] = at(angle(8), 110);
+  const [nx, ny] = at(angle(8), 104);
+  return (
+    `${rings}<path class="map-gap" d="M${x0} ${y0} L${x1} ${y1}"/>` +
+    `<circle class="map-ninth" cx="${nx}" cy="${ny}" r="9"/><circle class="map-here" cx="${nx}" cy="${ny}" r="3"/>`
+  );
+}
+
 export function relicFigureSvg(figure: RelicFigure, label: string): string {
   const body =
     figure === 'moons'
@@ -157,6 +181,8 @@ export function relicFigureSvg(figure: RelicFigure, label: string): string {
             ? segments()
             : figure === 'notes'
               ? notes()
-              : stars();
+              : figure === 'astrolabe'
+                ? astrolabe()
+                : stars();
   return frame(label, body);
 }

@@ -1080,6 +1080,19 @@ export class AudioGraph {
       case 'receiver.lit':
         this.play('sfx', at, (s, t) => sfx.sunChime(s, t));
         break;
+      // Anzur: a phase change shakes the hall; the moonlight freezing it rings out.
+      case 'guardian.phase':
+        this.play('sfx', at, (s, t) => {
+          sfx.rumble(s, t, 1.6);
+          sfx.heavyImpact(s, t + 0.2, 1);
+        });
+        break;
+      case 'guardian.lit':
+        this.play('sfx', at, (s, t) => {
+          sfx.sunChime(s, t);
+          sfx.rumble(s, t + 0.3, 2.2);
+        });
+        break;
       // The Observatory: the dome's rings grind round, a chime when one settles at the ninth place;
       // moonlight through the oculus.
       case 'ring.turned': {

@@ -46,6 +46,8 @@ const CAPTIONS: Record<string, CaptionDef> = {
   'heat.enter': { key: 'caption.heat', quiet: 8 },
   'wind.warn': { key: 'caption.windWarn', trap: true, quiet: 4 },
   'ring.turned': { key: 'caption.ring', quiet: 1 },
+  'guardian.phase': { key: 'caption.guardianPhase' },
+  'guardian.lit': { key: 'caption.guardianLit' },
   'oculus.open': { key: 'caption.oculus' },
   'wind.gust': { key: 'caption.windGust', quiet: 4 },
   'player.torn': { key: 'caption.torn' },

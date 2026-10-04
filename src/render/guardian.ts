@@ -16,7 +16,7 @@
 import * as THREE from 'three/webgpu';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { GuardianState } from '../sim/actors/guardian-types';
-import { guardianTuning as G } from '../sim/player/tuning';
+import { giantTuning, guardianTuning } from '../sim/player/tuning';
 import type { World } from '../sim/world';
 import { mergeStatic } from './merge';
 import { PuffPool } from './puffs';
@@ -153,15 +153,28 @@ export class GuardianView {
     for (const g of world.state.guardians) this.bodies.push(this.build(g));
   }
 
+  /** Anzur stands nearly twice as tall as the stone and bronze keepers. */
+  private scaleOf(g: GuardianState): number {
+    return g.kind === 'giant' ? giantTuning.height / guardianTuning.height : 1;
+  }
+
   private build(g: GuardianState): Body {
-    // Bazûr (the Forge) is cast bronze, darkened by the furnaces; Ubara (the Temple) is carved stone.
+    // Bazûr (the Forge) is cast bronze, darkened by the furnaces; Ubara (the Temple) is carved stone;
+    // Anzur (the Observatory) is night-grey stone, nearly twice their height, with a pale gaze.
     const cast = g.kind === 'bronze';
+    const giant = g.kind === 'giant';
     const rock = cast
       ? new THREE.MeshStandardMaterial({ color: '#7a5a34', metalness: 0.9, roughness: 0.42 })
-      : new THREE.MeshStandardMaterial({ ...surfaceParams(this.stone), color: '#b99c77' });
+      : new THREE.MeshStandardMaterial({
+          ...surfaceParams(this.stone),
+          color: giant ? '#8a8e9c' : '#b99c77',
+        });
     const dark = cast
       ? new THREE.MeshStandardMaterial({ color: '#3e2c1a', metalness: 0.85, roughness: 0.55 })
-      : new THREE.MeshStandardMaterial({ ...surfaceParams(this.stone), color: '#6f5a44' });
+      : new THREE.MeshStandardMaterial({
+          ...surfaceParams(this.stone),
+          color: giant ? '#454956' : '#6f5a44',
+        });
     const bronze = new THREE.MeshStandardMaterial({ color: '#8c6a3c', metalness: 0.85, roughness: 0.45 });
     const core = new THREE.MeshStandardMaterial({
       color: '#ffb347',
@@ -406,6 +419,12 @@ export class GuardianView {
     rubble.visible = false;
     this.group.add(rubble);
 
+    root.scale.setScalar(this.scaleOf(g));
+    if (giant) {
+      core.color.set('#b8d4ff');
+      core.emissive.set('#8fb6ff');
+      eyes.emissive.set('#cfe0ff');
+    }
     this.group.add(root);
     return {
       id: g.id,
@@ -441,13 +460,14 @@ export class GuardianView {
   private animate(b: Body, g: GuardianState, time: number, dt: number): void {
     const J = b.joints;
     const ph = g.phase - 1;
+    const T = g.kind === 'giant' ? giantTuning : guardianTuning;
     const t = g.modeTime;
     const target = b.target;
     copyPose(target, REST);
     // Walk cycle driven by the distance walked.
     const moved = Math.hypot(g.pos.x - b.last.x, g.pos.z - b.last.z);
     b.last.set(g.pos.x, g.pos.y, g.pos.z);
-    b.walk += moved * (Math.PI / G.stride);
+    b.walk += moved * (Math.PI / T.stride);
     const speed = Math.hypot(g.vel.x, g.vel.z);
     let core = g.phase === 2 ? 1.4 : 0.7;
     let eyes = 1;
@@ -474,7 +494,7 @@ export class GuardianView {
       }
       case 'windup': {
         // Arms up and back, leaning back, the core flaring: the tell.
-        const k = Math.min(1, t / ((G.windup[ph] ?? 1) * 0.8));
+        const k = Math.min(1, t / ((T.windup[ph] ?? 1) * 0.8));
         set2(target.shoulder, 0.15 - 2.9 * k, 0.15 - 2.9 * k);
         set2(target.shoulderOut, 0.25 * k, 0.25 * k);
         set2(target.elbow, -0.35 - 0.5 * k, -0.35 - 0.5 * k);
@@ -548,7 +568,7 @@ export class GuardianView {
     const k = 1 - Math.exp(-dt * (g.mode === 'recover' || g.mode === 'slam' ? 30 : 9));
     blendPose(b.pose, target, k);
     const p = b.pose;
-    J.root.position.set(g.pos.x, g.pos.y + p.y, g.pos.z);
+    J.root.position.set(g.pos.x, g.pos.y + p.y * this.scaleOf(g), g.pos.z);
     J.root.rotation.set(0, 0, 0);
     J.root.rotation.y = g.yaw;
     // Body pitch about the feet, in the direction it faces.
@@ -571,22 +591,23 @@ export class GuardianView {
     // Light and glow.
     b.core.emissiveIntensity += (core - b.core.emissiveIntensity) * Math.min(1, dt * 10);
     b.eyes.emissiveIntensity += (eyes * 2.5 - b.eyes.emissiveIntensity) * Math.min(1, dt * 6);
-    b.cracks.emissiveIntensity = g.phase === 2 ? 1.2 + Math.sin(time * 4) * 0.4 : 0;
+    b.cracks.emissiveIntensity = g.phase >= 2 ? 1.2 + Math.sin(time * 4) * 0.4 : 0;
     b.coreLight.intensity = b.core.emissiveIntensity * 5;
     const glow = b.coreGlow.material as THREE.SpriteMaterial;
     glow.opacity = Math.min(1, b.core.emissiveIntensity / 3);
     b.coreGlow.scale.setScalar(0.9 + b.core.emissiveIntensity * 0.35);
 
     // Where the fists land: in front of it.
-    const fx = g.pos.x - Math.sin(g.yaw) * 1.2;
-    const fz = g.pos.z - Math.cos(g.yaw) * 1.2;
+    const reach = g.kind === 'giant' ? 2.4 : 1.2;
+    const fx = g.pos.x - Math.sin(g.yaw) * reach;
+    const fz = g.pos.z - Math.cos(g.yaw) * reach;
 
     // The tell: during the wind-up a ring fills in on the floor under the coming blow.
     if (g.mode === 'windup') {
-      const k = Math.min(1, t / (G.windup[ph] ?? 1));
+      const k = Math.min(1, t / (T.windup[ph] ?? 1));
       b.tell.visible = true;
       b.tell.position.set(fx, g.pos.y + 0.03, fz);
-      b.tell.scale.setScalar(G.slamRadius * (1.15 - 0.35 * k));
+      b.tell.scale.setScalar(T.slamRadius * (1.15 - 0.35 * k));
       b.tellMat.opacity = (0.25 + 0.6 * k) * (0.75 + 0.25 * Math.sin(time * (14 + 20 * k)));
     } else if (b.tell.visible) {
       b.tellMat.opacity = Math.max(0, b.tellMat.opacity - dt * 3);
@@ -609,7 +630,7 @@ export class GuardianView {
     b.waveAge += dt;
     const wm = b.wave.material as THREE.MeshBasicMaterial;
     if (b.waveAge < 0.6) {
-      b.wave.scale.setScalar(0.5 + b.waveAge * (G.slamRadius / 0.6));
+      b.wave.scale.setScalar(0.5 + b.waveAge * (T.slamRadius / 0.6));
       wm.opacity = 0.6 * (1 - b.waveAge / 0.6);
     } else {
       wm.opacity = 0;
