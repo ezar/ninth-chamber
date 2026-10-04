@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CHAMBERS, chamberOf, nextChamber } from '../src/ui/campaign';
-import { chamberState, loadReached, markReached, type ProgressStorage } from '../src/ui/progress';
+import {
+  chamberState,
+  loadEndings,
+  loadReached,
+  markEnding,
+  markReached,
+  type ProgressStorage,
+} from '../src/ui/progress';
 import {
   DEFAULT_LEVEL,
   levelFromQuery,
@@ -49,6 +56,20 @@ describe('campaign progress', () => {
     const playable = new Set(['antechamber', 'cisterns']);
     const states = CHAMBERS.map((c) => chamberState(c, new Set(['antechamber']), playable));
     expect(states).toEqual(['open', 'locked', 'soon', 'soon', 'soon', 'soon', 'soon', 'soon', 'unknown']);
+  });
+
+  it('remembers the endings reached, alongside the chambers', () => {
+    const s = memory();
+    markReached(s, 'cisterns');
+    expect([...loadEndings(s)]).toEqual([]);
+    markEnding(s, 'blank');
+    markEnding(s, 'blank');
+    expect([...loadEndings(s)]).toEqual(['blank']);
+    expect(loadReached(s).has('cisterns')).toBe(true);
+    markReached(s, 'sun_temple');
+    expect([...loadEndings(s)]).toEqual(['blank']);
+    s.data.set('ninth-chamber.campaign', JSON.stringify({ reached: [], endings: ['nonsense', 'keeper'] }));
+    expect([...loadEndings(s)]).toEqual(['keeper']);
   });
 
   it('opens the Root Halls for anyone who already got past them to the Forge', () => {

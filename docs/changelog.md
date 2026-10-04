@@ -1,5 +1,16 @@
 # Changelog
 
+## Version 0.8.5 (2026-10-04): The conjunction timer and the endings
+
+The first of three releases on the way to 0.9.0 (docs/roadmap.md), chamber IX. The owner chose two endings, a real but generous timer, Elena's 1956 letter shown, and the names as final.
+
+- **The conjunction timer**: rules start, extend and stop a countdown (`timer.start 90s`, `timer.add 20s`, `timer.stop`).
+  - The HUD shows it at the top centre, and it turns to ember with a rising tone and a caption in the last ten seconds.
+  - When it runs out Nora falls ("The light of the conjunction faded"). She goes back to the last checkpoint with the time she had there, and never less than a minute.
+  - Save migration 007 (schema 8).
+- **Endings**: `level.end keeper` or `level.end blank` says which ending was reached. The validator knows the endings, and the campaign's progress remembers each one reached.
+- **Tests**: tests/conjunction-timer.test.ts (8) and a new case in tests/progress.test.ts.
+
 ## Version 0.8.1 (2026-10-04): Level validator fix
 
 - The level validator now rejects a tangle whose top is above the ceiling of a cell it covers. Up to the ceiling is still allowed, for full-height barriers. Above it, the roots would go through the rock and the cell could never be crossed.

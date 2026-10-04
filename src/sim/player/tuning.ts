@@ -345,6 +345,17 @@ export const tangle = {
   regrowTime: 6,
 };
 
+/**
+ * The conjunction timer (spec §19, chamber IX; the owner chose a real but
+ * generous one): rules start it for the last run in the conjunction's light.
+ */
+export const conjunction = {
+  /** The countdown warns this long before it runs out (s). */
+  warning: 10,
+  /** Back at a checkpoint after a fall, she always has at least this long (s). */
+  minAfterRespawn: 60,
+};
+
 /** Mild poison from darts (spec §19): it drains health for a while but never kills; a medkit cures it. */
 export const poison = {
   /** Seconds a dart poisons for (a second dart restarts it). */

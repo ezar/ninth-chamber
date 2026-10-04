@@ -382,6 +382,8 @@ export interface DynamicState {
   mechanisms: MechanismState;
   /** Stone guardians (sim/actors/guardian.ts). */
   guardians: GuardianState[];
+  /** The conjunction's countdown (chamber IX), started and stopped by rules; null while off. */
+  timer: { left: number } | null;
 }
 
 export interface Checkpoint {

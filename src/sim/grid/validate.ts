@@ -4,13 +4,13 @@
  * references and placement.
  */
 import { GUARDIAN_ACTIONS, GUARDIAN_SIGNALS } from '../actors/guardian-schema';
-import { exprNames, parseExpr } from '../logic/expr';
+import { exprNames, parseExpr, parseSeconds } from '../logic/expr';
 import { MECHANISM_ACTIONS, isMechanismSignal } from '../mechanisms/schema';
 import { validateMechanisms } from '../mechanisms/validate';
 import { enemyTypes } from '../player/tuning';
 import { key, reachableCells } from './reach';
 import { Level } from './level';
-import { levelSchema } from './schema';
+import { ENDINGS, levelSchema } from './schema';
 
 export interface ValidationResult {
   errors: string[];
@@ -142,8 +142,17 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
     }
     for (const action of rule.do) {
       const [verb = '', ...args] = action.split(/\s+/);
-      if (['flag', 'sfx', 'music', 'checkpoint', 'level.end', 'wait', 'torch.extinguish'].includes(verb))
+      if (['flag', 'sfx', 'music', 'checkpoint', 'wait', 'torch.extinguish', 'timer.stop'].includes(verb))
         continue;
+      if (verb === 'level.end') {
+        if (args[0] !== undefined && !(ENDINGS as readonly string[]).includes(args[0]))
+          errors.push(`rule ${i}: unknown ending '${args[0]}'`);
+        continue;
+      }
+      if (verb === 'timer.start' || verb === 'timer.add') {
+        if (parseSeconds(args[0]) === null) errors.push(`rule ${i}: bad action '${action}'`);
+        continue;
+      }
       if (verb === 'hint') {
         if (i18nKeys && args[0] && !i18nKeys.has(args[0]))
           errors.push(`rule ${i}: missing i18n key '${args[0]}'`);
