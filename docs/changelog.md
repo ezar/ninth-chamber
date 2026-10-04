@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.7.1 (2026-10-04): Observatory fix
+
+- Anzur's phase-2 slams no longer break the floor under the oculus while it is still dark. Before, he could destroy the pool before the three rings lit it, and so take away the only way to stop him.
+
 ## Version 0.7.0 (2026-10-03): Chamber VIII, the Observatory
 
 The last of the three releases on the way to 0.7.0 (docs/roadmap.md): chamber VIII opens.

@@ -115,6 +115,26 @@ describe('Anzur, the giant', () => {
       expect(tileState(w, x as number, z as number).fallen).toBe(false);
   });
 
+  it('never breaks the floor under the oculus before it opens either', () => {
+    const w = hall();
+    runActions(w, ['anzur.wake', 'anzur.advance']);
+    expect(w.state.mechanisms.oculi[0]?.on).toBe(false);
+    // Nora waits in the dark pool; Anzur pounds at her from beside it.
+    const p = w.state.player;
+    p.pos = { x: 1 * 2 + 1, y: 0, z: 1 * 2 + 1 };
+    standAt(w, 3, 2);
+    for (let i = 0; i < ticks(10); i++) {
+      stepWorld(w, frame());
+      for (const [x, z] of [
+        [1, 1],
+        [2, 1],
+        [1, 2],
+        [2, 2],
+      ])
+        expect(tileState(w, x as number, z as number).cracked).toBeNull();
+    }
+  });
+
   it('never falls, even with the floor gone under it', () => {
     const w = hall();
     runActions(w, ['anzur.wake']);
