@@ -12,6 +12,24 @@ import { TOUCH_BUTTONS, type TouchButton, type TouchLayout } from './settings';
 const isTouchButton = (b: string | undefined): b is TouchButton =>
   b !== undefined && (TOUCH_BUTTONS as readonly string[]).includes(b);
 
+/** The offset a button is drawn with (its CSS translate), [0, 0] when none. */
+export function parseOffset(translate: string): [number, number] {
+  // A zero second value is dropped when read back ("-742px 0px" reads "-742px").
+  const m = /^(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?$/.exec(translate.trim());
+  return m ? [Number(m[1]), Number(m[2] ?? 0)] : [0, 0];
+}
+
+/**
+ * Keeps the layout clamped as buttons come and go: a button drawn again after being hidden
+ * (the note reader closes, the torch is found, play starts) changes size, and is clamped
+ * then to the screen it shows on.
+ */
+export function watchTouchLayout(root: HTMLElement, layout: () => TouchLayout): void {
+  if (typeof ResizeObserver === 'undefined') return;
+  const seen = new ResizeObserver(() => applyTouchLayout(root, layout()));
+  for (const el of root.querySelectorAll<HTMLElement>('.tbtn[data-button]')) seen.observe(el);
+}
+
 /** The part of an offset that keeps a button (its box at its own place) wholly on screen. */
 export function clampOffset(
   home: { left: number; top: number; right: number; bottom: number },
@@ -136,7 +154,8 @@ export class TouchLayoutEditor {
     const el = (e.target as Element | null)?.closest<HTMLElement>('.tbtn[data-button]');
     const button = el?.dataset.button;
     if (!el || !isTouchButton(button) || this.drag) return;
-    const from = this.layout[button] ?? [0, 0];
+    // From where the button is drawn: a saved offset may have been clamped to this screen.
+    const from = parseOffset(el.style.translate);
     const box = el.getBoundingClientRect();
     this.drag = {
       id: e.pointerId,
