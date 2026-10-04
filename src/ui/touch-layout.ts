@@ -12,12 +12,42 @@ import { TOUCH_BUTTONS, type TouchButton, type TouchLayout } from './settings';
 const isTouchButton = (b: string | undefined): b is TouchButton =>
   b !== undefined && (TOUCH_BUTTONS as readonly string[]).includes(b);
 
-/** Draws each button where the layout puts it. */
+/** The part of an offset that keeps a button (its box at its own place) wholly on screen. */
+export function clampOffset(
+  home: { left: number; top: number; right: number; bottom: number },
+  o: readonly [number, number],
+  width: number,
+  height: number,
+): [number, number] {
+  const x = Math.min(width - home.right, Math.max(-home.left, o[0]));
+  const y = Math.min(height - home.bottom, Math.max(-home.top, o[1]));
+  return [Math.round(x), Math.round(y)];
+}
+
+/**
+ * Draws each button where the layout puts it, as far as the screen allows: a layout made
+ * on another screen, in the other orientation or with smaller buttons stays on screen. The
+ * saved layout is not changed. Buttons not drawn now (outside play) are clamped next time.
+ */
 export function applyTouchLayout(root: HTMLElement, layout: TouchLayout): void {
   for (const el of root.querySelectorAll<HTMLElement>('.tbtn[data-button]')) {
     const b = el.dataset.button;
     const o = isTouchButton(b) ? layout[b] : undefined;
-    el.style.translate = o ? `${o[0]}px ${o[1]}px` : '';
+    if (!o) {
+      el.style.translate = '';
+      continue;
+    }
+    el.style.translate = `${o[0]}px ${o[1]}px`;
+    const box = el.getBoundingClientRect();
+    if (box.width === 0) continue;
+    const home = {
+      left: box.left - o[0],
+      top: box.top - o[1],
+      right: box.right - o[0],
+      bottom: box.bottom - o[1],
+    };
+    const [x, y] = clampOffset(home, o, window.innerWidth, window.innerHeight);
+    el.style.translate = `${x}px ${y}px`;
   }
 }
 
@@ -41,13 +71,21 @@ export class TouchLayoutEditor {
     root.addEventListener('pointermove', (e) => this.move(e), { capture: true });
     root.addEventListener('pointerup', (e) => this.up(e), { capture: true });
     root.addEventListener('pointercancel', (e) => this.up(e), { capture: true });
-    window.addEventListener('keydown', (e) => {
-      if (this.open && e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        this.finish();
-      }
-    });
+    // Capture phase on the window, and stopImmediatePropagation: while the editor is open no key
+    // reaches the menu or the game underneath (Escape would back out of Options too). Enter, Space
+    // and Tab still work the editor's own buttons.
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if (!this.open) return;
+        e.stopImmediatePropagation();
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          this.finish();
+        }
+      },
+      { capture: true },
+    );
   }
 
   get open(): boolean {

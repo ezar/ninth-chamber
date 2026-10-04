@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.9.7 (2026-10-04): Touch layout fixes
+
+- **Moved touch buttons stay on screen.** A saved layout is drawn only as far as the screen allows. It is checked again when the game starts, on every resize and rotation, and after the button size changes. The saved layout itself is not changed, so turning the phone back restores it.
+- **Escape closes only the touch editor.** It no longer also backs out of Options. While the editor is open, no key reaches the menu or the game.
+- **Tests**: tests/touch-layout.test.ts.
+
 ## Version 0.9.6 (2026-10-04): Accessibility and the whole campaign
 
 The second release on the way to 1.0 (docs/roadmap.md).

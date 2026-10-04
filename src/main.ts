@@ -342,6 +342,8 @@ async function main(): Promise<void> {
     phase = p;
     document.body.dataset.phase = p;
     document.body.classList.toggle('playing', p === 'play');
+    // The touch buttons are drawn again now they show: a saved layout is clamped to this screen.
+    if (p === 'play') applyTouchLayout($('#touch'), settings.touchLayout);
     // The music director follows the phase: title theme, intro, the tomb's silences, the end.
     audio.setMusicPhase(p);
   };
@@ -1021,6 +1023,7 @@ async function main(): Promise<void> {
   });
 
   window.addEventListener('resize', () => {
+    applyTouchLayout($('#touch'), settings.touchLayout);
     renderer.resize();
     redraw = true;
   });
