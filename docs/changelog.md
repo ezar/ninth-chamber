@@ -10,6 +10,11 @@ The second of three releases on the way to 0.9.0.
   - _The Bare Segment_: the seal drawn with the ninth segment still bare.
   - Each ending has its three lines and the note Nora writes at the end. The bare segment carries Elena's signature, "E. V. — 1956", beside Nora's.
 - **The credits roll**: a Credits button on the campaign's last end screen. The roll lists the eight keepers and the credits, says thank you, and ends on the ending's signatures. It plays to the title's theme, any key closes it, and with reduced motion it is a still list.
+- **The monuments of chamber IX**, as procedural stand-ins until the owner's models arrive:
+  - `statue`: one of the eight keepers in stone, holding its chamber's relic in that chamber's light, or the empty ninth pedestal. Its cell is solid.
+  - `seal`: the great seal of the nine on a wall. Its ninth segment is an outline that fills with amber light once its lever is used.
+  - A lever can name what Action does there (`prompt`): at the seal, "Carve your name".
+  - The validator checks the seal's wall and lever and the prompt's text.
 - **Campaign**: chamber IX has its entry (intro, notes, endings). It shows as coming until its level arrives in 0.9.0.
 - **Texts** in English, Spanish and Catalan:
   - the promise on the empty pedestal;
