@@ -13,7 +13,7 @@ The second of three releases on the way to 0.9.0.
 - **The monuments of chamber IX**, as procedural stand-ins until the owner's models arrive:
   - `statue`: one of the eight keepers in stone, holding its chamber's relic in that chamber's light, or the empty ninth pedestal. Its cell is solid.
   - `seal`: the great seal of the nine on a wall. Its ninth segment is an outline that fills with amber light once its lever is used.
-  - A lever can name what Action does there (`prompt`): at the seal, "Carve your name".
+  - A lever can name what Action does there (`prompt`): at the seal, "Write your name in the ninth segment".
   - The validator checks the seal's wall and lever and the prompt's text.
 - **Campaign**: chamber IX has its entry (intro, notes, endings). It shows as coming until its level arrives in 0.9.0.
 - **Texts** in English, Spanish and Catalan:
