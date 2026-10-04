@@ -20,6 +20,10 @@ const $ = (id: string): HTMLElement => {
 const ROLL_SECONDS = 75;
 /** Input this soon after it opens does not close it (the button press that opened it). */
 const GRACE = 0.8;
+/** A pointer that moves less than this (px) between down and up is a tap, not a scroll. */
+const TAP = 10;
+/** Keys that scroll the still list instead of closing it. */
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
 
 export class CreditsRoll {
   private readonly root = $('roll');
@@ -28,13 +32,33 @@ export class CreditsRoll {
   private onClose: () => void = () => {};
 
   constructor(private readonly cue: (type: string, data?: Record<string, unknown>) => void) {
-    this.root.addEventListener('pointerdown', () => this.tryClose());
+    // Rolling, any touch closes it. As a still list (reduced motion) it scrolls by hand, so only
+    // a tap closes it, and the keys that scroll keep scrolling.
+    let down: { x: number; y: number } | null = null;
+    this.root.addEventListener('pointerdown', (e) => {
+      if (!this.still) this.tryClose();
+      else down = { x: e.clientX, y: e.clientY };
+    });
+    this.root.addEventListener('pointerup', (e) => {
+      if (this.still && down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < TAP) this.tryClose();
+      down = null;
+    });
+    this.root.addEventListener('pointercancel', () => (down = null));
     this.track.addEventListener('animationend', () => this.close());
     window.addEventListener('keydown', (e) => {
       if (!this.visible || e.repeat) return;
+      if (this.still && SCROLL_KEYS.has(e.key)) return;
       e.preventDefault();
       this.tryClose();
     });
+  }
+
+  /** Shown as a still list, scrolled by hand: the system's or the game's reduced motion. */
+  private get still(): boolean {
+    return (
+      document.documentElement.classList.contains('reduce-motion') ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    );
   }
 
   get visible(): boolean {
@@ -70,7 +94,14 @@ export class CreditsRoll {
   }
 
   pad(p: PadEdges): void {
-    if (this.visible && p.any) this.tryClose();
+    if (!this.visible) return;
+    if (!this.still) {
+      if (p.any) this.tryClose();
+      return;
+    }
+    // The still list: up and down scroll it, a button closes it.
+    if (p.up || p.down) this.root.scrollBy({ top: (p.down ? 1 : -1) * this.root.clientHeight * 0.4 });
+    if (p.confirm || p.back) this.tryClose();
   }
 
   private tryClose(): void {

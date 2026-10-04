@@ -23,6 +23,12 @@ The first release on the way to 1.0 (docs/roadmap.md, rewritten for 1.0).
   - `tests/golden-replays.test.ts` plays every replay back on a fresh world. A difference names the first stretch of 60 ticks that diverged.
   - `pnpm replay:update` records them again after an intended change. It refuses a walkthrough that changes the world by any means other than input.
 - **Reachability check fix**: a running jump no longer passes through a step taller than a grab. The comment promised it, but only the ceiling was checked. The wind room's step showed it, and tests/reach.test.ts now covers it.
+- **Fixes from review of 0.8.5 and 0.8.6**:
+  - _Continue_ resumes the conjunction timer with the time saved. Before, it gave back the minute meant for falls.
+  - Quitting to the title hides the countdown.
+  - The credits honour the game's own Reduced motion option, not only the system's.
+  - As a still list, the credits scroll by touch, keys and the d-pad. A tap, another key or a button closes them.
+  - Chamber IX's statues and seal are culled room by room, like the rest of the set dressing.
 - **Tests**: four new cases in tests/ninth-chamber.test.ts, one in tests/reach.test.ts, and the golden replays.
 
 ## Version 0.9.0 (2026-10-04): Chamber IX, the Ninth Chamber

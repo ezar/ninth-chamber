@@ -122,6 +122,8 @@ export function restore(level: Level, data: SaveData, seed = 1): World | null {
   // The resume point goes through the respawn, which settles the player and the mechanisms.
   world.checkpoint = clone(game.resume);
   respawn(world);
+  // The countdown resumes as it was saved: the minimum after a fall is for falls, not for Continue.
+  world.state.timer = clone(game.resume.timer);
   world.checkpoint = clone(game.checkpoint);
   world.events.drain();
   return world;
