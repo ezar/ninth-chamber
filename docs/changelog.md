@@ -1,5 +1,34 @@
 # Changelog
 
+## Version 0.8.0 (2026-10-04): Chamber V, the Root Halls
+
+The last of the three releases on the way to 0.8.0 (docs/roadmap.md): chamber V opens, and the campaign now runs I to VIII in order.
+
+- **The Root Halls** (`levels/root_halls.level.json`, spec §19): ten rooms under the sunken forest.
+  1. The rift: the way in, split by a giant root. A torch still burns there, and the first note waits.
+  2. The first wall: a safe 5 m wall of roots that teaches climbing.
+  3. The gallery of tangles: the torch against the roots for the first time. A mat of roots over a hole in the floor opens only when the torch is held over it (jade idol).
+  4. The scorpions' nest: a pack in the dark, and a strip of root floor that gives way.
+  5. The pool of roots: a dive under a wall of rock, between drowned roots. Beyond a drowned tunnel lies a chamber under the pool with air in it (gold idol). The water puts the torch out, so there is a brazier on the far bank.
+  6. The split hall: half of it sank. A pillar of roots is the only way up the step, and the torch in hand takes it away. A tangle closes the way out above.
+  7. The root bridge: a root squeezed against the rock over a chasm of thorns. Nora crosses along its face.
+  8. The forest vault: green light through the cracks, two scorpions and the second note. Behind a curtain of roots, a face climbs to a niche (stone idol).
+  9. Erreth's trunk: a 16 m climb up the petrified tree. Three layers of roots close below her on a timer, never onto her.
+  10. The heart of the tree: the Stone Seed and the last note.
+- **Campaign**:
+  - Chamber V gets its entry, with the seed figure and a music palette.
+  - Players who already reached a later chamber find V open.
+  - Three of the owner's texts change now that V sits between IV and VI: the Archive's teaser, the first line of the Forge's intro, and the Forge's last line, which now names the way through.
+- **Looks and light**: ten looks in moss green and amber, with filtered daylight and damp, and a baked lightmap.
+- **Tangles** can start sealed or parted (`hold`), so rules can hold them until the right moment.
+- **Tests**:
+  - tests/root-halls.test.ts: the bot plays the whole chamber with every secret and no deaths, and four checks that each puzzle is needed and has no dead end.
+  - New bot helpers for climbing.
+- **Found and fixed while building it**:
+  - The exits of rooms with a raised floor were at the lower height.
+  - The root bridge had no way off at the far end.
+  - The gold idol first sat under water, where nothing can be picked up.
+
 ## Version 0.7.6 (2026-10-04): Tangles, scorpions and root floors
 
 The second of three releases on the way to 0.8.0 (docs/roadmap.md).
