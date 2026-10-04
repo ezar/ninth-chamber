@@ -7,6 +7,7 @@
  * jump takes her back off the face.
  */
 import { blocks, distanceToEdge } from '../../grid/collision';
+import { sectorTop } from '../../grid/level';
 import type { SectorFlag } from '../../grid/schema';
 import { BLOCK, DIR_VEC, OPPOSITE, RIGHT_OF, yawToDir, type Dir } from '../../grid/units';
 import { tangleAt } from '../../mechanisms/tangles';
@@ -24,6 +25,19 @@ export function climbableFace(world: World, cx: number, cz: number, look: Dir): 
   return (world.level.sector(cx, cz)?.flags.has(FLAG[look]) ?? false) || tangleAt(world, cx, cz) !== null;
 }
 
+/**
+ * Top of a climbable face (m): a grown tangle's top, or the sector's own top
+ * (its ceiling for solid rock). Static geometry only: a block, door or
+ * platform in the cell adds no handholds.
+ */
+function faceTop(world: World, cx: number, cz: number): number {
+  const roots = tangleAt(world, cx, cz);
+  if (roots) return roots.top;
+  const s = world.level.sector(cx, cz);
+  if (!s) return -Infinity;
+  return s.wall ? s.ceil : sectorTop(s);
+}
+
 /** The cell in front of a point, looking `dir`. */
 function cellAhead(x: number, z: number, dir: Dir): { cx: number; cz: number } {
   const v = DIR_VEC[dir];
@@ -36,7 +50,7 @@ function faceAhead(world: World, dir: Dir): boolean {
   const w = cellAhead(p.pos.x, p.pos.z, dir);
   if (!climbableFace(world, w.cx, w.cz, OPPOSITE[dir])) return false;
   if (distanceToEdge(p.pos.x, p.pos.z, dir) - tuning.radius > W.reach) return false;
-  return world.grid.cellFloor(w.cx, w.cz) - (p.pos.y + tuning.handHeight) >= W.minAbove;
+  return faceTop(world, w.cx, w.cz) - (p.pos.y + tuning.handHeight) >= W.minAbove;
 }
 
 /** She stands facing a face she can get on with Action (the HUD prompts it). */
@@ -133,7 +147,7 @@ export function wall(c: Ctx): void {
 
 function climbUp(c: Ctx, dir: Dir, w: { cx: number; cz: number }, k: number): void {
   const { p, q } = c;
-  const top = q.cellFloor(w.cx, w.cz);
+  const top = faceTop(c.world, w.cx, w.cz);
   let y = p.pos.y + k * W.up * c.dt;
   if (y + tuning.handHeight >= top) {
     // The top edge: she hangs from it if it can be held, and stops below it otherwise.
@@ -173,7 +187,7 @@ function climbSide(c: Ctx, dir: Dir, sign: number): void {
   const lz = nz + sv.z * sign * tuning.radius;
   const w = cellAhead(lx, lz, dir);
   if (!climbableFace(c.world, w.cx, w.cz, OPPOSITE[dir])) return;
-  if (q.cellFloor(w.cx, w.cz) < p.pos.y + tuning.handHeight) return;
+  if (faceTop(c.world, w.cx, w.cz) < p.pos.y + tuning.handHeight) return;
   // And her body must fit in the cell it moves into.
   if (blocks(q, Math.floor(lx / BLOCK), Math.floor(lz / BLOCK), p.pos.y, tuning.height, 0)) return;
   p.pos.x = nx;
