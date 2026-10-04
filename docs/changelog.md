@@ -1,5 +1,25 @@
 # Changelog
 
+## Version 0.9.5 (2026-10-04): The Ninth Chamber in full, its own music, golden replays
+
+The first release on the way to 1.0 (docs/roadmap.md, rewritten for 1.0).
+
+- **The Ninth Chamber in full** (spec §19 asks for traps that combine everything before). Each echo room gains a second beat that mixes mechanisms:
+  - _the dome_: the ring on its mark and a block pushed onto the new moon; the door wants both;
+  - _the wind_: above the updraught, a bridge one block wide over a pit, with gusts from the side (a fall costs a climb, not a life);
+  - _the bronze_: past the cast bridge, a band of floor that burns in turns;
+  - _the roots_: scorpions at the foot of the wall;
+  - _the glyphs_: two locks, the eye and the star;
+  - _the mirrors_: two mirrors, the high one sending the light on to the door;
+  - _the blades_: a twelfth room in the run under the conjunction's light, with two blades swinging in turn.
+  - Nora's remarks and the hints follow, in English, Spanish and Catalan; the lightmap is baked again.
+- **Golden replays** (spec §16):
+  - Each chamber's golden path is recorded as the bot's input frames in `tests/replays/<level>.replay.json.gz`, with the world's hash every 60 ticks.
+  - `tests/golden-replays.test.ts` plays every replay back on a fresh world. A difference names the first stretch of 60 ticks that diverged.
+  - `pnpm replay:update` records them again after an intended change. It refuses a walkthrough that changes the world by any means other than input.
+- **Reachability check fix**: a running jump no longer passes through a step taller than a grab. The comment promised it, but only the ceiling was checked. The wind room's step showed it, and tests/reach.test.ts now covers it.
+- **Tests**: four new cases in tests/ninth-chamber.test.ts, one in tests/reach.test.ts, and the golden replays.
+
 ## Version 0.9.0 (2026-10-04): Chamber IX, the Ninth Chamber
 
 The last of the three releases on the way to 0.9.0 (docs/roadmap.md): the campaign is complete, I to IX.
