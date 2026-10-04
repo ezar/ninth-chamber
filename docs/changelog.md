@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.8.1 (2026-10-04): Level validator fix
+
+- The level validator now rejects a tangle whose top is above the ceiling of a cell it covers. Up to the ceiling is still allowed, for full-height barriers. Above it, the roots would go through the rock and the cell could never be crossed.
+
 ## Version 0.8.0 (2026-10-04): Chamber V, the Root Halls
 
 The last of the three releases on the way to 0.8.0 (docs/roadmap.md): chamber V opens, and the campaign now runs I to VIII in order.

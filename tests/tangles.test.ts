@@ -213,6 +213,9 @@ describe('tangles of roots', () => {
     expect(errs(4, [2, 1])).toEqual([]);
     expect(errs(0, [2, 1])).toEqual(["tangle 'roots': its top is not above the floor at 2,1"]);
     expect(errs(4, [0, 1])).toEqual(["tangle 'roots' grows into a wall at 0,1"]);
+    // Up to the ceiling (12 clicks) is a full-height barrier; above it is an error.
+    expect(errs(12, [2, 1])).toEqual([]);
+    expect(errs(13, [2, 1])).toEqual(["tangle 'roots': its top is above the ceiling at 2,1"]);
   });
 
   it('can start parted, waiting for a rule to seal it', () => {
