@@ -28,12 +28,18 @@ function cellAhead(x: number, z: number, dir: Dir): { cx: number; cz: number } {
 }
 
 /** A climbable face in front of her, within reach and tall enough to climb (not just a ledge). */
-function faceAhead(c: Ctx, dir: Dir): boolean {
-  const { p, q } = c;
+function faceAhead(world: World, dir: Dir): boolean {
+  const p = world.state.player;
   const w = cellAhead(p.pos.x, p.pos.z, dir);
-  if (!climbableFace(c.world, w.cx, w.cz, OPPOSITE[dir])) return false;
+  if (!climbableFace(world, w.cx, w.cz, OPPOSITE[dir])) return false;
   if (distanceToEdge(p.pos.x, p.pos.z, dir) - tuning.radius > W.reach) return false;
-  return q.cellFloor(w.cx, w.cz) - (p.pos.y + tuning.handHeight) >= W.minAbove;
+  return world.grid.cellFloor(w.cx, w.cz) - (p.pos.y + tuning.handHeight) >= W.minAbove;
+}
+
+/** She stands facing a face she can get on with Action (the HUD prompts it). */
+export function wallInReach(world: World): boolean {
+  const p = world.state.player;
+  return p.mode === 'ground' && faceAhead(world, yawToDir(p.yaw));
 }
 
 function startWall(c: Ctx, dir: Dir, y: number): void {
@@ -57,7 +63,7 @@ function startWall(c: Ctx, dir: Dir, y: number): void {
 /** From the floor: Action facing a climbable face. */
 export function tryGetOnWall(c: Ctx): boolean {
   const dir = yawToDir(c.p.yaw);
-  if (!faceAhead(c, dir)) return false;
+  if (!faceAhead(c.world, dir)) return false;
   startWall(c, dir, c.p.pos.y + W.lift);
   return true;
 }
@@ -68,7 +74,7 @@ export function tryCatchWall(c: Ctx): boolean {
   if (p.sinceRelease < tuning.regrabDelay) return false;
   if (!c.held('action') && !p.jumped) return false;
   const dir = yawToDir(p.yaw);
-  if (!faceAhead(c, dir)) return false;
+  if (!faceAhead(c.world, dir)) return false;
   if (p.pos.y <= c.q.floorAt(p.pos.x, p.pos.z) + 0.05) return false;
   startWall(c, dir, p.pos.y);
   return true;

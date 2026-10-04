@@ -116,6 +116,7 @@ export class Haptics {
         break;
       }
       case 'player.grabbed':
+      case 'player.onWall':
         this.play({ phone: 14, strong: 0.15, weak: 0.45, ms: 60 });
         break;
       case 'player.hurt':

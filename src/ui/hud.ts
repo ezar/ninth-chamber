@@ -4,6 +4,7 @@
  * death fade. It only listens to sim events (the end of the level has its own
  * screen, ui/end-screen.ts).
  */
+import { wallInReach } from '../sim/player/modes/wall';
 import { actionLabel } from './control-labels';
 import type { SimEvent } from '../core/events';
 import { BLOCK, DIR_VEC, yawToDir } from '../sim/grid/units';
@@ -200,6 +201,7 @@ export class Hud {
       if (a.kind === 'torch' && !a.taken) return 'prompt.pickup';
     }
     if (brazierInReach(world)) return 'prompt.lightTorch';
+    if (wallInReach(world)) return 'prompt.climb';
     const v = DIR_VEC[yawToDir(p.yaw)];
     const b = blockAt(world, cx + v.x, cz + v.z);
     if (b && Math.abs(b.y - p.pos.y) < 0.05) {

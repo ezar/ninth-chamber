@@ -51,6 +51,7 @@
   "prompt.pickup": "Recoger",
   "prompt.block": "Agarrar el bloque",
   "prompt.lightTorch": "Encender la antorcha",
+  "prompt.climb": "Trepar",
   "end.time": "Tiempo",
   "end.secrets": "Secretos",
   "end.deaths": "Muertes",

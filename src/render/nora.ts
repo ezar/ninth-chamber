@@ -41,6 +41,8 @@ export interface NoraPose {
   use?: 'mirror' | 'slot' | null;
   /** Standing on a moving platform: her planted feet travel with it. */
   riding?: boolean;
+  /** On a climbable wall: distance climbed along it (m), which drives the climbing cycle. */
+  climbPhase?: number;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1864,6 +1866,9 @@ export class NoraModel {
       case 'climb':
         this.evalClimb(pose, out);
         break;
+      case 'wall':
+        this.evalWall(pose, out);
+        break;
       case 'block':
       case 'push':
       case 'pull':
@@ -2295,6 +2300,47 @@ export class NoraModel {
       p.curl[s < 0 ? 0 : 1] = 1.05;
       const ls = Math.sin(t * 1.3 + (s > 0 ? 0 : 1.7));
       this.legFK(p, sd, (s > 0 ? 0.12 : -0.02) + 0.04 * ls - sway * 0.5, 0.04, s > 0 ? 0.38 : 0.2, -0.45);
+    }
+  }
+
+  /**
+   * On a wall of roots: hands and feet on the face, each hand reaching up in
+   * turn as she moves, the foot on the other side stepping with it. A stand-in
+   * until the Mixamo climbing clips arrive.
+   */
+  private evalWall(pose: NoraPose, p: Pose): void {
+    const t = pose.modeTime;
+    // One hand reaches every 0.45 m climbed.
+    const u = ((pose.climbPhase ?? 0) / 0.45) * Math.PI;
+    const breath = 0.008 * Math.sin(t * 2.2);
+    p.pos.set(0, HIPS_Y - 0.06 + breath, 0.02);
+    this.rot(p, HIPS, 0.16, 0, 0.05 * Math.sin(u));
+    this.rot(p, SPINE, -0.04, 0, -0.04 * Math.sin(u));
+    this.rot(p, CHEST, -0.06, 0, 0);
+    this.rot(p, NECK, 0.14, 0, 0);
+    this.rot(p, HEAD, 0.32, 0.06 * Math.sin(u), 0);
+    for (const sd of SIDES) {
+      const s = sd.s;
+      const ph = Math.sin(u + (s > 0 ? 0 : Math.PI));
+      this.clav(p, sd, 0.16 + 0.08 * ph, 0.02);
+      this.armIK(
+        p,
+        sd,
+        _v1.set(s * 0.24, 1.72 + 0.22 * ph, -0.29).clone(),
+        new THREE.Vector3(s * 0.9, -0.3, 0.4),
+        new THREE.Vector3(0, 1, -0.2),
+        new THREE.Vector3(0, 0.1, -1),
+      );
+      p.curl[s < 0 ? 0 : 1] = 1.0;
+      // Feet on the face, knees out; each steps up opposite its hand.
+      this.legIK(
+        p,
+        sd,
+        _v2.set(s * 0.17, 0.26 - 0.16 * ph, -0.2).clone(),
+        -0.5,
+        0,
+        new THREE.Vector3(s * 0.7, 0, -0.7),
+      );
     }
   }
 

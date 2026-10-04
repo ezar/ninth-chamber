@@ -568,6 +568,7 @@ export class AudioGraph {
         break;
       }
       case 'player.grabbed':
+      case 'player.onWall':
       case 'rope.grabbed':
         this.play('sfx', null, (s, t) => {
           if (this.ready('hand.stone', 'cloth.move')) {

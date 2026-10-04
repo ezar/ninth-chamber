@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TICK_DT } from '../src/core/loop';
+import { wallInReach } from '../src/sim/player/modes/wall';
 import { tuning, wallClimb as W } from '../src/sim/player/tuning';
 import type { World } from '../src/sim/world';
 import { frame, run, runUntil, testLevel } from './helpers';
@@ -180,5 +181,15 @@ describe('climbing walls', () => {
     getOn(w);
     run(w, up, 2);
     expect(p.torch.stowed).toBe(true);
+  });
+
+  it('tells the HUD when a face can be climbed', () => {
+    const w = rootWall();
+    expect(wallInReach(w)).toBe(false);
+    runUntil(w, up, (x) => x.state.player.pos.z < 2 * 2 + tuning.radius + 0.05, 120);
+    run(w, idle, 1);
+    expect(wallInReach(w)).toBe(true);
+    w.state.player.yaw = Math.PI;
+    expect(wallInReach(w)).toBe(false);
   });
 });
