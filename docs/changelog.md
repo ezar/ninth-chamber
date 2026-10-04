@@ -19,7 +19,8 @@ The last of the three releases on the way to 0.8.0 (docs/roadmap.md): chamber V 
   - Chamber V gets its entry, with the seed figure and a music palette.
   - Players who already reached a later chamber find V open.
   - Three of the owner's texts change now that V sits between IV and VI: the Archive's teaser, the first line of the Forge's intro, and the Forge's last line, which now names the way through.
-- **Looks and light**: ten looks in moss green and amber, with filtered daylight and damp, and a baked lightmap.
+- **Looks and light**: ten looks in moss green and amber, with filtered daylight and damp, and a baked lightmap. The stone keeps the shared texture: its green comes from the light until the root kit and a mossy stone arrive. A brazier in the scorpions' nest keeps it readable.
+- **Reference shots**: `pnpm shots` no longer stands Nora on a deadly floor, which killed her in the bridge's chasm and spoiled the shots after it.
 - **Tangles** can start sealed or parted (`hold`), so rules can hold them until the right moment.
 - **Tests**:
   - tests/root-halls.test.ts: the bot plays the whole chamber with every secret and no deaths, and four checks that each puzzle is needed and has no dead end.

@@ -1,11 +1,11 @@
 {
   "id": "roots_trunk",
   "background": "#060a06",
-  "exposure": 1.1,
+  "exposure": 1.3,
   "hemi": {
-    "sky": "#7f9a6c",
+    "sky": "#8fb07a",
     "ground": "#141008",
-    "intensity": 0.34
+    "intensity": 0.5
   },
   "fog": {
     "color": "#2e4228",
@@ -27,10 +27,10 @@
     "threshold": 0.8
   },
   "grade": {
-    "tint": "#d6e8bc",
-    "saturation": 0.78,
+    "tint": "#c6e2a6",
+    "saturation": 0.92,
     "contrast": 1.12,
     "vignette": 0.42
   },
-  "fill": 1.1
+  "fill": 1.6
 }

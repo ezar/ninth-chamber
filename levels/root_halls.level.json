@@ -428,6 +428,12 @@
       "size": "small"
     },
     {
+      "id": "brazier_nest",
+      "type": "brazier",
+      "room": "nest",
+      "at": [9, 1]
+    },
+    {
       "id": "z_pool",
       "type": "zone",
       "room": "pool",

@@ -103,7 +103,7 @@ export async function openLevel(
 /** The level's rooms with a standing cell in each (its most central open floor). */
 export async function roomStands(page: Page): Promise<{ id: string; cx: number; cz: number }[]> {
   return page.evaluate(() => {
-    type Sector = { wall: boolean; pit: boolean; room: string };
+    type Sector = { wall: boolean; pit: boolean; room: string; flags: ReadonlySet<string> };
     const nc = (
       window as unknown as {
         __nc: {
@@ -126,7 +126,8 @@ export async function roomStands(page: Page): Promise<{ id: string; cx: number; 
       for (let cz = r.minZ; cz < r.maxZ; cz++)
         for (let cx = r.minX; cx < r.maxX; cx++) {
           const s = lv.sector(cx, cz);
-          if (!s || s.wall || s.pit || s.room !== r.id) continue;
+          // Never on a deadly floor (spikes, thorns): she would die before the shot.
+          if (!s || s.wall || s.pit || s.flags.has('death') || s.room !== r.id) continue;
           if (!Number.isFinite(nc.world.grid.floorAt(cx * 2 + 1, cz * 2 + 1))) continue;
           const d = Math.hypot(cx + 0.5 - mx, cz + 0.5 - mz);
           if (!best || d < best.d) best = { cx, cz, d };
