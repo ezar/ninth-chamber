@@ -23,6 +23,12 @@ export const SECTOR_FLAGS = [
 export const FACINGS = ['N', 'E', 'S', 'W'] as const;
 /** The audio's reverb presets a room can name (audio/reverb.ts): an unknown one breaks the mixer. */
 export const REVERBS = ['stone_small', 'stone_medium', 'hall_large', 'water_cistern'] as const;
+/**
+ * How the campaign can end (chamber IX, spec §19; the owner chose two endings): Nora writes her
+ * name in the ninth segment and stays as its keeper, or leaves it blank as her grandmother did.
+ */
+export const ENDINGS = ['keeper', 'blank'] as const;
+export type Ending = (typeof ENDINGS)[number];
 /** How a journal note is presented: a typed expedition log, a handwritten page or a carving. */
 export const NOTE_STYLES = ['diary', 'letter', 'carving'] as const;
 

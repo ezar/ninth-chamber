@@ -39,7 +39,7 @@ import { PlaytestLog, clearSessions, exportLog, loadSessions } from './ui/playte
 import { browserSaveStore } from './ui/save-store';
 import { inventoryEntries } from './ui/inventory';
 import { setLabelBindings } from './ui/control-labels';
-import { browserProgressStorage, loadReached, markReached } from './ui/progress';
+import { browserProgressStorage, loadReached, markEnding, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
 import { CaptionView } from './ui/caption-view';
 import { applyStaticStrings, isStringKey, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
@@ -938,6 +938,8 @@ async function main(): Promise<void> {
       // The next chamber is reached: the map opens it, and the end screen offers it.
       const next = nextChamber(level.id)?.level;
       if (next && playable.has(next)) markReached(progress, next);
+      // The Ninth Chamber's ending is remembered with the campaign's progress.
+      if (world.ending) markEnding(progress, world.ending);
       endScreen.show(world, (id) => playable.has(id));
       playtest.save();
     }

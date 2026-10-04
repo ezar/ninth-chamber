@@ -2,6 +2,7 @@
  * Declarative level logic (spec §8): `when → do` rules over named signals
  * and flags. Rules fire on the rising edge of their condition.
  */
+import { ENDINGS } from '../grid/schema';
 import { alertEnemy } from '../actors/enemies';
 import { guardianAction } from '../actors/guardian';
 import type { RuleFile } from '../grid/schema';
@@ -99,9 +100,24 @@ function runAction(world: World, verb: string, args: string[]): void {
     case 'checkpoint':
       saveCheckpoint(world);
       return;
-    case 'level.end':
+    case 'level.end': {
+      // `level.end <ending>`: the Ninth Chamber says which ending was reached.
+      const ending = ENDINGS.find((x) => x === args[0]) ?? null;
       world.ended = true;
-      world.events.emit({ type: 'level.end', tick });
+      world.ending = ending;
+      world.events.emit({ type: 'level.end', tick, ending });
+      return;
+    }
+    case 'timer.start':
+      world.state.timer = { left: parseSeconds(args[0]) ?? 0 };
+      world.events.emit({ type: 'timer.started', tick, left: world.state.timer.left });
+      return;
+    case 'timer.add':
+      if (world.state.timer) world.state.timer.left += parseSeconds(args[0]) ?? 0;
+      return;
+    case 'timer.stop':
+      if (world.state.timer) world.events.emit({ type: 'timer.stopped', tick, left: world.state.timer.left });
+      world.state.timer = null;
       return;
     case 'torch.extinguish':
       extinguishTorch(world, 'rule');

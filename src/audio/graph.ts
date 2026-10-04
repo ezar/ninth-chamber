@@ -984,6 +984,10 @@ export class AudioGraph {
         });
         m.duck(1);
         break;
+      // The conjunction's light fading: a rising tone, like the flutes before a gust.
+      case 'timer.warn':
+        this.play('sfx', null, (s, t) => sfx.fluteRise(s, t, 2, 440));
+        break;
       case 'tangle.shrink':
         this.play('sfx', at, (s, t) => sfx.rootCreak(s, t));
         break;

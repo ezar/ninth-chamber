@@ -55,6 +55,7 @@ const CAPTIONS: Record<string, CaptionDef> = {
   'flare.out': { key: 'caption.flareOut' },
   'tangle.shrink': { key: 'caption.tangleShrink', quiet: 3 },
   'tangle.closed': { key: 'caption.tangleGrow', quiet: 4 },
+  'timer.warn': { key: 'caption.timerWarn', trap: true },
 };
 
 const ENEMY_CAPTIONS: Record<string, Partial<Record<string, StringKey>>> = {

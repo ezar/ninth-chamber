@@ -10,6 +10,7 @@ import { migrate003 } from './003';
 import { migrate004 } from './004';
 import { migrate005 } from './005';
 import { migrate006 } from './006';
+import { migrate007 } from './007';
 
 export type Migration = (save: Record<string, unknown>) => Record<string, unknown>;
 
@@ -19,6 +20,7 @@ export type Migration = (save: Record<string, unknown>) => Record<string, unknow
 /** 004: schema 4 → 5 (0.5.5, the Wind Stair's wind zones). */
 /** 005: schema 5 → 6 (0.6.5, the Observatory's rings and oculus). */
 /** 006: schema 6 → 7 (0.7.6, the Root Halls' tangles of roots). */
+/** 007: schema 7 → 8 (0.8.5, the Ninth Chamber's conjunction timer). */
 export const MIGRATIONS: readonly Migration[] = [
   migrate001,
   migrate002,
@@ -26,4 +28,5 @@ export const MIGRATIONS: readonly Migration[] = [
   migrate004,
   migrate005,
   migrate006,
+  migrate007,
 ];

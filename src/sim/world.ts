@@ -19,7 +19,9 @@ import { createGuardians, resetGuardians, updateGuardians } from './actors/guard
 import { createMechanisms, mechanismFloor, resetMechanisms, updateMechanisms } from './mechanisms';
 import { stepPlayer } from './player/controller';
 import { newTorch } from './player/torch';
-import { flares, mechanics, swimming, tuning } from './player/tuning';
+import { conjunction, flares, mechanics, swimming, tuning } from './player/tuning';
+import { killPlayer } from './player/context';
+import type { Ending } from './grid/schema';
 import type { Actor, BlockActor, DoorActor, DynamicState, PlayerState, Stats } from './state';
 
 export type { Vec3 } from './state';
@@ -35,6 +37,8 @@ export interface World {
   rules: CompiledRule[];
   stats: Stats;
   ended: boolean;
+  /** Which ending the level ended with (`level.end <ending>`, chamber IX), or null. */
+  ending: Ending | null;
   grid: GridQuery;
 }
 
@@ -159,6 +163,7 @@ export function createWorld(level: Level, seed = 1): World {
     flares: [],
     mechanisms: createMechanisms(level),
     guardians: createGuardians(level),
+    timer: null,
   };
   const world: World = {
     tick: 0,
@@ -182,6 +187,7 @@ export function createWorld(level: Level, seed = 1): World {
       kills: 0,
     },
     ended: false,
+    ending: null,
     grid: null as unknown as GridQuery,
   };
   world.grid = makeGrid(world);
@@ -314,6 +320,9 @@ export function respawn(world: World): void {
   p.weapon.busy = 0;
   p.swim = { air: swimming.airMax, pitch: 0, roll: 0, stroke: 0, drown: 0 };
   p.poison = 0;
+  // The conjunction gives her a fair chance from the checkpoint, never a hopeless one.
+  if (world.state.timer)
+    world.state.timer.left = Math.max(world.state.timer.left, conjunction.minAfterRespawn);
   resetEnemies(world);
   // Secrets found since the checkpoint stay found (they count once, like journal notes).
   for (const a of world.state.actors) {
@@ -323,6 +332,17 @@ export function respawn(world: World): void {
     }
   }
   world.events.emit({ type: 'player.respawned', tick: world.tick });
+}
+
+/** The conjunction's countdown: a warning near the end, and a fall when it runs out. */
+function updateTimer(world: World, dt: number): void {
+  const t = world.state.timer;
+  if (!t || world.state.player.mode === 'dead') return;
+  const before = t.left;
+  t.left = Math.max(0, t.left - dt);
+  if (before > conjunction.warning && t.left <= conjunction.warning)
+    world.events.emit({ type: 'timer.warn', tick: world.tick, left: t.left });
+  if (t.left <= 0) killPlayer(world, 'conjunction');
 }
 
 /** Advances the simulation by one 1/60 s tick. */
@@ -335,6 +355,7 @@ export function stepWorld(world: World, input: InputFrame, dt = TICK_DT): void {
     updateWater(world, dt);
     updateFlares(world, dt);
     runLogic(world, dt);
+    updateTimer(world, dt);
     updateMechanisms(world, dt);
     updateGuardians(world, dt);
     const p = world.state.player.pos;

@@ -4,6 +4,8 @@
  * death fade. It only listens to sim events (the end of the level has its own
  * screen, ui/end-screen.ts).
  */
+import { conjunction } from '../sim/player/tuning';
+import { formatTime } from './end-screen';
 import { wallInReach } from '../sim/player/modes/wall';
 import { actionLabel } from './control-labels';
 import type { SimEvent } from '../core/events';
@@ -33,6 +35,9 @@ export class Hud {
   private readonly hurtFlash = document.createElement('div');
   /** Hot edges in the Forge's open heat. */
   private readonly heat = document.createElement('div');
+  /** The conjunction's countdown (chamber IX), shown only while it runs. */
+  private readonly timer = document.createElement('div');
+  private timerShown = '';
   private readonly weaponsButton = document.querySelector<HTMLElement>('#touch [data-button="weapons"]');
   private weaponsDrawn = false;
   private readonly torchButton = document.querySelector<HTMLElement>('#touch [data-button="torch"]');
@@ -48,7 +53,10 @@ export class Hud {
     this.hurtFlash.setAttribute('aria-hidden', 'true');
     this.heat.id = 'heat-haze';
     this.heat.setAttribute('aria-hidden', 'true');
-    $('hud').append(this.hurtFlash, this.heat);
+    this.timer.id = 'hud-timer';
+    this.timer.setAttribute('role', 'timer');
+    this.timer.setAttribute('aria-label', t('hud.timer'));
+    $('hud').append(this.hurtFlash, this.heat, this.timer);
   }
 
   /** The level title, with an optional kicker line above it (e.g. the tomb and chamber). */
@@ -93,7 +101,7 @@ export class Hud {
         requestAnimationFrame(() => this.hurtFlash.classList.remove('show'));
         break;
       case 'player.died':
-        this.showNotice(t('notice.died'), 'ember');
+        this.showNotice(t(e.cause === 'conjunction' ? 'notice.conjunction' : 'notice.died'), 'ember');
         this.fade.classList.add('dark');
         break;
       case 'player.respawned':
@@ -154,6 +162,16 @@ export class Hud {
     // Poison drains the bar: it changes colour and pattern while it lasts (colour-safe under Options).
     this.health.classList.toggle('poisoned', poisoned);
     this.healthFill.style.width = `${p.health}%`;
+
+    // The conjunction's countdown: whole seconds, warning colour near the end.
+    const left = world.state.timer?.left ?? null;
+    const shown = left === null ? '' : formatTime(Math.ceil(left));
+    if (shown !== this.timerShown) {
+      this.timerShown = shown;
+      this.timer.textContent = shown;
+      this.timer.classList.toggle('show', left !== null);
+      this.timer.classList.toggle('warn', left !== null && left <= conjunction.warning);
+    }
 
     // The touch draw / holster button says what it will do and glows while armed.
     if (this.weaponsButton && p.weapon.drawn !== this.weaponsDrawn) {
