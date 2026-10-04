@@ -46,11 +46,35 @@ export class CreditsRoll {
     this.root.addEventListener('pointercancel', () => (down = null));
     this.track.addEventListener('animationend', () => this.close());
     window.addEventListener('keydown', (e) => {
-      if (!this.visible || e.repeat) return;
-      if (this.still && SCROLL_KEYS.has(e.key)) return;
+      if (!this.visible) return;
+      // Focus stays on the button that opened the roll, so the keys scroll the list by hand
+      // (held down, they keep scrolling).
+      if (this.still && SCROLL_KEYS.has(e.key)) {
+        e.preventDefault();
+        this.scrollBy(e.key);
+        return;
+      }
       e.preventDefault();
+      if (e.repeat) return;
       this.tryClose();
     });
+  }
+
+  private scrollBy(key: string): void {
+    const page = this.root.clientHeight * 0.85;
+    const top =
+      key === 'Home'
+        ? -this.root.scrollTop
+        : key === 'End'
+          ? this.root.scrollHeight
+          : key === 'ArrowUp'
+            ? -60
+            : key === 'ArrowDown'
+              ? 60
+              : key === 'PageUp'
+                ? -page
+                : page;
+    this.root.scrollBy({ top });
   }
 
   /** Shown as a still list, scrolled by hand: the system's or the game's reduced motion. */

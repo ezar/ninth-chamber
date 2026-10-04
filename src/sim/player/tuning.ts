@@ -352,8 +352,11 @@ export const tangle = {
 export const conjunction = {
   /** The countdown warns this long before it runs out (s). */
   warning: 10,
-  /** Back at a checkpoint after a fall, she always has at least this long (s). */
-  minAfterRespawn: 60,
+  /**
+   * Back at a checkpoint after a fall, she always has at least this long (s): enough for the
+   * longest stretch of the run between two checkpoints at a third of the bot's pace.
+   */
+  minAfterRespawn: 120,
 };
 
 /** Mild poison from darts (spec §19): it drains health for a while but never kills; a medkit cures it. */

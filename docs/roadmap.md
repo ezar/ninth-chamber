@@ -2,7 +2,7 @@
 
 Agreed with the owner on 2026-10-04, after 0.9.0: the campaign is complete (I to IX), and 1.0 is the release that can be put in front of people. The roadmap to 0.9.0 is closed; its record, with the owner's four decisions on chamber IX, is in the changelog (0.8.5 to 0.9.0).
 
-**Status:** in progress (0.9.5).
+**Status:** 0.9.5 and 0.9.6 released; 1.0 waits on the owner's part.
 
 ## 0.9.5 · The Ninth Chamber in full, its own music, golden replays
 

@@ -829,5 +829,12 @@
   "hint.ninth.blades": "Cuchillas, como las del Templo. Nunca pasan a la vez.",
   "hints.ninth_chamber.blades.1": "Dos cuchillas cruzan el pasillo.",
   "hints.ninth_chamber.blades.2": "Pasan por turnos: siempre hay un momento en que una acaba de pasar.",
-  "hints.ninth_chamber.blades.3": "Espera a que cada cuchilla pase, y corre hasta el siguiente hueco."
+  "hints.ninth_chamber.blades.3": "Espera a que cada cuchilla pase, y corre hasta el siguiente hueco.",
+  "options.tutorialHints": "Consejos de juego",
+  "options.tutorialHints.hint": "Consejos sobre cómo jugar. Los comentarios de Nora sobre cada cámara se ven siempre.",
+  "options.touchLayout": "Colocar botones táctiles",
+  "options.touchLayout.hint": "Arrastra cada botón adonde lo quieran tus pulgares.",
+  "options.touchLayout.drag": "Arrastra los botones adonde los quieras.",
+  "options.touchLayout.reset": "Restablecer",
+  "options.touchLayout.done": "Hecho"
 }

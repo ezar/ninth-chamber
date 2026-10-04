@@ -829,5 +829,12 @@
   "hint.ninth.blades": "Fulles, com les del Temple. Mai no passen alhora.",
   "hints.ninth_chamber.blades.1": "Dues fulles travessen el passadís.",
   "hints.ninth_chamber.blades.2": "Passen per torns: sempre hi ha un moment en què una acaba de passar.",
-  "hints.ninth_chamber.blades.3": "Espera que cada fulla passi, i corre fins al buit següent."
+  "hints.ninth_chamber.blades.3": "Espera que cada fulla passi, i corre fins al buit següent.",
+  "options.tutorialHints": "Consells de joc",
+  "options.tutorialHints.hint": "Consells sobre com jugar. Els comentaris de la Nora sobre cada cambra es veuen sempre.",
+  "options.touchLayout": "Col·locar botons tàctils",
+  "options.touchLayout.hint": "Arrossega cada botó on el vulguin els teus polzes.",
+  "options.touchLayout.drag": "Arrossega els botons on els vulguis.",
+  "options.touchLayout.reset": "Restableix",
+  "options.touchLayout.done": "Fet"
 }
