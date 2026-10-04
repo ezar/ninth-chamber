@@ -12,6 +12,7 @@ import { validateLevel } from '../src/sim/grid/validate';
 import { DIR_YAW, type Dir } from '../src/sim/grid/units';
 import { createWorld, findActor, type World } from '../src/sim/world';
 import { Bot } from './bot';
+import { recordGolden } from './golden';
 
 const level = Level.parse(levelJson);
 const origin = new Map(
@@ -233,6 +234,7 @@ describe('The Bronze Forge', () => {
 
   it('can be finished through every room with all three secrets and no deaths', { timeout: 120_000 }, () => {
     const bot = playForge();
+    recordGolden(bot);
     expect(bot.w.ended).toBe(true);
     expect(bot.w.stats.secrets).toBe(3);
     expect(bot.w.stats.deaths).toBe(0);

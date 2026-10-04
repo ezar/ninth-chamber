@@ -12,6 +12,7 @@ import { validateLevel } from '../src/sim/grid/validate';
 import { DIR_YAW, type Dir } from '../src/sim/grid/units';
 import { createWorld, findActor, type World } from '../src/sim/world';
 import { Bot } from './bot';
+import { recordGolden } from './golden';
 import { frame } from './helpers';
 import { damageEnemy } from '../src/sim/actors/enemies';
 import { clayGuardian } from '../src/sim/player/tuning';
@@ -202,6 +203,7 @@ describe('The Clay Archive', () => {
 
   it('can be finished through every room with all three secrets and no deaths', { timeout: 60_000 }, () => {
     const bot = playArchive();
+    recordGolden(bot);
     expect(bot.w.ended).toBe(true);
     expect(bot.w.stats.secrets).toBe(3);
     expect(bot.w.stats.deaths).toBe(0);

@@ -215,7 +215,7 @@ export function reachableCells(level: Level): Set<string> {
       if (swimming) continue;
       for (let k = 2; k <= gaps; k++) {
         const mid = level.sector(n.cx + dx * (k - 1), n.cz + dz * (k - 1));
-        if (!mid || mid.wall || mid.ceil - n.h < 2) break;
+        if (!mid || mid.wall || mid.ceil - n.h < 2 || Math.max(...mid.floor) - n.h > CLIMB) break;
         const land = level.sector(n.cx + dx * k, n.cz + dz * k);
         if (!land || land.wall) continue;
         for (const h of heights(land)) if (h - n.h <= JUMP_RISE) visit({ cx: land.cx, cz: land.cz, h });

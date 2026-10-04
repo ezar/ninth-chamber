@@ -19,6 +19,7 @@ import type { Facing4 } from '../src/sim/mechanisms/types';
 import { killPlayer } from '../src/sim/player/context';
 import { createWorld, saveCheckpoint, stepWorld, type World } from '../src/sim/world';
 import { Bot } from './bot';
+import { recordGolden } from './golden';
 import { frame, run, runUntil } from './helpers';
 
 const level = Level.parse(levelJson);
@@ -241,6 +242,7 @@ describe('The Temple of the Sun', () => {
 
   it('can be finished through every room with every secret and note, the guardian defeated and no deaths', () => {
     const bot = playSunTemple();
+    recordGolden(bot);
     const w = bot.w;
     expect(w.ended).toBe(true);
     expect(w.stats.deaths).toBe(0);

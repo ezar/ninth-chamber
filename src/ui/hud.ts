@@ -140,8 +140,10 @@ export class Hud {
   /** Clears everything on screen (back to the title). */
   reset(): void {
     this.fade.classList.remove('dark');
-    for (const el of [this.notice, this.hint, this.prompt, this.title, this.health, this.heat])
+    for (const el of [this.notice, this.hint, this.prompt, this.title, this.health, this.heat, this.timer])
       el.classList.remove('show');
+    this.timer.classList.remove('warn');
+    this.timerShown = '';
     this.noticeTimer = 0;
     this.hintTimer = 0;
     this.healthShownFor = 0;

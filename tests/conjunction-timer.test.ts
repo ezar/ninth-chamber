@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { TICK_DT } from '../src/core/loop';
 import { runActions } from '../src/sim/logic/rules';
-import { migrate } from '../src/sim/save/save';
+import { migrate, restore, snapshot } from '../src/sim/save/save';
 import { validateLevel } from '../src/sim/grid/validate';
 import { conjunction as C } from '../src/sim/player/tuning';
 import { respawn, saveCheckpoint, type World } from '../src/sim/world';
@@ -74,6 +74,15 @@ describe('the conjunction timer', () => {
     runActions(w, ['timer.start 60s']);
     respawn(w);
     expect(w.state.timer).toBeNull();
+  });
+
+  it('Continue resumes with the time she had, not the minimum after a fall', () => {
+    const w = hall();
+    runActions(w, ['timer.start 30s']);
+    run(w, frame(), ticks(5));
+    const save = snapshot(w, 'test', 'now', true);
+    const back = restore(w.level, save);
+    expect(back?.state.timer?.left).toBeCloseTo(25, 3);
   });
 
   it('old saves are migrated with no timer', () => {

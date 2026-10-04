@@ -52,8 +52,8 @@ export interface PlayerPose {
 
 /** Seconds between refreshes of a non-live (mobile) sun shadow. */
 const STATIC_SHADOW_REFRESH = 1;
-/** Groups whose children are culled one by one (the static set dressing). */
-const DRESSING: ReadonlySet<string> = new Set(['dressing']);
+/** Groups whose children are culled one by one (the static set dressing, chamber IX's monuments). */
+const DRESSING: ReadonlySet<string> = new Set(['dressing', 'monuments']);
 /** Film grain amplitude on the display image (art bible: subtle; lowered after phone feedback). */
 /** Half-width of the mobile contact shadow blob (m). */
 const CONTACT_RADIUS = 0.8;

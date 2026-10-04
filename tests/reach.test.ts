@@ -75,6 +75,13 @@ describe('reachability', () => {
     expect(relicError(file(gap(3)))).toBe(true);
   });
 
+  it('does not jump through a step taller than a grab', () => {
+    // A 4.5 m step two cells deep, with a low floor beyond it: no running jump passes through
+    // the rock, so the far side needs a way up the step.
+    const rows = ['#####', '#.R.#', '#999#', '#999#', '#...#', '#.S.#', '#####'];
+    expect(relicError(file(rows, {}, { '9': 9, R: 2 }))).toBe(true);
+  });
+
   it('counts a pushable block as a step', () => {
     const rows = ['#####', '#8R8#', '#888#', '#4..#', '#.S.#', '#####'];
     expect(relicError(file(rows, {}, { R: 8 }))).toBe(false);

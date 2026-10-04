@@ -1,7 +1,7 @@
 {
   "name": "ninth-chamber",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.9.5",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "engines": {
@@ -18,6 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate:levels": "tsx scripts/validate-levels.ts",
+    "replay:update": "tsx scripts/replay-update.ts",
     "anim:build": "tsx scripts/anim/build-clips.ts",
     "bench": "tsx scripts/perf/bench.ts",
     "loadtime": "tsx scripts/perf/loadtime.ts",

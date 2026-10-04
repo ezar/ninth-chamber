@@ -96,18 +96,21 @@
     },
     {
       "id": "wind",
-      "origin": [1, -27, 0],
+      "origin": [1, -29, 0],
       "ceil": 32,
       "legend": {
         "#": "wall",
         ".": 0,
-        "u": 9
+        "u": 9,
+        "p": 2
       },
       "rows": [
         "####u####",
         "#uuuuuuu#",
+        "#pppuppp#",
+        "#pppuppp#",
         "#uuuuuuu#",
-        "#.......#",
+        "#uuuuuuu#",
         "#.......#",
         "#.......#",
         "#.......#",
@@ -121,16 +124,22 @@
     },
     {
       "id": "bronze",
-      "origin": [1, -35, 9],
+      "origin": [1, -39, 9],
       "ceil": 16,
       "legend": {
         "#": "wall",
         ".": 0,
         "c": -8,
-        "b": -8
+        "b": -8,
+        "F": {
+          "floor": 0,
+          "mat": "metal"
+        }
       },
       "rows": [
         "####.####",
+        "#.......#",
+        "#FFFFFFF#",
         "#.......#",
         "#cccbccc#",
         "#cccbccc#",
@@ -144,7 +153,7 @@
     },
     {
       "id": "roots",
-      "origin": [1, -43, 9],
+      "origin": [1, -47, 9],
       "ceil": 24,
       "legend": {
         "#": "wall",
@@ -174,7 +183,7 @@
     },
     {
       "id": "glyphs",
-      "origin": [1, -55, 19],
+      "origin": [1, -59, 19],
       "ceil": 12,
       "legend": {
         "#": "wall",
@@ -199,7 +208,7 @@
     },
     {
       "id": "mirrors",
-      "origin": [0, -63, 19],
+      "origin": [0, -67, 19],
       "ceil": 16,
       "legend": {
         "#": "wall",
@@ -220,8 +229,20 @@
       "reverb": "stone_medium"
     },
     {
+      "id": "blades",
+      "origin": [3, -75, 19],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": ["##.##", "#...#", "##.##", "##.##", "##.##", "##.##", "##.##", "##.##"],
+      "look": "ninth_blades",
+      "reverb": "stone_medium"
+    },
+    {
       "id": "water",
-      "origin": [1, -71, 19],
+      "origin": [1, -83, 19],
       "ceil": 20,
       "legend": {
         "#": "wall",
@@ -245,7 +266,7 @@
     },
     {
       "id": "sand",
-      "origin": [0, -82, 27],
+      "origin": [0, -94, 27],
       "ceil": 20,
       "legend": {
         "#": "wall",
@@ -277,7 +298,7 @@
     },
     {
       "id": "seal",
-      "origin": [-1, -92, 27],
+      "origin": [-1, -104, 27],
       "ceil": 32,
       "legend": {
         "#": "wall",
@@ -551,54 +572,91 @@
       "height": 8
     },
     {
+      "id": "block_dome",
+      "type": "block",
+      "room": "dome",
+      "at": [2, 5]
+    },
+    {
+      "id": "plate_moon",
+      "type": "plate",
+      "room": "dome",
+      "at": [2, 2]
+    },
+    {
+      "id": "lever_reset_dome",
+      "type": "lever",
+      "room": "dome",
+      "at": [1, 6],
+      "wall": "W",
+      "spring": true
+    },
+    {
       "id": "brazier_dome",
       "type": "brazier",
       "room": "dome",
-      "at": [1, 6]
+      "at": [7, 1]
     },
     {
       "id": "z_wind",
       "type": "zone",
       "room": "wind",
-      "at": [3, 6],
+      "at": [3, 8],
       "size": [3, 1]
     },
     {
       "id": "updraught",
       "type": "wind",
       "room": "wind",
-      "at": [3, 3],
+      "at": [3, 6],
       "size": [3, 1],
       "dir": "up"
+    },
+    {
+      "id": "gust_bridge",
+      "type": "wind",
+      "room": "wind",
+      "at": [1, 2],
+      "size": [7, 2],
+      "dir": "E",
+      "period": 6,
+      "blow": 2.5
+    },
+    {
+      "id": "z_bridge",
+      "type": "zone",
+      "room": "wind",
+      "at": [3, 4],
+      "size": [3, 1]
     },
     {
       "id": "brazier_wind",
       "type": "brazier",
       "room": "wind",
-      "at": [7, 6]
+      "at": [7, 8]
     },
     {
       "id": "z_bronze",
       "type": "zone",
       "room": "bronze",
-      "at": [3, 6],
+      "at": [3, 8],
       "size": [3, 1]
     },
     {
       "id": "lever_bronze",
       "type": "lever",
       "room": "bronze",
-      "at": [1, 6],
+      "at": [1, 8],
       "wall": "W"
     },
     {
       "id": "pour_bridge",
       "type": "pour",
       "room": "bronze",
-      "at": [4, 4],
+      "at": [4, 6],
       "path": [
-        [4, 4],
-        [4, 2]
+        [4, 6],
+        [4, 4]
       ],
       "h": 0
     },
@@ -606,7 +664,23 @@
       "id": "brazier_bronze",
       "type": "brazier",
       "room": "bronze",
-      "at": [7, 6]
+      "at": [7, 8]
+    },
+    {
+      "id": "fire_bronze",
+      "type": "fire",
+      "room": "bronze",
+      "at": [1, 2],
+      "size": [7, 1],
+      "period": 3,
+      "burn": 1.3
+    },
+    {
+      "id": "z_fire",
+      "type": "zone",
+      "room": "bronze",
+      "at": [1, 3],
+      "size": [7, 1]
     },
     {
       "id": "z_roots",
@@ -635,6 +709,31 @@
       "at": [3, 1],
       "size": [3, 1],
       "top": 24
+    },
+    {
+      "id": "sc_roots0",
+      "type": "enemy",
+      "enemy": "scorpion",
+      "room": "roots",
+      "at": [2, 4],
+      "face": "S",
+      "pack": "roots"
+    },
+    {
+      "id": "sc_roots1",
+      "type": "enemy",
+      "enemy": "scorpion",
+      "room": "roots",
+      "at": [6, 4],
+      "face": "S",
+      "pack": "roots"
+    },
+    {
+      "id": "medkit_roots",
+      "type": "medkit",
+      "room": "roots",
+      "at": [1, 4],
+      "size": "small"
     },
     {
       "id": "z_glyphs",
@@ -667,6 +766,15 @@
       "target": 3
     },
     {
+      "id": "lock_star",
+      "type": "glyphlock",
+      "room": "glyphs",
+      "at": [6, 2],
+      "facing": "W",
+      "glyph": 0,
+      "target": 4
+    },
+    {
       "id": "door_glyphs",
       "type": "door",
       "room": "glyphs",
@@ -677,7 +785,7 @@
       "id": "brazier_glyphs",
       "type": "brazier",
       "room": "glyphs",
-      "at": [7, 1]
+      "at": [7, 3]
     },
     {
       "id": "z_mirrors",
@@ -702,11 +810,18 @@
       "facing": "NE"
     },
     {
+      "id": "mirror_high",
+      "type": "mirror",
+      "room": "mirrors",
+      "at": [4, 1],
+      "facing": "NE"
+    },
+    {
       "id": "disc_door",
       "type": "receiver",
       "room": "mirrors",
-      "at": [4, 1],
-      "face": "S"
+      "at": [8, 1],
+      "face": "W"
     },
     {
       "id": "disc_niche",
@@ -740,6 +855,35 @@
       "id": "brazier_mirrors",
       "type": "brazier",
       "room": "mirrors",
+      "at": [1, 1]
+    },
+    {
+      "id": "z_blades",
+      "type": "zone",
+      "room": "blades",
+      "at": [2, 7],
+      "size": [1, 1]
+    },
+    {
+      "id": "blade_low",
+      "type": "blade",
+      "room": "blades",
+      "at": [2, 5],
+      "axis": "x",
+      "phase": 0
+    },
+    {
+      "id": "blade_high",
+      "type": "blade",
+      "room": "blades",
+      "at": [2, 3],
+      "axis": "x",
+      "phase": 0.5
+    },
+    {
+      "id": "brazier_blades",
+      "type": "brazier",
+      "room": "blades",
       "at": [1, 1]
     },
     {
@@ -928,12 +1072,21 @@
       "once": false
     },
     {
-      "when": "ring_dome.set",
+      "when": "lever_reset_dome.used",
+      "do": ["block_dome.reset"],
+      "once": false
+    },
+    {
+      "when": "ring_dome.set and plate_moon.pressed",
       "do": ["door_dome.open", "camera.focus door_dome 2s"]
     },
     {
       "when": "z_wind.entered",
       "do": ["hint hint.ninth.wind"]
+    },
+    {
+      "when": "z_bridge.entered",
+      "do": ["checkpoint", "hint hint.ninth.gust"]
     },
     {
       "when": "z_bronze.entered",
@@ -944,6 +1097,10 @@
       "do": ["pour_bridge.pour", "sfx rumble"]
     },
     {
+      "when": "z_fire.entered",
+      "do": ["checkpoint", "hint hint.ninth.fire"]
+    },
+    {
       "when": "z_roots.entered",
       "do": ["checkpoint", "hint hint.ninth.roots"]
     },
@@ -952,12 +1109,12 @@
       "do": ["checkpoint", "hint hint.ninth.glyphs"]
     },
     {
-      "when": "lock_glyphs.set",
+      "when": "lock_glyphs.set and lock_star.set",
       "do": ["door_glyphs.open", "camera.focus door_glyphs 2s", "sfx rumble"]
     },
     {
       "when": "z_mirrors.entered",
-      "do": ["timer.start 240s", "checkpoint", "music chase", "hint hint.ninth.timer"]
+      "do": ["timer.start 240s", "checkpoint", "music tension", "hint hint.ninth.timer"]
     },
     {
       "when": "disc_door.lit",
@@ -966,6 +1123,10 @@
     {
       "when": "disc_niche.lit",
       "do": ["door_niche.open", "sfx rumble"]
+    },
+    {
+      "when": "z_blades.entered",
+      "do": ["hint hint.ninth.blades"]
     },
     {
       "when": "z_water.entered",

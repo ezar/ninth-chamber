@@ -4,6 +4,7 @@
  * is east (+X). Cells are world cells (room origin + position in the room).
  */
 import { expect } from 'vitest';
+import type { InputFrame } from '../src/core/input-frame';
 import type { Dir } from '../src/sim/grid/units';
 import { stepWorld, type World } from '../src/sim/world';
 import { frame } from './helpers';
@@ -17,6 +18,8 @@ const DIRS: Record<Dir, { x: number; y: number }> = {
 
 export class Bot {
   readonly rooms = new Set<string>();
+  /** Every frame played, in order: the golden replay of a walkthrough (tests/golden.ts). */
+  readonly frames: InputFrame[] = [];
 
   constructor(readonly w: World) {}
 
@@ -30,6 +33,7 @@ export class Bot {
   }
 
   tick(f = frame()): void {
+    this.frames.push({ ...f });
     stepWorld(this.w, f);
     if (this.p.mode === 'dead') throw new Error(`died at ${this.where()}`);
     const room = this.w.level.roomAt(Math.floor(this.p.pos.x / 2), Math.floor(this.p.pos.z / 2));

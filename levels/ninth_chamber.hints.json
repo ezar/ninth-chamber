@@ -10,7 +10,7 @@
     {
       "id": "dome",
       "rooms": ["dome"],
-      "solved": "ring_dome.set",
+      "solved": "z_wind.entered",
       "hints": ["hints.ninth_chamber.dome.1", "hints.ninth_chamber.dome.2", "hints.ninth_chamber.dome.3"]
     },
     {
@@ -38,7 +38,7 @@
     {
       "id": "glyphs",
       "rooms": ["glyphs"],
-      "solved": "lock_glyphs.set",
+      "solved": "z_mirrors.entered",
       "hints": [
         "hints.ninth_chamber.glyphs.1",
         "hints.ninth_chamber.glyphs.2",
@@ -53,6 +53,16 @@
         "hints.ninth_chamber.mirrors.1",
         "hints.ninth_chamber.mirrors.2",
         "hints.ninth_chamber.mirrors.3"
+      ]
+    },
+    {
+      "id": "blades",
+      "rooms": ["blades"],
+      "solved": "z_water.entered",
+      "hints": [
+        "hints.ninth_chamber.blades.1",
+        "hints.ninth_chamber.blades.2",
+        "hints.ninth_chamber.blades.3"
       ]
     },
     {

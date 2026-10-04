@@ -13,6 +13,7 @@ import { DIR_YAW, type Dir } from '../src/sim/grid/units';
 import { swimming, tangle as T } from '../src/sim/player/tuning';
 import { createWorld, type World } from '../src/sim/world';
 import { Bot } from './bot';
+import { recordGolden } from './golden';
 import { frame, run } from './helpers';
 
 const level = Level.parse(levelJson);
@@ -218,6 +219,7 @@ describe('The Root Halls', () => {
 
   it('is played from start to relic with every secret and no deaths', () => {
     const bot = playRootHalls();
+    recordGolden(bot);
     const w = bot.w;
     expect(w.stats.secrets).toBe(3);
     expect(w.stats.deaths).toBe(0);

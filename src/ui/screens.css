@@ -1402,6 +1402,18 @@ body.reduce-motion #start-seal.open .seal-svg path {
     animation: none;
   }
 }
+/* The same with the game's own Reduced motion option (Options → Accessibility). */
+:root.reduce-motion #roll {
+  overflow-y: auto;
+}
+:root.reduce-motion #roll-track {
+  position: static;
+  padding-top: 12vh;
+  padding-bottom: 12vh;
+}
+:root.reduce-motion #roll.rolling #roll-track {
+  animation: none;
+}
 
 .roll-signature {
   margin: 0.6em 0;
