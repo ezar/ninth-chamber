@@ -580,6 +580,42 @@ export function screech(s: Strip, t: number, short = false): void {
   }
 }
 
+/** Roots shrinking back from a flame: woody creaks and a dry rustle. */
+export function rootCreak(s: Strip, t: number, dur = 0.9): void {
+  for (let i = 0; i < 5; i++) {
+    const at = t + (dur * i) / 5 + rnd(0, 0.05);
+    s.tone(at, {
+      wave: 'sawtooth',
+      f: rnd(140, 220),
+      f2: rnd(90, 130),
+      lp: 900,
+      gain: 0.03,
+      a: 0.02,
+      d: 0.15,
+    });
+  }
+  s.noiseHit(t, { type: 'bandpass', f: 1800, q: 1.5, gain: 0.05, a: 0.1, d: dur });
+}
+
+/** A scorpion's chitter: dry clicks of its pincers and legs on stone. */
+export function chitter(s: Strip, t: number, clicks = 6): void {
+  for (let i = 0; i < clicks; i++)
+    s.noiseHit(t + i * 0.045 + (i % 2) * 0.012, {
+      type: 'bandpass',
+      f: 4200 - (i % 3) * 700,
+      q: 6,
+      gain: 0.035,
+      a: 0.001,
+      d: 0.025,
+    });
+}
+
+/** A sting: the tail whips forward, and a sharp prick when it lands. */
+export function sting(s: Strip, t: number, hit: boolean): void {
+  s.noiseHit(t, { type: 'highpass', f: 2500, gain: 0.04, a: 0.01, d: 0.08 });
+  if (hit) s.tone(t + 0.08, { wave: 'square', f: 1900, f2: 900, gain: 0.03, a: 0.002, d: 0.06, lp: 3000 });
+}
+
 /** Wings beating past, and the thump of the shove when it lands. */
 export function wingShove(s: Strip, t: number, hit: boolean): void {
   for (let i = 0; i < 3; i++)

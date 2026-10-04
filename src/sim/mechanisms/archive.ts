@@ -91,10 +91,7 @@ export function updateDarts(world: World, d: DartDef, st: DartState, dt: number)
       const inLine = d.line.some((c) => c.cx === pcx && c.cz === pcz);
       if (inLine && p.mode !== 'dead' && p.pos.y - floor < traps.darts.height) {
         damagePlayer(world, traps.darts.damage, 'darts');
-        if (p.health > 0) {
-          p.poison = poison.duration;
-          world.events.emit({ type: 'player.poisoned', tick: world.tick });
-        }
+        poisonPlayer(world);
       }
       return;
     }
@@ -108,6 +105,14 @@ export function updateDarts(world: World, d: DartDef, st: DartState, dt: number)
 }
 
 /** Poison drains health slowly, down to a floor it never passes. */
+/** Mild poison (darts, a scorpion's sting): it drains health for a while; a medkit cures it. */
+export function poisonPlayer(world: World): void {
+  const p = world.state.player;
+  if (p.health <= 0 || p.mode === 'dead') return;
+  p.poison = poison.duration;
+  world.events.emit({ type: 'player.poisoned', tick: world.tick });
+}
+
 export function updatePoison(world: World, dt: number): void {
   const p = world.state.player;
   if (p.poison <= 0) return;

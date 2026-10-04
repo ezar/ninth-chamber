@@ -511,7 +511,7 @@ export const noise = {
 };
 
 /** Enemy types: each is data plus a behaviour from a closed list (spec §7 "Enemigos"). */
-export const ENEMY_TYPES = ['jackal', 'clay', 'automaton', 'bird'] as const;
+export const ENEMY_TYPES = ['jackal', 'clay', 'automaton', 'bird', 'scorpion'] as const;
 export type EnemyType = (typeof ENEMY_TYPES)[number];
 export const ENEMY_BEHAVIOURS = ['packHunter', 'flyer'] as const;
 export type EnemyBehaviour = (typeof ENEMY_BEHAVIOURS)[number];
@@ -550,6 +550,8 @@ export interface EnemyStats {
     reachUp: number;
     /** Delay from reaching Nora to the first bite (s). */
     windup: number;
+    /** A bite that lands also poisons her (spec §19, the Root Halls' scorpions). */
+    poison?: boolean;
   };
   /** Sight: range (m) and largest height difference it notices (m). */
   sightRange: number;
@@ -668,6 +670,36 @@ export const enemyTypes: Record<EnemyType, EnemyStats> = {
     flankUntil: 0,
     prowlSwing: 0.6,
     prowlRate: 0.5,
+  },
+  // The Root Halls' scorpions (spec §19): small, quick and in groups. Their sting does
+  // little damage but poisons, like the darts; a pistol hit or two kills one.
+  scorpion: {
+    behaviour: 'packHunter',
+    health: 2,
+    runSpeed: 3.4,
+    trotSpeed: 1.2,
+    accel: 10,
+    turnSpeed: 10,
+    radius: 0.25,
+    height: 0.3,
+    eyeHeight: 0.2,
+    climb: 0.5,
+    maxDrop: 1,
+    dropSpeed: 7,
+    bite: { damage: 4, interval: 1.4, range: 0.9, reachUp: 0.5, windup: 0.4, poison: true },
+    sightRange: 8,
+    sightHeight: 2,
+    alertTime: 0.5,
+    hurtTime: 0.25,
+    staggerCooldown: 0.6,
+    repathTime: 0.5,
+    searchLimit: 1200,
+    refugeTime: 6,
+    calmTime: 5,
+    flankDistance: 1.2,
+    flankUntil: 2,
+    prowlSwing: 0.4,
+    prowlRate: 1.4,
   },
   // The Wind Stair's rock birds (spec §19): quick and fragile, they fly at Nora and shove her
   // (a little damage) instead of biting. Two pistol hits bring one down. They never give up.

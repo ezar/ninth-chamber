@@ -14,6 +14,7 @@ import type { Level } from '../grid/level';
 import { BLOCK, DIR_YAW, cellCenter, wrapAngle } from '../grid/units';
 import { setSignal } from '../logic/rules';
 import { damagePlayer } from '../player/context';
+import { poisonPlayer } from '../mechanisms/archive';
 import {
   automaton,
   clayGuardian,
@@ -431,7 +432,10 @@ function attack(world: World, e: EnemyState, s: EnemyStats, dt: number): void {
   if (e.biteIn <= EPS) {
     const hit = inBiteRange(e, s, p.pos);
     emit(world, 'enemy.bite', e, { hit });
-    if (hit) damagePlayer(world, s.bite.damage, e.type);
+    if (hit) {
+      damagePlayer(world, s.bite.damage, e.type);
+      if (s.bite.poison) poisonPlayer(world);
+    }
     e.biteIn += s.bite.interval;
   }
 }
