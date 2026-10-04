@@ -391,7 +391,7 @@ function chase(world: World, g: GuardianState, dt: number): void {
     g.repathIn = tun(g).repathTime;
     const res = findPath(navOf(world, g), walkerOf(g), cellOf(g.pos), cellOf(p.pos), tun(g).searchLimit);
     g.path = res.path;
-    g.reachable = res.reached && p.mode !== 'hang' && p.mode !== 'climb';
+    g.reachable = res.reached && p.mode !== 'hang' && p.mode !== 'wall' && p.mode !== 'climb';
   }
   const d = Math.hypot(p.pos.x - g.pos.x, p.pos.z - g.pos.z);
   const low = p.pos.y - g.pos.y <= tun(g).slamReach + 0.6;

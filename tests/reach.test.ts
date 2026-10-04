@@ -141,4 +141,23 @@ describe('reachability', () => {
     f.entities?.push({ id: 'w', type: 'wind', room: 'r', at: [1, 3], size: [3, 1], dir: 'up' });
     expect(relicError(f)).toBe(false);
   });
+
+  it('climbs a face of roots to its top, however tall', () => {
+    // 8 m: far out of a jump's reach, but the face looking at her is climbable.
+    const rows = ['#####', '#CRC#', '#CCC#', '#...#', '#.S.#', '#####'];
+    expect(relicError(file(rows, {}, { R: 16, C: 16 }))).toBe(true);
+    expect(relicError(file(rows, {}, { R: 16, C: { floor: 16, flags: ['climbS'] } }))).toBe(false);
+    // A face looking away from her does not help.
+    expect(relicError(file(rows, {}, { R: 16, C: { floor: 16, flags: ['climbN'] } }))).toBe(true);
+  });
+
+  it('traverses along a face over a deadly pit', () => {
+    // Thorns between the start and the relic's side; a root wall runs along the north of both.
+    const rows = ['#######', '#CCCCC#', '#..xR.#', '#S.x..#', '#######'];
+    const legend = { x: { floor: -4, flags: ['death' as const] }, C: 16 };
+    expect(relicError(file(rows, {}, { ...legend, R: 0 }))).toBe(false); // jumped
+    const wide = ['#########', '#CCCCCCC#', '#..xxxxR#', '#S.xxxx.#', '#########'];
+    expect(relicError(file(wide, {}, legend))).toBe(true);
+    expect(relicError(file(wide, {}, { ...legend, C: { floor: 16, flags: ['climbS'] } }))).toBe(false);
+  });
 });

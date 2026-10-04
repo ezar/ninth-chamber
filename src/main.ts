@@ -908,7 +908,7 @@ async function main(): Promise<void> {
       const at = renderer.entityPosition(String(e.target));
       if (at) camera.focusOn(at, Number(e.duration) || 2);
     }
-    if (e.type === 'player.grabbed') camera.swingBehind(world.state.player.yaw);
+    if (e.type === 'player.grabbed' || e.type === 'player.onWall') camera.swingBehind(world.state.player.yaw);
     camera.onEvent(e, p, (id) => renderer.entityPosition(id));
     groundFx(e);
     haptics.device = hud.device;
@@ -1030,11 +1030,17 @@ async function main(): Promise<void> {
     camera.aiming = p.weapon.drawn && (p.mode === 'ground' || p.mode === 'air');
     // The room's framing (the Wind Stair's shaft looks up or down, and has fixed shots).
     camera.setFraming(world.level.roomAt(Math.floor(at.x / 2), Math.floor(at.z / 2))?.camera ?? null);
-    camera.update(at, p.mode === 'hang' || p.mode === 'rope' || p.mode === 'climb', world.grid, cameraDt, {
-      vx: p.mode === 'ground' || p.mode === 'air' ? p.vel.x : 0,
-      vz: p.mode === 'ground' || p.mode === 'air' ? p.vel.z : 0,
-      vy: p.vel.y,
-    });
+    camera.update(
+      at,
+      p.mode === 'hang' || p.mode === 'wall' || p.mode === 'rope' || p.mode === 'climb',
+      world.grid,
+      cameraDt,
+      {
+        vx: p.mode === 'ground' || p.mode === 'air' ? p.vel.x : 0,
+        vz: p.mode === 'ground' || p.mode === 'air' ? p.vel.z : 0,
+        vy: p.vel.y,
+      },
+    );
     renderer.setFocus(camera.focusPoint, camera.focusWeight);
     camera.narrow = renderer.camera.aspect < 0.8;
     // Narrow (portrait) screens keep a playable horizontal field of view.
@@ -1072,6 +1078,8 @@ async function main(): Promise<void> {
         torch: torchInHand(p) ? 1 : 0,
         use: useKind(world),
         riding: riding(world),
+        // Climbing moves straight up, down or along the face: their sum drives the cycle.
+        climbPhase: at.y + (p.dir === 'N' || p.dir === 'S' ? at.x : at.z),
         ...renderer.combat.aimPose(world),
       },
       view.eye,

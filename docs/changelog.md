@@ -1,5 +1,19 @@
 # Changelog
 
+## Version 0.7.5 (2026-10-04): Wall climbing
+
+The first of three releases on the way to 0.8.0 (docs/roadmap.md), chamber V, the Root Halls.
+
+- **Climbing walls** (spec §5 "Escalar paredes"). The sector flag `climb<D>` marks the face of that sector that looks towards D as climbable.
+  - Nora gets on a face with Action, catches one from a jump, or steps onto one from the ledge above it by pulling back while hanging.
+  - On the face she climbs up, down and sideways, as long as the face goes on.
+  - At the top she hangs from the edge and climbs up as from any ledge. At the bottom she steps off onto the floor.
+  - A jump takes her back off the face and turns her round. Action lets go.
+  - The torch goes on her belt while she climbs. Birds and tearing gusts knock her off, as from a ledge.
+- **Seeing it**: pale roots on every climbable face, a climbing pose built from the hanging one, the grab sound and a "Climb" prompt. Both are stand-ins until the root kit and the Mixamo climbing clips arrive (docs/art/models-brief.md).
+- **Reachability**: the level validator climbs a face to its top, however tall, and along it while it goes on.
+- **Tests**: tests/wall-climb.test.ts (14 movement tests) and two new cases in tests/reach.test.ts.
+
 ## Version 0.7.1 (2026-10-04): Observatory fix
 
 - Anzur's phase-2 slams no longer break the floor under the oculus while it is still dark. Before, he could destroy the pool before the three rings lit it, and so take away the only way to stop him.

@@ -8,6 +8,7 @@ import { jump } from './ground';
 import { startClimb, startHang } from './hang';
 import { tryGrabRope } from './rope';
 import { enterWaterFromAir, softLanding } from './swim';
+import { tryCatchWall } from './wall';
 
 export function air(c: Ctx): void {
   const { p, q, dt } = c;
@@ -63,6 +64,7 @@ export function air(c: Ctx): void {
 
   if (tryGrabRope(c)) return;
   if (tryGrab(c, rising)) return;
+  if (tryCatchWall(c)) return;
   if (enterWaterFromAir(c, y0)) return;
 
   const floor = q.floorAt(p.pos.x, p.pos.z);

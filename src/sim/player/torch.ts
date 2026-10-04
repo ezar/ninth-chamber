@@ -24,6 +24,7 @@ import { torch as T } from './tuning';
 /** Moves that need both hands: the torch goes on her belt meanwhile. */
 const TWO_HANDED: ReadonlySet<PlayerMode> = new Set([
   'hang',
+  'wall',
   'climb',
   'block',
   'push',

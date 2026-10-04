@@ -5,6 +5,7 @@ import type { Ledge } from '../../state';
 import { emit, faceDir, setMode, wishAlong, type Ctx } from '../context';
 import { tearingGust } from '../../mechanisms/wind';
 import { tuning, wind as windTuning } from '../tuning';
+import { tryWallFromLedge } from './wall';
 
 export function startHang(c: Ctx, ledge: Ledge, x: number, z: number): void {
   const { p } = c;
@@ -37,8 +38,13 @@ export function hang(c: Ctx): void {
   const right = RIGHT_OF[ledge.dir];
   const side = wishAlong(c, right);
 
-  if (c.pressed('action') || (forward < -0.5 && p.modeTime > 0.2)) {
+  if (c.pressed('action')) {
     letGo(c);
+    return;
+  }
+  // Pulling back lets go, or puts her on the face below if it is climbable.
+  if (forward < -0.5 && p.modeTime > 0.2) {
+    if (!tryWallFromLedge(c)) letGo(c);
     return;
   }
   if ((c.pressed('jump') || forward > 0.5) && p.modeTime > 0.25) {

@@ -51,6 +51,7 @@
   "prompt.pickup": "Pick up",
   "prompt.block": "Grab the block",
   "prompt.lightTorch": "Light the torch",
+  "prompt.climb": "Climb",
   "end.time": "Time",
   "end.secrets": "Secrets",
   "end.deaths": "Deaths",

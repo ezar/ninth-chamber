@@ -378,7 +378,7 @@ function searchNora(
   const p = world.state.player;
   const res = findPath(navOf(world), walkerOf(s), cellOfPos(e.pos), cellOfPos(p.pos), s.searchLimit);
   // Hanging from a wall is out of reach even when the cell below is not.
-  return { reached: res.reached && p.mode !== 'hang', path: res.path };
+  return { reached: res.reached && p.mode !== 'hang' && p.mode !== 'wall', path: res.path };
 }
 
 function chase(world: World, e: EnemyState, s: EnemyStats, dt: number): void {

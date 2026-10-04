@@ -18,6 +18,7 @@ import { DOOR_MODEL_HEIGHT, dressLevel, PropLibrary, type PropModel } from './pr
 import { crackMask } from './textures';
 import { materialColor, texture, uv, vec2 } from 'three/tsl';
 import { torchModel } from './torch';
+import { rootFaces } from './roots';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
 
@@ -188,6 +189,8 @@ export class Props {
     this.group.add(this.embers);
 
     this.buildSpikes();
+    const roots = rootFaces(this.level);
+    if (roots) this.group.add(roots);
     this.buildCrumbleTiles();
     this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
   }

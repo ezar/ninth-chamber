@@ -9,6 +9,7 @@ import { windAt } from '../../mechanisms/wind';
 import { tuning, wind as windTuning } from '../tuning';
 import { startHang } from './hang';
 import { floatInDeepWater, wadeSpeed, walkTop } from './swim';
+import { tryGetOnWall } from './wall';
 
 export function ground(c: Ctx): void {
   const { p, q, dt } = c;
@@ -16,7 +17,7 @@ export function ground(c: Ctx): void {
   const action = c.held('action');
   if (floatInDeepWater(c)) return;
 
-  if (c.pressed('action') && (tryInteract(c) || useMechanism(c))) return;
+  if (c.pressed('action') && (tryInteract(c) || useMechanism(c) || tryGetOnWall(c))) return;
   if (action && tryGrabBlock(c)) return;
   if (walk && action && tryDropToHang(c)) return;
 
