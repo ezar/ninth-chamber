@@ -54,7 +54,7 @@
         }
       },
       "rows": [
-        "####.####",
+        "####u####",
         "#uuuuuuu#",
         "#uuuuuuu#",
         "#uCCCCCu#",
@@ -140,15 +140,24 @@
           "water": -1,
           "mat": "wood"
         },
-        "d": {
-          "floor": -14,
-          "water": -1,
-          "mat": "wood"
-        },
         "g": {
           "floor": -8,
           "ceil": -4,
           "water": -1
+        },
+        "d": {
+          "floor": -8,
+          "ceil": -4,
+          "water": -1
+        },
+        "k": {
+          "floor": -8,
+          "ceil": 6,
+          "water": -1
+        },
+        "l": {
+          "floor": 0,
+          "ceil": 6
         },
         "b": 0
       },
@@ -158,8 +167,8 @@
         "#.......#",
         "#wwwwwww#",
         "##g######",
-        "#wwwwwww#",
-        "#wwwwwdw#",
+        "#wwww#l##",
+        "#wwwwdk##",
         "#.......#",
         "#.......#",
         "####.####"
@@ -178,7 +187,7 @@
         "b": 0
       },
       "rows": [
-        "####.####",
+        "####u####",
         "#uuuuuuu#",
         "#uuuuuuu#",
         "#uuuuuuu#",
@@ -207,19 +216,25 @@
           "mat": "wood",
           "flags": ["climbS"]
         },
+        "B": {
+          "floor": 6,
+          "mat": "wood",
+          "flags": ["climbS"]
+        },
+        "e": 6,
         "x": {
           "floor": -12,
           "mat": "wood",
           "flags": ["death"]
         }
       },
-      "rows": ["#########.#", "#bbbbbbbb.#", "#.xxxxxxx.#", "#.xxxxxxx##", "#.xxxxxxx##", "#.#########"],
+      "rows": ["#########e#", "#bbbbbbbbB#", "#.xxxxxxx.#", "#.xxxxxxx##", "#.xxxxxxx##", "#.#########"],
       "look": "roots_bridge",
       "reverb": "stone_medium"
     },
     {
       "id": "vault",
-      "origin": [7, -61, 20],
+      "origin": [7, -61, 26],
       "ceil": 40,
       "legend": {
         "#": "wall",
@@ -251,7 +266,7 @@
     },
     {
       "id": "trunk",
-      "origin": [10, -69, 20],
+      "origin": [10, -69, 26],
       "ceil": 40,
       "legend": {
         "#": "wall",
@@ -268,7 +283,7 @@
           "flags": ["climbS", "climbE", "climbW"]
         }
       },
-      "rows": ["###.###", "#LLLLL#", "#LLtLL#", "#..T..#", "#.....#", "#.....#", "#.....#", "###.###"],
+      "rows": ["###L###", "#LLLLL#", "#LLtLL#", "#..T..#", "#.....#", "#.....#", "#.....#", "###.###"],
       "look": "roots_trunk",
       "reverb": "hall_large",
       "camera": {
@@ -278,7 +293,7 @@
     },
     {
       "id": "heart",
-      "origin": [9, -75, 52],
+      "origin": [9, -75, 58],
       "ceil": 20,
       "legend": {
         "#": "wall",
@@ -432,7 +447,7 @@
       "id": "tg_drowned2",
       "type": "tangle",
       "room": "pool",
-      "at": [5, 6],
+      "at": [4, 5],
       "size": [1, 1],
       "top": -2,
       "hold": "sealed"
@@ -441,7 +456,7 @@
       "id": "idol_gold",
       "type": "secret",
       "room": "pool",
-      "at": [6, 6],
+      "at": [6, 5],
       "idol": "gold"
     },
     {
