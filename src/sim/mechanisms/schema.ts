@@ -210,6 +210,22 @@ export const mechanismEntities = [
   z
     .object({
       ...base,
+      type: z.literal('tangle'),
+      /**
+       * A tangle of roots (spec §19, chamber V): size in blocks (x, z) from `at`, and its top in
+       * clicks. Grown, it fills its cells from their floor up to the top, solid and climbable; a
+       * lit torch close by makes it shrink back.
+       */
+      size: z.tuple([int.min(1), int.min(1)]).default([1, 1]),
+      top: int,
+      grown: z.boolean().default(true),
+      /** Who decides at the start: the torch (free), or rules have it sealed or parted already. */
+      hold: z.enum(['free', 'sealed', 'parted']).default('free'),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
       type: z.literal('glyphlock'),
       /** The side its glyph is read from (and turned from): the face shown points this way. */
       facing: FACING,
@@ -251,6 +267,7 @@ export const MECHANISM_SIGNALS: Record<string, string[]> = {
   wind: ['gust'],
   ring: ['set'],
   oculus: ['on'],
+  tangle: ['open'],
 };
 
 /** Rule actions each mechanism type accepts (`<id>.<action> [args]`). */
@@ -268,6 +285,7 @@ export const MECHANISM_ACTIONS: Record<string, string[]> = {
   wind: ['on', 'off', 'toggle'],
   ring: ['turn', 'back'],
   oculus: ['on', 'off', 'toggle'],
+  tangle: ['seal', 'part', 'free'],
 };
 
 /** Whether `<entity of type>.<suffix>` is a signal a mechanism emits. */

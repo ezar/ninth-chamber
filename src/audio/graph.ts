@@ -816,6 +816,12 @@ export class AudioGraph {
         break;
       }
       case 'tile.cracked':
+        if (e.mat === 'wood') {
+          // A floor of roots creaks under her weight for the whole warning.
+          this.play('sfx', at, (s, t) => sfx.rootCreak(s, t, mechanics.crumbleDelay));
+          m.duck(mechanics.crumbleDelay + 1);
+          break;
+        }
         this.play('sfx', at, (s, t) => {
           if (this.ready('tile.crack', 'debris')) {
             // The warning spans the whole delay before the tile gives way.
@@ -835,7 +841,11 @@ export class AudioGraph {
         break;
       case 'tile.fell':
         this.play('sfx', at, (s, t) => {
-          if (this.ready('debris', 'stone.impact')) {
+          if (e.mat === 'wood') {
+            // Roots snapping, then the fall far below.
+            sfx.rootCreak(s, t, 0.3);
+            sfx.tileFall(s, t + 0.05);
+          } else if (this.ready('debris', 'stone.impact')) {
             this.layer(s, t, 'debris', { gain: LEVEL.debris * 2.4 });
             this.layer(s, t, 'tile.crack', { gain: LEVEL.crack * 0.6, rate: 0.8 });
             // Landing far below, muffled.
@@ -974,6 +984,12 @@ export class AudioGraph {
         });
         m.duck(1);
         break;
+      case 'tangle.shrink':
+        this.play('sfx', at, (s, t) => sfx.rootCreak(s, t));
+        break;
+      case 'tangle.closed':
+        this.play('sfx', at, (s, t) => sfx.rootCreak(s, t, 1.6));
+        break;
       case 'enemy.alerted': {
         if (e.enemy === 'bird') {
           this.play('sfx', at, (s, t) => sfx.screech(s, t));
@@ -990,6 +1006,10 @@ export class AudioGraph {
           this.play('sfx', at, (s, t) => sfx.rumble(s, t, 0.9));
           break;
         }
+        if (e.enemy === 'scorpion') {
+          this.play('sfx', at, (s, t) => sfx.chitter(s, t));
+          break;
+        }
         const dur = growlLength();
         this.play('sfx', at, (s, t) => sfx.growl(s, t, dur));
         break;
@@ -1001,12 +1021,14 @@ export class AudioGraph {
         this.play('sfx', at, (s, t) => {
           if (plated) sfx.ricochet(s, t);
           else sfx.bulletHit(s, t);
-          if (!dying && !clay && !plated && e.enemy !== 'bird') sfx.yelp(s, t + 0.02, false);
+          if (!dying && !clay && !plated && e.enemy !== 'bird' && e.enemy !== 'scorpion')
+            sfx.yelp(s, t + 0.02, false);
         });
         break;
       }
       case 'enemy.died':
         if (e.enemy === 'bird') this.play('sfx', at, (s, t) => sfx.screech(s, t + 0.03, true));
+        else if (e.enemy === 'scorpion') this.play('sfx', at, (s, t) => sfx.chitter(s, t + 0.03, 3));
         else this.play('sfx', at, (s, t) => sfx.yelp(s, t + 0.03, true));
         break;
       case 'enemy.shove':
@@ -1022,7 +1044,8 @@ export class AudioGraph {
           });
           break;
         }
-        this.play('sfx', at, (s, t) => sfx.bite(s, t, hit));
+        if (e.enemy === 'scorpion') this.play('sfx', at, (s, t) => sfx.sting(s, t, hit));
+        else this.play('sfx', at, (s, t) => sfx.bite(s, t, hit));
         break;
       }
       case 'enemy.gaveUp':

@@ -1,0 +1,45 @@
+{
+  "level": "root_halls",
+  "puzzles": [
+    {
+      "id": "first_wall",
+      "rooms": ["first_wall"],
+      "solved": "z_tangles.entered",
+      "hints": [
+        "hints.root_halls.first_wall.1",
+        "hints.root_halls.first_wall.2",
+        "hints.root_halls.first_wall.3"
+      ]
+    },
+    {
+      "id": "tangles",
+      "rooms": ["tangles"],
+      "solved": "z_nest.entered",
+      "hints": ["hints.root_halls.tangles.1", "hints.root_halls.tangles.2", "hints.root_halls.tangles.3"]
+    },
+    {
+      "id": "pool",
+      "rooms": ["pool"],
+      "solved": "z_split.entered",
+      "hints": ["hints.root_halls.pool.1", "hints.root_halls.pool.2", "hints.root_halls.pool.3"]
+    },
+    {
+      "id": "split",
+      "rooms": ["split"],
+      "solved": "z_bridge.entered",
+      "hints": ["hints.root_halls.split.1", "hints.root_halls.split.2", "hints.root_halls.split.3"]
+    },
+    {
+      "id": "bridge",
+      "rooms": ["bridge"],
+      "solved": "z_vault.entered",
+      "hints": ["hints.root_halls.bridge.1", "hints.root_halls.bridge.2", "hints.root_halls.bridge.3"]
+    },
+    {
+      "id": "trunk",
+      "rooms": ["trunk"],
+      "solved": "z_heart.entered",
+      "hints": ["hints.root_halls.trunk.1", "hints.root_halls.trunk.2", "hints.root_halls.trunk.3"]
+    }
+  ]
+}

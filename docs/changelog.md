@@ -1,5 +1,59 @@
 # Changelog
 
+## Version 0.8.0 (2026-10-04): Chamber V, the Root Halls
+
+The last of the three releases on the way to 0.8.0 (docs/roadmap.md): chamber V opens, and the campaign now runs I to VIII in order.
+
+- **The Root Halls** (`levels/root_halls.level.json`, spec §19): ten rooms under the sunken forest.
+  1. The rift: the way in, split by a giant root. A torch still burns there, and the first note waits.
+  2. The first wall: a safe 5 m wall of roots that teaches climbing.
+  3. The gallery of tangles: the torch against the roots for the first time. A mat of roots over a hole in the floor opens only when the torch is held over it (jade idol).
+  4. The scorpions' nest: a pack in the dark, and a strip of root floor that gives way.
+  5. The pool of roots: a dive under a wall of rock, between drowned roots. Beyond a drowned tunnel lies a chamber under the pool with air in it (gold idol). The water puts the torch out, so there is a brazier on the far bank.
+  6. The split hall: half of it sank. A pillar of roots is the only way up the step, and the torch in hand takes it away. A tangle closes the way out above.
+  7. The root bridge: a root squeezed against the rock over a chasm of thorns. Nora crosses along its face.
+  8. The forest vault: green light through the cracks, two scorpions and the second note. Behind a curtain of roots, a face climbs to a niche (stone idol).
+  9. Erreth's trunk: a 16 m climb up the petrified tree. Three layers of roots close below her on a timer, never onto her.
+  10. The heart of the tree: the Stone Seed and the last note.
+- **Campaign**:
+  - Chamber V gets its entry, with the seed figure and a music palette.
+  - Players who already reached a later chamber find V open.
+  - Three of the owner's texts change now that V sits between IV and VI: the Archive's teaser, the first line of the Forge's intro, and the Forge's last line, which now names the way through.
+- **Looks and light**: ten looks in moss green and amber, with filtered daylight and damp, and a baked lightmap. The stone keeps the shared texture: its green comes from the light until the root kit and a mossy stone arrive. A brazier in the scorpions' nest keeps it readable.
+- **Reference shots**: `pnpm shots` no longer stands Nora on a deadly floor, which killed her in the bridge's chasm and spoiled the shots after it.
+- **Tangles** can start sealed or parted (`hold`), so rules can hold them until the right moment.
+- **Tests**:
+  - tests/root-halls.test.ts: the bot plays the whole chamber with every secret and no deaths, and four checks that each puzzle is needed and has no dead end.
+  - New bot helpers for climbing.
+- **Found and fixed while building it**:
+  - The exits of rooms with a raised floor were at the lower height.
+  - The root bridge had no way off at the far end.
+  - The gold idol first sat under water, where nothing can be picked up.
+  - The pool named a reverb preset the audio does not have, which broke the page (caught by `pnpm smoke`). The level schema now accepts only the presets the audio has.
+
+## Version 0.7.6 (2026-10-04): Tangles, scorpions and root floors
+
+The second of three releases on the way to 0.8.0 (docs/roadmap.md).
+
+- **Tangles of roots** (`src/sim/mechanisms/tangles.ts`, entity `tangle`: cells, a top in clicks, grown or not at the start).
+  - Grown, a tangle fills its cells up to its top. It is solid, and climbable on every side.
+  - A lit torch in Nora's hand within 2.2 m makes it shrink back in 0.8 s. That opens the way and takes its handholds away: if she is climbing it, she falls.
+  - With the torch out or away it waits 2.5 s, then grows back over 6 s. It never grows back onto Nora or onto a living enemy.
+  - Rules: `<id>.seal` makes it grow whatever the torch, `<id>.part` keeps it open, and `<id>.free` hands it back to the torch. It emits the signal `<id>.open`.
+  - A tangle can also fill a hole in the floor: held over it, the torch opens it.
+- **Scorpions**: a new enemy type, `scorpion`. They are small, quick and hunt in packs. Their sting does little damage but poisons, like the darts. A pistol hit or two kills one.
+- **Root floors and thorns**:
+  - A crumbling floor with the `wood` material is a mat of woven roots that creaks under her, instead of the stone cracking.
+  - A deadly pit floored with `wood` grows thorns instead of spikes.
+- **Seeing and hearing it**:
+  - tangles grow from the rock around them and shrink back into it, or rise from the floor when they stand free;
+  - a stand-in scorpion model with legs, pincers and a stinging tail;
+  - root creaks, a scorpion's chitter and sting;
+  - captions in English, Spanish and Catalan.
+- **Saves**: migration 006 adds the tangles to older saves (schema 7).
+- **Level tools**: the reachability check counts tangles as both open and grown. The validator rejects a tangle that grows into rock or never rises above the floor.
+- **Tests**: tests/tangles.test.ts (12) and tests/scorpions.test.ts (5).
+
 ## Version 0.7.5 (2026-10-04): Wall climbing
 
 The first of three releases on the way to 0.8.0 (docs/roadmap.md), chamber V, the Root Halls.

@@ -8,20 +8,19 @@ import { CHAMBERS, chamberOf, nextChamber } from '../src/ui/campaign';
 const keys = (o: object): Set<string> => new Set(Object.keys(o));
 
 describe('campaign story data', () => {
-  it('has nine chambers: seven playable (VI to VIII built before V), the Root Halls sealed and the ninth unknown', () => {
+  it('has nine chambers: eight playable and the ninth unknown', () => {
     expect(CHAMBERS.map((c) => c.numeral)).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX']);
     expect(CHAMBERS.map((c) => c.level ?? null)).toEqual([
       'antechamber',
       'cisterns',
       'sun_temple',
       'clay_archive',
-      null,
+      'root_halls',
       'bronze_forge',
       'wind_stair',
       'observatory',
       null,
     ]);
-    expect(CHAMBERS[4]?.status).toBe('sealed');
     expect(CHAMBERS[8]?.status).toBe('unknown');
   });
 
@@ -50,11 +49,12 @@ describe('campaign story data', () => {
     expect([...placed].sort()).toEqual([...(chamberOf('antechamber')?.journal ?? [])].sort());
   });
 
-  it('chains the chambers: the Archive leads past the sealed Root Halls to the Forge, the Forge to the Wind Stair, then the Observatory and the ninth', () => {
+  it('chains the chambers: the Archive leads to the Root Halls, then the Forge, the Wind Stair, the Observatory and the ninth', () => {
     expect(nextChamber('antechamber')?.level).toBe('cisterns');
     expect(nextChamber('cisterns')?.level).toBe('sun_temple');
     expect(nextChamber('sun_temple')?.level).toBe('clay_archive');
-    expect(nextChamber('clay_archive')?.level).toBe('bronze_forge');
+    expect(nextChamber('clay_archive')?.level).toBe('root_halls');
+    expect(nextChamber('root_halls')?.level).toBe('bronze_forge');
     expect(nextChamber('bronze_forge')?.level).toBe('wind_stair');
     expect(nextChamber('wind_stair')?.level).toBe('observatory');
     expect(nextChamber('observatory')?.numeral).toBe('IX');

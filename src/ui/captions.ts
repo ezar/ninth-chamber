@@ -53,6 +53,8 @@ const CAPTIONS: Record<string, CaptionDef> = {
   'player.torn': { key: 'caption.torn' },
   'torch.out': { key: 'caption.torchOut' },
   'flare.out': { key: 'caption.flareOut' },
+  'tangle.shrink': { key: 'caption.tangleShrink', quiet: 3 },
+  'tangle.closed': { key: 'caption.tangleGrow', quiet: 4 },
 };
 
 const ENEMY_CAPTIONS: Record<string, Partial<Record<string, StringKey>>> = {
@@ -61,6 +63,7 @@ const ENEMY_CAPTIONS: Record<string, Partial<Record<string, StringKey>>> = {
     clay: 'caption.clayAlerted',
     automaton: 'caption.automatonAlerted',
     bird: 'caption.birdAlerted',
+    scorpion: 'caption.scorpionAlerted',
   },
   'enemy.shove': { bird: 'caption.birdShove' },
   'enemy.quenched': { automaton: 'caption.automatonQuenched' },

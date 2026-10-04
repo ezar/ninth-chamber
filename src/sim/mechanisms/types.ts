@@ -177,6 +177,17 @@ export interface OculusState {
   on: boolean;
 }
 
+/** A tangle of roots (spec §19, chamber V). */
+export interface TangleState {
+  id: string;
+  /** 0 shrunk back … 1 fully grown; solid and climbable from 0.5. */
+  grown: number;
+  /** Seconds since a torch last made it shrink. */
+  idle: number;
+  /** Rules: free (the torch decides), sealed (it grows whatever the torch) or parted (it stays open). */
+  hold: 'free' | 'sealed' | 'parted';
+}
+
 export interface MechanismState {
   platforms: PlatformState[];
   trapdoors: TrapdoorState[];
@@ -195,6 +206,7 @@ export interface MechanismState {
   winds: WindState[];
   rings: RingState[];
   oculi: OculusState[];
+  tangles: TangleState[];
   /** Nora stood in open heat last tick. */
   scorched: boolean;
   /** What Nora is operating (turning a mirror, setting an item, taking one) and whether it has reacted. */

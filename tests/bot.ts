@@ -221,6 +221,50 @@ export class Bot {
     this.waitMode('ground');
   }
 
+  // ───────────────────────────── Climbing walls (spec §5 "Escalar paredes") ─────────────────────────────
+
+  /** Walks into the climbable face in `dir` and gets on it with Action. */
+  getOnWall(dir: Dir): void {
+    const v = DIRS[dir];
+    for (let i = 0; i < 90; i++) this.tick(frame({ x: v.x, y: v.y, held: ['walk'] }));
+    this.tick(frame({ pressed: ['action'] }));
+    expect(this.p.mode, `getting on the wall at ${this.where()}`).toBe('wall');
+  }
+
+  /** Climbs the face she is on (facing `dir`) to the top, and over it onto the ground. */
+  climbWall(dir: Dir, max = 3000): void {
+    const v = DIRS[dir];
+    for (let i = 0; i < max && this.p.mode !== 'ground'; i++) this.tick(frame({ x: v.x, y: v.y }));
+    this.waitMode('ground');
+  }
+
+  /** Climbs up the face she is on (facing `dir`) to a feet height (m). */
+  climbWallTo(dir: Dir, y: number, max = 3000): void {
+    const v = DIRS[dir];
+    for (let i = 0; i < max && this.p.pos.y < y; i++) {
+      expect(this.p.mode, `climbing at ${this.where()}`).toBe('wall');
+      this.tick(frame({ x: v.x, y: v.y }));
+    }
+  }
+
+  /** Moves sideways along the face she is on, towards `side`, until her centre is in world cell column `c`. */
+  wallAlong(side: Dir, c: number, max = 2000): void {
+    const v = DIRS[side];
+    const inCell = (): boolean =>
+      Math.floor((v.x !== 0 ? this.p.pos.x : this.p.pos.z) / 2) === c &&
+      Math.abs(((v.x !== 0 ? this.p.pos.x : this.p.pos.z) % 2) - 1) < 0.5;
+    for (let i = 0; i < max && !inCell(); i++) {
+      expect(this.p.mode, `moving along the wall at ${this.where()}`).toBe('wall');
+      this.tick(frame({ x: v.x, y: v.y }));
+    }
+    expect(inCell(), `along the wall to ${c} at ${this.where()}`).toBe(true);
+  }
+
+  /** Puts the torch away, or takes it out again. */
+  toggleTorch(): void {
+    this.tick(frame({ pressed: ['torch'] }));
+  }
+
   // ───────────────────────────── Water (spec §5.10) and flares (§7) ─────────────────────────────
 
   /** Walks (or runs) in `dir` until Nora is in the water, then waits until she floats at the surface. */

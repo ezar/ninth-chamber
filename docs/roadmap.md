@@ -2,7 +2,7 @@
 
 Agreed with the owner on 2026-10-04, after 0.7.1. Chamber IX needs the owner's decisions first, so the owner chose chamber V, the Root Halls, which needs none. It is the last of the middle chambers. As before, Claude takes its design decisions from the spec. Each decision taken is listed below for review. The roadmap to 0.7.0 is closed; its record is in the changelog.
 
-**Status:** in progress.
+**Status:** done. 0.7.5, 0.7.6 and 0.8.0 are released; see the changelog.
 
 **Goal:** chamber V, the Root Halls: a forest buried when the mountain sank, whose roots have split the halls for three thousand years. Walls of roots Nora climbs, tangles that shrink from the torch, scorpions, root floors that give way, and the long climb up Erreth's trunk to the Stone Seed.
 
@@ -16,6 +16,7 @@ Agreed with the owner on 2026-10-04, after 0.7.1. Chamber IX needs the owner's d
 | Scorpions       | A new small enemy in groups. Its sting poisons, like the darts of chamber IV.                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Root floors     | The crumbling floor of chamber I with the `wood` material: the creak of wood and its own look. Thorns are the death pits with their own look.                                                                                                                                                                                                                                                                                                                                    |
 | Erreth's trunk  | The climax: a long climb up the trunk while tangles close below, on a timer the rules start. It is soft: the tangles grow up behind Nora, never onto her.                                                                                                                                                                                                                                                                                                                        |
+| Secrets         | As spec §19 lists them: a mat of roots opened only by the torch held over it, a face hidden behind a curtain of roots, and a chamber under the pool. As built, that chamber is an air pocket beyond a drowned tunnel, since nothing is picked up under water.                                                                                                                                                                                                                    |
 | Models          | Procedural stand-ins (root walls, tangles, scorpions, the trunk, the seed) until the owner's models arrive, listed in docs/art/models-brief.md. The Mixamo climbing animations come with the owner's models; until then the climbing pose is built from the hanging one.                                                                                                                                                                                                         |
 
 ## 0.7.5 · Wall climbing

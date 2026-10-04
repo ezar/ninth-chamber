@@ -19,6 +19,7 @@ import { crackMask } from './textures';
 import { materialColor, texture, uv, vec2 } from 'three/tsl';
 import { torchModel } from './torch';
 import { rootFaces } from './roots';
+import { TangleViews } from './tangles';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
 
@@ -30,6 +31,7 @@ const center = (c: number): number => c * BLOCK + BLOCK / 2;
 const RELIC_TINTS: Readonly<Record<string, { color: string; emissive: string; light: string }>> = {
   cisterns: { color: '#bfeee6', emissive: '#46d0c4', light: '#7ee6dc' },
   clay_archive: { color: '#b4683e', emissive: '#ff6a2a', light: '#ff9a5a' },
+  root_halls: { color: '#9cc9a0', emissive: '#3fb05e', light: '#86e09a' },
 };
 
 /** Chambers whose relic is a tablet of fired clay rather than a gem in a cage. */
@@ -72,6 +74,7 @@ export class Props {
   readonly hidden = new Set<string>();
   private readonly actors = new Map<string, Actor>();
   private readonly tileViews = new Map<string, THREE.Mesh>();
+  private readonly tangles: TangleViews;
   private readonly flames: {
     sprite: THREE.Sprite;
     base: THREE.Vector3;
@@ -191,6 +194,8 @@ export class Props {
     this.buildSpikes();
     const roots = rootFaces(this.level);
     if (roots) this.group.add(roots);
+    this.tangles = new TangleViews(this.level);
+    this.group.add(this.tangles.group);
     this.buildCrumbleTiles();
     this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
   }
@@ -282,31 +287,50 @@ export class Props {
     holder.userData.model = true;
   }
 
+  /** Spikes in deadly pits; in a pit floored with roots (`wood`), thorns (spec §19, chamber V). */
   private buildSpikes(): void {
-    const spots: THREE.Vector3[] = [];
+    const metal: THREE.Vector3[] = [];
+    const thorns: THREE.Vector3[] = [];
     for (const s of this.level.allSectors()) {
       if (!s.flags.has('death')) continue;
       const y = Math.max(...s.floor);
-      for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-          spots.push(new THREE.Vector3(s.cx * BLOCK + 0.25 + i * 0.5, y, s.cz * BLOCK + 0.25 + j * 0.5));
+      const wood = s.mat === 'wood';
+      const n = wood ? 5 : 4;
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+          const step = BLOCK / n;
+          (wood ? thorns : metal).push(
+            new THREE.Vector3(s.cx * BLOCK + step / 2 + i * step, y, s.cz * BLOCK + step / 2 + j * step),
+          );
         }
       }
     }
-    if (!spots.length) return;
-    const geo = new THREE.ConeGeometry(0.07, 0.9, 6);
-    geo.translate(0, 0.45, 0);
-    const mesh = new THREE.InstancedMesh(geo, this.mats.darkMetal, spots.length);
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    spots.forEach((p, i) => {
-      const tilt = new THREE.Euler(((i * 7) % 5) * 0.03 - 0.06, 0, ((i * 11) % 5) * 0.03 - 0.06);
-      q.setFromEuler(tilt);
-      m.compose(p, q, new THREE.Vector3(1, 0.8 + ((i * 13) % 5) * 0.08, 1));
-      mesh.setMatrixAt(i, m);
-    });
-    mesh.castShadow = true;
-    this.group.add(mesh);
+    const field = (
+      spots: THREE.Vector3[],
+      geo: THREE.BufferGeometry,
+      mat: THREE.Material,
+      tilt: number,
+    ): void => {
+      if (!spots.length) return;
+      const mesh = new THREE.InstancedMesh(geo, mat, spots.length);
+      const m = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      spots.forEach((p, i) => {
+        const e = new THREE.Euler((((i * 7) % 5) - 2) * tilt, (i * 1.7) % 6.28, (((i * 11) % 5) - 2) * tilt);
+        q.setFromEuler(e);
+        m.compose(p, q, new THREE.Vector3(1, 0.8 + ((i * 13) % 5) * 0.08, 1));
+        mesh.setMatrixAt(i, m);
+      });
+      mesh.castShadow = true;
+      this.group.add(mesh);
+    };
+    const spike = new THREE.ConeGeometry(0.07, 0.9, 6);
+    spike.translate(0, 0.45, 0);
+    field(metal, spike, this.mats.darkMetal, 0.03);
+    // Thorns: thin, dark and leaning every way, on a mat of roots.
+    const thorn = new THREE.ConeGeometry(0.035, 0.75, 5);
+    thorn.translate(0, 0.375, 0);
+    field(thorns, thorn, new THREE.MeshStandardMaterial({ color: '#3b2a1a', roughness: 0.7 }), 0.12);
   }
 
   private buildCrumbleTiles(): void {
@@ -316,11 +340,30 @@ export class Props {
     const r = floor.map.repeat;
     const tiled = uv().mul(vec2(r.x, r.y));
     mat.colorNode = materialColor.mul(texture(floor.map, tiled)).mul(texture(crackMask(), tiled));
+    // A floor of roots (`wood`) that gives way: woven roots over a dark mat (spec §19, chamber V).
+    const woven = new THREE.MeshStandardMaterial({ color: '#5e4830', roughness: 0.95 });
+    const rootMat = new THREE.MeshStandardMaterial({ color: '#9a8458', roughness: 0.9 });
     for (const s of this.level.allSectors()) {
       if (!s.flags.has('crumble')) continue;
+      const wood = s.mat === 'wood';
       const geo = new RoundedBoxGeometry(BLOCK - 0.04, 0.35, BLOCK - 0.04, 2, 0.03);
       geo.translate(0, -0.175 - 0.015, 0);
-      const mesh = new THREE.Mesh(geo, mat);
+      const mesh = new THREE.Mesh(geo, wood ? woven : mat);
+      if (wood) {
+        for (let i = 0; i < 6; i++) {
+          const along = i % 2 === 0;
+          const o = -0.75 + Math.floor(i / 2) * 0.75 + ((s.cx * 3 + s.cz * 5 + i) % 3) * 0.08;
+          const pts = [-0.95, -0.3, 0.3, 0.95].map(
+            (u, k) => new THREE.Vector3(along ? u : o, -0.01 + (k % 2) * 0.025, along ? o : u),
+          );
+          const tube = new THREE.Mesh(
+            new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.05, 5),
+            rootMat,
+          );
+          tube.castShadow = true;
+          mesh.add(tube);
+        }
+      }
       mesh.position.set(center(s.cx), Math.max(...s.floor), center(s.cz));
       mesh.castShadow = mesh.receiveShadow = true;
       this.group.add(mesh);
@@ -436,6 +479,7 @@ export class Props {
   }
 
   update(world: World, time: number, dt: number): void {
+    this.tangles.update(world, dt);
     for (const a of world.state.actors) {
       const v = this.viewFor(a);
       if (!v) continue;

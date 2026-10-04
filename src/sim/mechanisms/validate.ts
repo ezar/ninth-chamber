@@ -6,7 +6,7 @@
  */
 import type { Level } from '../grid/level';
 import { sectorTop } from '../grid/level';
-import { DIR_VEC, OPPOSITE } from '../grid/units';
+import { CLICK, DIR_VEC, OPPOSITE } from '../grid/units';
 import { guardianTuning, tuning, wind as windTuning } from '../player/tuning';
 
 type Cell = [number, number];
@@ -135,6 +135,19 @@ export function validateMechanisms(
           errors.push(`ring '${e.id}': start and target must be below its ${e.positions} positions`);
         if (e.start === e.target) warnings.push(`ring '${e.id}' starts aligned`);
         break;
+      case 'tangle': {
+        if (cx - r.x + e.size[0] > r.w || cz - r.z + e.size[1] > r.h)
+          errors.push(`tangle '${e.id}' leaves its room`);
+        const top = level.rooms.find((x) => x.id === e.room)?.originY ?? 0;
+        for (let x = cx; x < cx + e.size[0]; x++)
+          for (let z = cz; z < cz + e.size[1]; z++) {
+            const s = level.sector(x, z);
+            if (!s || s.wall) errors.push(`tangle '${e.id}' grows into a wall at ${x},${z}`);
+            else if (top + e.top * CLICK <= (s.pit ? s.pitFloor : sectorTop(s)))
+              errors.push(`tangle '${e.id}': its top is not above the floor at ${x},${z}`);
+          }
+        break;
+      }
       case 'oculus':
         if (cx - r.x + e.size[0] > r.w || cz - r.z + e.size[1] > r.h)
           errors.push(`oculus '${e.id}' leaves its room`);

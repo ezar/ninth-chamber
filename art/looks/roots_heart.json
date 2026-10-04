@@ -1,0 +1,33 @@
+{
+  "id": "roots_heart",
+  "background": "#060a06",
+  "exposure": 1.32,
+  "hemi": {
+    "sky": "#8fb07a",
+    "ground": "#1a1408",
+    "intensity": 0.48
+  },
+  "fog": {
+    "color": "#2a3a24",
+    "density": 0.024
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ffb05a",
+    "intensity": 30,
+    "flicker": 0.18
+  },
+  "bloom": {
+    "strength": 0.55,
+    "radius": 0.6,
+    "threshold": 0.8
+  },
+  "grade": {
+    "tint": "#c6e2a6",
+    "saturation": 0.92,
+    "contrast": 1.12,
+    "vignette": 0.46
+  },
+  "fill": 1.6,
+  "lightmap": 1.3
+}

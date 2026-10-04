@@ -45,10 +45,19 @@ describe('campaign progress', () => {
     expect(markReached(broken, 'cisterns').has('cisterns')).toBe(true);
   });
 
-  it('shows reached chambers open, the rest locked or coming, the unbuilt ones sealed and IX unknown', () => {
+  it('shows reached chambers open, the rest locked or coming, and IX unknown', () => {
     const playable = new Set(['antechamber', 'cisterns']);
     const states = CHAMBERS.map((c) => chamberState(c, new Set(['antechamber']), playable));
-    expect(states).toEqual(['open', 'locked', 'soon', 'soon', 'sealed', 'soon', 'soon', 'soon', 'unknown']);
+    expect(states).toEqual(['open', 'locked', 'soon', 'soon', 'soon', 'soon', 'soon', 'soon', 'unknown']);
+  });
+
+  it('opens the Root Halls for anyone who already got past them to the Forge', () => {
+    const s = memory();
+    s.data.set('ninth-chamber.campaign', JSON.stringify({ reached: ['antechamber', 'bronze_forge'] }));
+    const reached = loadReached(s);
+    expect(reached.has('root_halls')).toBe(true);
+    expect(reached.has('clay_archive')).toBe(true);
+    expect(reached.has('wind_stair')).toBe(false);
   });
 
   it('chains the chambers: the Antechamber, then the Cisterns, then the Temple of the Sun', () => {

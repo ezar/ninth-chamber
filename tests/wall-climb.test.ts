@@ -7,7 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import { TICK_DT } from '../src/core/loop';
 import { wallInReach } from '../src/sim/player/modes/wall';
-import { tuning, wallClimb as W } from '../src/sim/player/tuning';
+import { enemyTypes, tuning, wallClimb as W } from '../src/sim/player/tuning';
+import type { EntityFile } from '../src/sim/grid/schema';
 import type { World } from '../src/sim/world';
 import { frame, run, runUntil, testLevel } from './helpers';
 
@@ -191,5 +192,40 @@ describe('climbing walls', () => {
     expect(wallInReach(w)).toBe(true);
     w.state.player.yaw = Math.PI;
     expect(wallInReach(w)).toBe(false);
+  });
+
+  it('takes the height of a face from the rock, not from a door or block in its cell', () => {
+    // A closed door stands in a floor cell marked climbable: it adds no face of roots to climb.
+    const w = testLevel(['#####', '#.D.#', '#...#', '#.S.#', '#####'], {
+      ceil: 12,
+      legend: { D: { floor: 0, flags: ['climbS'] } },
+      entities: [{ id: 'door', type: 'door', room: 'r', at: [2, 1], height: 6 } as EntityFile],
+    });
+    runUntil(w, up, (x) => x.state.player.pos.z < 2 * 2 + tuning.radius + 0.05, 120);
+    run(w, idle, 1);
+    expect(wallInReach(w)).toBe(false);
+    run(w, frame({ pressed: ['action'] }), 1);
+    expect(w.state.player.mode).not.toBe('wall');
+  });
+
+  it('a jackal at the foot of the face bites until she climbs out of its reach, then gives up', () => {
+    const w = testLevel(['######', '#RRRR#', '#....#', '#.S..#', '######'], {
+      ceil: 30,
+      legend: { R: { floor: 12, flags: ['climbS'] } },
+      entities: [{ id: 'j', type: 'enemy', enemy: 'jackal', room: 'r', at: [3, 2], face: 'W' } as EntityFile],
+    });
+    getOn(w);
+    const p = w.state.player;
+    expect(p.mode).toBe('wall');
+    // Low on the face she is still within its bite: it keeps at her and does not give up.
+    run(w, idle, ticks(enemyTypes.jackal.refugeTime + 1));
+    expect(w.state.enemies[0]?.mode).toBe('attack');
+    p.health = tuning.maxHealth;
+    // Climb out of its reach and stay there: no more bites land.
+    run(w, up, ticks(2.5));
+    const h0 = p.health;
+    run(w, idle, ticks(4));
+    expect(p.mode).toBe('wall');
+    expect(p.health).toBe(h0);
   });
 });

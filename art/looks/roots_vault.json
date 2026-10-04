@@ -1,0 +1,36 @@
+{
+  "id": "roots_vault",
+  "background": "#060a06",
+  "exposure": 1.38,
+  "hemi": {
+    "sky": "#8fb07a",
+    "ground": "#141008",
+    "intensity": 0.5
+  },
+  "fog": {
+    "color": "#33482c",
+    "density": 0.016
+  },
+  "sun": {
+    "color": "#e8f6c0",
+    "intensity": 4.0,
+    "direction": [0.25, 0.9, -0.3]
+  },
+  "fire": {
+    "color": "#ffa24e",
+    "intensity": 34,
+    "flicker": 0.22
+  },
+  "bloom": {
+    "strength": 0.7,
+    "radius": 0.6,
+    "threshold": 0.76
+  },
+  "grade": {
+    "tint": "#c6e2a6",
+    "saturation": 0.92,
+    "contrast": 1.12,
+    "vignette": 0.42
+  },
+  "fill": 1.8
+}

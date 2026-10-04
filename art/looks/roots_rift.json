@@ -1,0 +1,36 @@
+{
+  "id": "roots_rift",
+  "background": "#060a06",
+  "exposure": 1.3,
+  "hemi": {
+    "sky": "#8fb07a",
+    "ground": "#141008",
+    "intensity": 0.5
+  },
+  "fog": {
+    "color": "#2a3a24",
+    "density": 0.024
+  },
+  "sun": {
+    "color": "#e6f2c0",
+    "intensity": 3.4,
+    "direction": [0.3, 0.92, 0.25]
+  },
+  "fire": {
+    "color": "#ffa24e",
+    "intensity": 34,
+    "flicker": 0.22
+  },
+  "bloom": {
+    "strength": 0.55,
+    "radius": 0.6,
+    "threshold": 0.8
+  },
+  "grade": {
+    "tint": "#c6e2a6",
+    "saturation": 0.92,
+    "contrast": 1.12,
+    "vignette": 0.42
+  },
+  "fill": 1.6
+}

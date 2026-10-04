@@ -26,6 +26,7 @@ import { createDarts, createGlyphLock, turnGlyph, updateDarts, updateGlyphs, upd
 import { createPour, pourAction, pourCovers, updateHeat, updatePour } from './bronze';
 import { createWind, updateWind, windAction } from './wind';
 import { createOculus, createRing, oculusAction, ringAction, updateRings } from './rings';
+import { createTangle, tangleAction, tangleAt, updateTangle } from './tangles';
 
 export { mechanismPrompt, useMechanism } from './use';
 
@@ -65,6 +66,7 @@ export function createMechanisms(level: Level): MechanismState {
     winds: [...d.winds.values()].map(createWind),
     rings: [...d.rings.values()].map(createRing),
     oculi: [...d.oculi.values()].map(createOculus),
+    tangles: [...d.tangles.values()].map(createTangle),
     scorched: false,
     use: null,
   };
@@ -96,6 +98,8 @@ export function mechanismFloor(
     const def = d.pours.get(c.id);
     if (st && def && pourCovers(st, c.i)) h = Math.max(h, def.y);
   }
+  const roots = tangleAt(world, cx, cz);
+  if (roots) h = Math.max(h, roots.top);
   for (const p of m.platforms) {
     const on =
       px !== undefined && pz !== undefined ? platformUnder(p.pos, px, pz) : platformOverCell(p.pos, cx, cz);
@@ -141,6 +145,10 @@ export function updateMechanisms(world: World, dt: number): void {
   for (const s of m.winds) {
     const def = d.winds.get(s.id);
     if (def) updateWind(world, def, s, dt);
+  }
+  for (const s of m.tangles) {
+    const def = d.tangles.get(s.id);
+    if (def) updateTangle(world, def, s, dt);
   }
   updateGlyphs(world, d.glyphs);
   updateRings(world);
@@ -264,6 +272,9 @@ export function mechanismAction(world: World, id: string, op: string, args: stri
   const ring = m.rings.find((r) => r.id === id);
   const rdef = d.rings.get(id);
   if (ring && rdef) return ringAction(world, rdef, ring, op);
+
+  const tangle = m.tangles.find((t) => t.id === id);
+  if (tangle) return tangleAction(tangle, op);
 
   const oculus = m.oculi.find((o) => o.id === id);
   const odef = d.oculi.get(id);

@@ -100,7 +100,8 @@ export function updateActors(world: World, dt: number): void {
     const t = tileState(world, pcx, pcz);
     if (t.cracked === null && !t.fallen) {
       t.cracked = 0;
-      events.emit({ type: 'tile.cracked', tick, cx: pcx, cz: pcz });
+      // The material picks the sound: stone cracks, a floor of roots creaks (spec §19, chamber V).
+      events.emit({ type: 'tile.cracked', tick, cx: pcx, cz: pcz, mat: here.mat });
       makeNoise(world, { x: cellCenter(pcx), z: cellCenter(pcz) }, noise.tile);
     }
   }
@@ -110,7 +111,7 @@ export function updateActors(world: World, dt: number): void {
     if (t.cracked >= mechanics.crumbleDelay) {
       t.fallen = true;
       const [cx, cz] = key.split(',').map(Number);
-      events.emit({ type: 'tile.fell', tick, cx, cz });
+      events.emit({ type: 'tile.fell', tick, cx, cz, mat: level.sector(cx ?? 0, cz ?? 0)?.mat });
     }
   }
 }

@@ -14,7 +14,7 @@
 import type { StringKey } from './i18n';
 
 /** How the end screen draws a relic's clue: eight signs and a missing ninth. */
-export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs' | 'segments' | 'notes' | 'astrolabe';
+export type RelicFigure = 'stars' | 'moons' | 'rays' | 'signs' | 'segments' | 'notes' | 'astrolabe' | 'seed';
 
 export interface Relic {
   name: StringKey;
@@ -37,7 +37,7 @@ export interface Chamber {
   name: StringKey;
   /** One-line description for the campaign map. */
   line: StringKey;
-  /** Chambers with no level yet: sealed (IV–VIII) or not found (IX). */
+  /** Chambers with no level yet: not found (IX). */
   status?: 'sealed' | 'unknown';
   /** Kicker above the level title, e.g. "Tomb of Qarrum · First chamber". */
   kicker?: StringKey;
@@ -134,7 +134,25 @@ export const CHAMBERS: readonly Chamber[] = [
     teaser: 'teaser.clay_archive',
     journal: ['journal.clay_archive.1', 'journal.clay_archive.2', 'journal.clay_archive.3'],
   },
-  { numeral: 'V', name: 'chamber.5.name', line: 'chamber.5.line', status: 'sealed' },
+  {
+    numeral: 'V',
+    level: 'root_halls',
+    name: 'chamber.5.name',
+    line: 'chamber.5.line',
+    kicker: 'kicker.root_halls',
+    premise: 'premise.root_halls',
+    intro: ['intro.root_halls.1', 'intro.root_halls.2', 'intro.root_halls.3'],
+    relic: {
+      name: 'relic.root_halls.name',
+      clue: 'relic.root_halls.clue',
+      figure: 'seed',
+      figureLabel: 'end.root_halls.figure',
+      moment: ['end.root_halls.1', 'end.root_halls.2', 'end.root_halls.3'],
+      cleared: 'end.root_halls.kicker',
+    },
+    teaser: 'teaser.root_halls',
+    journal: ['journal.root_halls.1', 'journal.root_halls.2', 'journal.root_halls.3'],
+  },
   {
     numeral: 'VI',
     level: 'bronze_forge',
@@ -199,10 +217,8 @@ export const chamberOf = (levelId: string): Chamber | undefined => CHAMBERS.find
 
 /**
  * The chamber after a level's, in campaign order: the next one that can be
- * played, skipping chambers not built yet (the Forge, VI, opens after the
- * Archive, IV, until the Root Halls, V, exist; the Wind Stair, VII, follows
- * the Forge, and the Observatory, VIII, follows that); with none left, the next
- * sealed one, for the end screen's teaser.
+ * played, skipping chambers not built yet; with none left, the next sealed
+ * one, for the end screen's teaser.
  */
 export function nextChamber(levelId: string): Chamber | undefined {
   const i = CHAMBERS.findIndex((c) => c.level === levelId);

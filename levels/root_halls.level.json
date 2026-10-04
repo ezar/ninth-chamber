@@ -1,0 +1,703 @@
+{
+  "schema": 1,
+  "id": "root_halls",
+  "name": "level.root_halls",
+  "par": 1650,
+  "start": {
+    "room": "rift",
+    "at": [3, 8],
+    "face": "N"
+  },
+  "rooms": [
+    {
+      "id": "rift",
+      "origin": [0, 0, 0],
+      "ceil": 24,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "R": {
+          "floor": 5,
+          "mat": "wood"
+        }
+      },
+      "rows": [
+        "########.##",
+        "#.........#",
+        "#....R....#",
+        "#....R....#",
+        "#....R....#",
+        "#....R....#",
+        "#....R....#",
+        "#.........#",
+        "#.........#",
+        "###########"
+      ],
+      "look": "roots_rift",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -12
+      }
+    },
+    {
+      "id": "first_wall",
+      "origin": [4, -8, 0],
+      "ceil": 20,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "u": 10,
+        "C": {
+          "floor": 10,
+          "mat": "wood",
+          "flags": ["climbS"]
+        }
+      },
+      "rows": [
+        "####u####",
+        "#uuuuuuu#",
+        "#uuuuuuu#",
+        "#uCCCCCu#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "roots_first_wall",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -16
+      }
+    },
+    {
+      "id": "tangles",
+      "origin": [4, -17, 10],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "h": {
+          "floor": -8,
+          "mat": "wood"
+        },
+        "c": {
+          "floor": 0,
+          "mat": "wood",
+          "flags": ["climbE"]
+        }
+      },
+      "rows": [
+        "####.####",
+        "###...###",
+        "#.......#",
+        "#.....ch#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "roots_tangles",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "nest",
+      "origin": [3, -26, 10],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "w": {
+          "floor": 0,
+          "mat": "wood",
+          "flags": ["crumble"]
+        }
+      },
+      "rows": [
+        "#####.#####",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#wwwwwwwww#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#####.#####"
+      ],
+      "look": "roots_nest",
+      "reverb": "stone_medium",
+      "pitDepth": -6
+    },
+    {
+      "id": "pool",
+      "origin": [4, -36, 10],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "w": {
+          "floor": -8,
+          "water": -1,
+          "mat": "wood"
+        },
+        "g": {
+          "floor": -8,
+          "ceil": -4,
+          "water": -1
+        },
+        "d": {
+          "floor": -8,
+          "ceil": -4,
+          "water": -1
+        },
+        "k": {
+          "floor": -8,
+          "ceil": 6,
+          "water": -1
+        },
+        "l": {
+          "floor": 0,
+          "ceil": 6
+        },
+        "b": 0
+      },
+      "rows": [
+        "####.####",
+        "#......b#",
+        "#.......#",
+        "#wwwwwww#",
+        "##g######",
+        "#wwww#l##",
+        "#wwwwdk##",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "roots_pool",
+      "reverb": "water_cistern"
+    },
+    {
+      "id": "split",
+      "origin": [4, -45, 10],
+      "ceil": 24,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "u": 10,
+        "b": 0
+      },
+      "rows": [
+        "####u####",
+        "#uuuuuuu#",
+        "#uuuuuuu#",
+        "#uuuuuuu#",
+        "#uuuuuuu#",
+        "#.......#",
+        "#.......#",
+        "#.....b.#",
+        "####.####"
+      ],
+      "look": "roots_split",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -14
+      }
+    },
+    {
+      "id": "bridge",
+      "origin": [7, -51, 20],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "b": {
+          "floor": 6,
+          "ceil": 8,
+          "mat": "wood",
+          "flags": ["climbS"]
+        },
+        "B": {
+          "floor": 6,
+          "mat": "wood",
+          "flags": ["climbS"]
+        },
+        "e": 6,
+        "x": {
+          "floor": -12,
+          "mat": "wood",
+          "flags": ["death"]
+        }
+      },
+      "rows": ["#########e#", "#bbbbbbbbB#", "#.xxxxxxx.#", "#.xxxxxxx##", "#.xxxxxxx##", "#.#########"],
+      "look": "roots_bridge",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "vault",
+      "origin": [7, -61, 26],
+      "ceil": 40,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "n": {
+          "floor": 16,
+          "mat": "wood",
+          "flags": ["climbS"]
+        },
+        "T": 0
+      },
+      "rows": [
+        "######.######",
+        "#..........n#",
+        "#..........T#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#...........#",
+        "#########.###"
+      ],
+      "look": "roots_vault",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": -20
+      }
+    },
+    {
+      "id": "trunk",
+      "origin": [10, -69, 26],
+      "ceil": 40,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "L": 32,
+        "t": {
+          "floor": 32,
+          "mat": "wood",
+          "flags": ["climbE", "climbW"]
+        },
+        "T": {
+          "floor": 32,
+          "mat": "wood",
+          "flags": ["climbS", "climbE", "climbW"]
+        }
+      },
+      "rows": ["###L###", "#LLLLL#", "#LLtLL#", "#..T..#", "#.....#", "#.....#", "#.....#", "###.###"],
+      "look": "roots_trunk",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": 18,
+        "distance": 6
+      }
+    },
+    {
+      "id": "heart",
+      "origin": [9, -75, 58],
+      "ceil": 20,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "R": 0
+      },
+      "rows": ["#########", "#...R...#", "#.......#", "#.......#", "#.......#", "####.####"],
+      "look": "roots_heart",
+      "reverb": "stone_medium"
+    }
+  ],
+  "entities": [
+    {
+      "id": "z_start",
+      "type": "zone",
+      "room": "rift",
+      "at": [2, 7],
+      "size": [6, 2]
+    },
+    {
+      "id": "torch_rift",
+      "type": "torch",
+      "room": "rift",
+      "at": [3, 7],
+      "lit": true
+    },
+    {
+      "id": "brazier_rift",
+      "type": "brazier",
+      "room": "rift",
+      "at": [1, 1]
+    },
+    {
+      "id": "note_buried",
+      "type": "note",
+      "room": "rift",
+      "at": [1, 5],
+      "text": "journal.root_halls.1",
+      "style": "carving",
+      "wall": "W"
+    },
+    {
+      "id": "z_wall",
+      "type": "zone",
+      "room": "first_wall",
+      "at": [3, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "z_tangles",
+      "type": "zone",
+      "room": "tangles",
+      "at": [3, 7],
+      "size": [3, 1]
+    },
+    {
+      "id": "tg_gate",
+      "type": "tangle",
+      "room": "tangles",
+      "at": [3, 1],
+      "size": [3, 1],
+      "top": 16
+    },
+    {
+      "id": "tg_hole",
+      "type": "tangle",
+      "room": "tangles",
+      "at": [7, 3],
+      "top": 0
+    },
+    {
+      "id": "idol_jade",
+      "type": "secret",
+      "room": "tangles",
+      "at": [7, 3],
+      "idol": "jade"
+    },
+    {
+      "id": "brazier_tangles",
+      "type": "brazier",
+      "room": "tangles",
+      "at": [1, 6]
+    },
+    {
+      "id": "z_nest",
+      "type": "zone",
+      "room": "nest",
+      "at": [4, 7],
+      "size": [3, 1]
+    },
+    {
+      "id": "sc_nest0",
+      "type": "enemy",
+      "enemy": "scorpion",
+      "room": "nest",
+      "at": [2, 2],
+      "face": "S",
+      "pack": "nest"
+    },
+    {
+      "id": "sc_nest1",
+      "type": "enemy",
+      "enemy": "scorpion",
+      "room": "nest",
+      "at": [4, 1],
+      "face": "S",
+      "pack": "nest"
+    },
+    {
+      "id": "sc_nest2",
+      "type": "enemy",
+      "enemy": "scorpion",
+      "room": "nest",
+      "at": [7, 2],
+      "face": "S",
+      "pack": "nest"
+    },
+    {
+      "id": "sc_nest3",
+      "type": "enemy",
+      "enemy": "scorpion",
+      "room": "nest",
+      "at": [8, 1],
+      "face": "S",
+      "pack": "nest"
+    },
+    {
+      "id": "medkit_nest",
+      "type": "medkit",
+      "room": "nest",
+      "at": [9, 6],
+      "size": "small"
+    },
+    {
+      "id": "brazier_nest",
+      "type": "brazier",
+      "room": "nest",
+      "at": [9, 1]
+    },
+    {
+      "id": "z_pool",
+      "type": "zone",
+      "room": "pool",
+      "at": [3, 8],
+      "size": [3, 1]
+    },
+    {
+      "id": "tg_drowned1",
+      "type": "tangle",
+      "room": "pool",
+      "at": [3, 5],
+      "size": [1, 1],
+      "top": -2,
+      "hold": "sealed"
+    },
+    {
+      "id": "tg_drowned2",
+      "type": "tangle",
+      "room": "pool",
+      "at": [4, 5],
+      "size": [1, 1],
+      "top": -2,
+      "hold": "sealed"
+    },
+    {
+      "id": "idol_gold",
+      "type": "secret",
+      "room": "pool",
+      "at": [6, 5],
+      "idol": "gold"
+    },
+    {
+      "id": "brazier_pool",
+      "type": "brazier",
+      "room": "pool",
+      "at": [7, 1]
+    },
+    {
+      "id": "z_split",
+      "type": "zone",
+      "room": "split",
+      "at": [3, 7],
+      "size": [3, 1]
+    },
+    {
+      "id": "tg_pillar",
+      "type": "tangle",
+      "room": "split",
+      "at": [2, 5],
+      "top": 10
+    },
+    {
+      "id": "tg_split",
+      "type": "tangle",
+      "room": "split",
+      "at": [3, 1],
+      "size": [3, 1],
+      "top": 24
+    },
+    {
+      "id": "brazier_split",
+      "type": "brazier",
+      "room": "split",
+      "at": [6, 7]
+    },
+    {
+      "id": "brazier_split_up",
+      "type": "brazier",
+      "room": "split",
+      "at": [7, 4]
+    },
+    {
+      "id": "z_bridge",
+      "type": "zone",
+      "room": "bridge",
+      "at": [1, 4],
+      "size": [1, 1]
+    },
+    {
+      "id": "z_vault",
+      "type": "zone",
+      "room": "vault",
+      "at": [8, 8],
+      "size": [3, 1]
+    },
+    {
+      "id": "tg_curtain",
+      "type": "tangle",
+      "room": "vault",
+      "at": [11, 2],
+      "top": 8
+    },
+    {
+      "id": "idol_stone",
+      "type": "secret",
+      "room": "vault",
+      "at": [11, 1],
+      "idol": "stone"
+    },
+    {
+      "id": "note_erreth",
+      "type": "note",
+      "room": "vault",
+      "at": [1, 4],
+      "text": "journal.root_halls.2",
+      "style": "carving",
+      "wall": "W"
+    },
+    {
+      "id": "sc_vault0",
+      "type": "enemy",
+      "enemy": "scorpion",
+      "room": "vault",
+      "at": [3, 3],
+      "face": "S",
+      "pack": "vault"
+    },
+    {
+      "id": "sc_vault1",
+      "type": "enemy",
+      "enemy": "scorpion",
+      "room": "vault",
+      "at": [5, 2],
+      "face": "S",
+      "pack": "vault"
+    },
+    {
+      "id": "brazier_vault",
+      "type": "brazier",
+      "room": "vault",
+      "at": [1, 8]
+    },
+    {
+      "id": "medkit_vault",
+      "type": "medkit",
+      "room": "vault",
+      "at": [1, 1],
+      "size": "small"
+    },
+    {
+      "id": "z_trunk",
+      "type": "zone",
+      "room": "trunk",
+      "at": [2, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "medkit_trunk",
+      "type": "medkit",
+      "room": "trunk",
+      "at": [1, 6],
+      "size": "large"
+    },
+    {
+      "id": "tg_rise0",
+      "type": "tangle",
+      "room": "trunk",
+      "at": [1, 4],
+      "size": [5, 3],
+      "top": 8,
+      "grown": false,
+      "hold": "parted"
+    },
+    {
+      "id": "tg_rise1",
+      "type": "tangle",
+      "room": "trunk",
+      "at": [1, 4],
+      "size": [5, 3],
+      "top": 16,
+      "grown": false,
+      "hold": "parted"
+    },
+    {
+      "id": "tg_rise2",
+      "type": "tangle",
+      "room": "trunk",
+      "at": [1, 4],
+      "size": [5, 3],
+      "top": 24,
+      "grown": false,
+      "hold": "parted"
+    },
+    {
+      "id": "z_heart",
+      "type": "zone",
+      "room": "heart",
+      "at": [3, 4],
+      "size": [3, 1]
+    },
+    {
+      "id": "seed",
+      "type": "relic",
+      "room": "heart",
+      "at": [4, 1]
+    },
+    {
+      "id": "note_door",
+      "type": "note",
+      "room": "heart",
+      "at": [7, 3],
+      "text": "journal.root_halls.3",
+      "style": "carving",
+      "wall": "E"
+    }
+  ],
+  "logic": [
+    {
+      "when": "z_start.entered",
+      "do": ["hint hint.roots.start", "music vista"]
+    },
+    {
+      "when": "z_wall.entered",
+      "do": ["checkpoint", "hint hint.roots.climb", "music calm"]
+    },
+    {
+      "when": "z_tangles.entered",
+      "do": ["checkpoint", "hint hint.roots.tangles"]
+    },
+    {
+      "when": "tg_gate.open",
+      "do": ["hint hint.roots.regrow"]
+    },
+    {
+      "when": "z_nest.entered",
+      "do": ["checkpoint", "music tension", "hint hint.roots.nest"]
+    },
+    {
+      "when": "z_pool.entered",
+      "do": ["checkpoint", "hint hint.roots.pool", "music calm"]
+    },
+    {
+      "when": "z_split.entered",
+      "do": ["checkpoint", "hint hint.roots.split"]
+    },
+    {
+      "when": "z_bridge.entered",
+      "do": ["checkpoint", "hint hint.roots.bridge"]
+    },
+    {
+      "when": "z_vault.entered",
+      "do": ["checkpoint", "hint hint.roots.vault", "music vista"]
+    },
+    {
+      "when": "z_trunk.entered",
+      "do": [
+        "checkpoint",
+        "hint hint.roots.trunk",
+        "music chase",
+        "wait 6s",
+        "tg_rise0.seal",
+        "wait 7s",
+        "tg_rise1.seal",
+        "wait 7s",
+        "tg_rise2.seal"
+      ]
+    },
+    {
+      "when": "z_heart.entered",
+      "do": ["checkpoint", "music relic", "hint hint.roots.heart"]
+    },
+    {
+      "when": "seed.taken",
+      "do": ["camera.focus seed 3s", "music fanfare", "wait 3s", "level.end"]
+    }
+  ]
+}

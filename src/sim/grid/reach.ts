@@ -5,7 +5,8 @@
  * into its bridge, moving platforms as standing
  * at every height on their path, and any cell of a room with a pushable
  * block as possibly holding that block, to stand on, and every wind zone as
- * blowing whichever way helps: jumps from a windy cell reach further, and an
+ * blowing whichever way helps, and every tangle of roots as both open and
+ * grown (to stand on and climb): jumps from a windy cell reach further, and an
  * updraught lets her reach higher ledges. A climbable face is climbed to its
  * top from any height, and traversed sideways while it continues. A cell this graph cannot reach can never be reached
  * in play, so an exit, secret or checkpoint outside it is a broken level.
@@ -68,6 +69,8 @@ export function reachableCells(level: Level): Set<string> {
   const windy = new Set<string>();
   const updraught = new Map<string, number>();
   const floodTo = new Map<string, number>();
+  // Cells of tangles of roots: open, or grown to their top and climbable on every side.
+  const roots = new Set<string>();
   for (const e of level.entities) {
     const room = level.rooms.find((r) => r.id === e.room);
     if (!room) continue;
@@ -85,6 +88,13 @@ export function reachableCells(level: Level): Set<string> {
     if (e.type === 'watergate') {
       const high = room.originY + e.high * CLICK;
       for (const r of e.rooms ?? [e.room]) floodTo.set(r, Math.max(floodTo.get(r) ?? -Infinity, high));
+    }
+    if (e.type === 'tangle') {
+      for (let x = 0; x < e.size[0]; x++)
+        for (let z = 0; z < e.size[1]; z++) {
+          roots.add(key(cx + x, cz + z));
+          add(cx + x, cz + z, room.originY + e.top * CLICK);
+        }
     }
     if (e.type === 'trapdoor') {
       for (let x = 0; x < e.size[0]; x++)
@@ -148,7 +158,7 @@ export function reachableCells(level: Level): Set<string> {
   const faceLooking = (cx: number, cz: number, dx: number, dz: number): boolean => {
     const s = level.sector(cx, cz);
     const flag = dx > 0 ? 'climbE' : dx < 0 ? 'climbW' : dz > 0 ? 'climbS' : 'climbN';
-    return s?.flags.has(flag) ?? false;
+    return (s?.flags.has(flag) ?? false) || roots.has(key(cx, cz));
   };
   /** The faces a cell has in front of it: she can be on them at any height. */
   const facesAt = (cx: number, cz: number): (readonly [number, number])[] =>
