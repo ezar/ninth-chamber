@@ -1,0 +1,71 @@
+{
+  "level": "ninth_chamber",
+  "puzzles": [
+    {
+      "id": "ray",
+      "rooms": ["ray"],
+      "solved": "z_eight.entered",
+      "hints": ["hints.ninth_chamber.ray.1", "hints.ninth_chamber.ray.2", "hints.ninth_chamber.ray.3"]
+    },
+    {
+      "id": "dome",
+      "rooms": ["dome"],
+      "solved": "ring_dome.set",
+      "hints": ["hints.ninth_chamber.dome.1", "hints.ninth_chamber.dome.2", "hints.ninth_chamber.dome.3"]
+    },
+    {
+      "id": "wind",
+      "rooms": ["wind"],
+      "solved": "z_bronze.entered",
+      "hints": ["hints.ninth_chamber.wind.1", "hints.ninth_chamber.wind.2", "hints.ninth_chamber.wind.3"]
+    },
+    {
+      "id": "bronze",
+      "rooms": ["bronze"],
+      "solved": "z_roots.entered",
+      "hints": [
+        "hints.ninth_chamber.bronze.1",
+        "hints.ninth_chamber.bronze.2",
+        "hints.ninth_chamber.bronze.3"
+      ]
+    },
+    {
+      "id": "roots",
+      "rooms": ["roots"],
+      "solved": "z_glyphs.entered",
+      "hints": ["hints.ninth_chamber.roots.1", "hints.ninth_chamber.roots.2", "hints.ninth_chamber.roots.3"]
+    },
+    {
+      "id": "glyphs",
+      "rooms": ["glyphs"],
+      "solved": "lock_glyphs.set",
+      "hints": [
+        "hints.ninth_chamber.glyphs.1",
+        "hints.ninth_chamber.glyphs.2",
+        "hints.ninth_chamber.glyphs.3"
+      ]
+    },
+    {
+      "id": "mirrors",
+      "rooms": ["mirrors"],
+      "solved": "disc_door.lit",
+      "hints": [
+        "hints.ninth_chamber.mirrors.1",
+        "hints.ninth_chamber.mirrors.2",
+        "hints.ninth_chamber.mirrors.3"
+      ]
+    },
+    {
+      "id": "water",
+      "rooms": ["water"],
+      "solved": "lever_water.used",
+      "hints": ["hints.ninth_chamber.water.1", "hints.ninth_chamber.water.2", "hints.ninth_chamber.water.3"]
+    },
+    {
+      "id": "sand",
+      "rooms": ["sand"],
+      "solved": "plate_sand.pressed",
+      "hints": ["hints.ninth_chamber.sand.1", "hints.ninth_chamber.sand.2", "hints.ninth_chamber.sand.3"]
+    }
+  ]
+}

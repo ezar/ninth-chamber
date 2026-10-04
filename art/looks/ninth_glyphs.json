@@ -1,0 +1,35 @@
+{
+  "id": "ninth_glyphs",
+  "background": "#0b0604",
+  "exposure": 1.06,
+  "hemi": {
+    "sky": "#8a5636",
+    "ground": "#1c0e07",
+    "intensity": 0.2
+  },
+  "fog": {
+    "color": "#4a2c1c",
+    "density": 0.032
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ff9a46",
+    "intensity": 42,
+    "flicker": 0.26
+  },
+  "bloom": {
+    "strength": 0.7,
+    "radius": 0.5,
+    "threshold": 0.74
+  },
+  "grade": {
+    "tint": "#ffd9b8",
+    "saturation": 0.98,
+    "contrast": 1.16,
+    "vignette": 0.46
+  },
+  "trim": {
+    "friezeHeight": 3.0,
+    "reliefs": true
+  }
+}

@@ -200,7 +200,10 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
   checkReach(level, errors, warnings);
 
   if (i18nKeys && !i18nKeys.has(file.name)) errors.push(`missing i18n key '${file.name}' for the level name`);
-  if (!file.entities.some((e) => e.type === 'relic')) warnings.push('the level has no relic');
+  // The Ninth Chamber has no relic: it ends with a choice (`level.end <ending>`).
+  const endsWithChoice = file.logic.some((r) => r.do.some((a) => /^level\.end\s+\S/.test(a)));
+  if (!endsWithChoice && !file.entities.some((e) => e.type === 'relic'))
+    warnings.push('the level has no relic');
   const secrets = file.entities.filter((e) => e.type === 'secret').length;
   if (secrets !== 3) warnings.push(`the level has ${secrets} secrets (the spec asks for 3)`);
 

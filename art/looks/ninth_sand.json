@@ -1,0 +1,35 @@
+{
+  "id": "ninth_sand",
+  "background": "#0b0d10",
+  "exposure": 1.1,
+  "hemi": {
+    "sky": "#6f8497",
+    "ground": "#3a2c1f",
+    "intensity": 0.35
+  },
+  "fog": {
+    "color": "#8a9aa6",
+    "density": 0.022
+  },
+  "sun": {
+    "color": "#dfe8f2",
+    "intensity": 4.5,
+    "direction": [0.24, 0.96, -0.14]
+  },
+  "fire": {
+    "color": "#ff9a4a",
+    "intensity": 8,
+    "flicker": 0.2
+  },
+  "bloom": {
+    "strength": 0.45,
+    "radius": 0.5,
+    "threshold": 0.85
+  },
+  "grade": {
+    "tint": "#d6e2ec",
+    "saturation": 0.85,
+    "contrast": 1.12,
+    "vignette": 0.35
+  }
+}
