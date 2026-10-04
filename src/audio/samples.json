@@ -367,6 +367,36 @@
       "kind": "stream",
       "duration": 98.405
     },
+    "clay_archive.intro": {
+      "file": "music/clay_archive-intro.webm",
+      "kind": "stream",
+      "duration": 94.999
+    },
+    "root_halls.intro": {
+      "file": "music/root_halls-intro.webm",
+      "kind": "stream",
+      "duration": 94.909
+    },
+    "bronze_forge.intro": {
+      "file": "music/bronze_forge-intro.webm",
+      "kind": "stream",
+      "duration": 94.777
+    },
+    "wind_stair.intro": {
+      "file": "music/wind_stair-intro.webm",
+      "kind": "stream",
+      "duration": 93.038
+    },
+    "observatory.intro": {
+      "file": "music/observatory-intro.webm",
+      "kind": "stream",
+      "duration": 93.661
+    },
+    "ninth_chamber.intro": {
+      "file": "music/ninth_chamber-intro.webm",
+      "kind": "stream",
+      "duration": 94.047
+    },
     "antechamber.explore.1": {
       "file": "music/antechamber-explore-1.webm",
       "kind": "stream",
@@ -397,6 +427,66 @@
       "kind": "stream",
       "duration": 118.0
     },
+    "clay_archive.explore.1": {
+      "file": "music/clay_archive-explore-1.webm",
+      "kind": "stream",
+      "duration": 184.983
+    },
+    "clay_archive.explore.2": {
+      "file": "music/clay_archive-explore-2.webm",
+      "kind": "stream",
+      "duration": 180.0
+    },
+    "root_halls.explore.1": {
+      "file": "music/root_halls-explore-1.webm",
+      "kind": "stream",
+      "duration": 157.933
+    },
+    "root_halls.explore.2": {
+      "file": "music/root_halls-explore-2.webm",
+      "kind": "stream",
+      "duration": 184.992
+    },
+    "bronze_forge.explore.1": {
+      "file": "music/bronze_forge-explore-1.webm",
+      "kind": "stream",
+      "duration": 179.962
+    },
+    "bronze_forge.explore.2": {
+      "file": "music/bronze_forge-explore-2.webm",
+      "kind": "stream",
+      "duration": 180.0
+    },
+    "wind_stair.explore.1": {
+      "file": "music/wind_stair-explore-1.webm",
+      "kind": "stream",
+      "duration": 180.0
+    },
+    "wind_stair.explore.2": {
+      "file": "music/wind_stair-explore-2.webm",
+      "kind": "stream",
+      "duration": 184.993
+    },
+    "observatory.explore.1": {
+      "file": "music/observatory-explore-1.webm",
+      "kind": "stream",
+      "duration": 179.121
+    },
+    "observatory.explore.2": {
+      "file": "music/observatory-explore-2.webm",
+      "kind": "stream",
+      "duration": 184.975
+    },
+    "ninth_chamber.explore.1": {
+      "file": "music/ninth_chamber-explore-1.webm",
+      "kind": "stream",
+      "duration": 178.99
+    },
+    "ninth_chamber.explore.2": {
+      "file": "music/ninth_chamber-explore-2.webm",
+      "kind": "stream",
+      "duration": 180.0
+    },
     "antechamber.relic": {
       "file": "music/antechamber-relic.webm",
       "kind": "stream",
@@ -411,6 +501,36 @@
       "file": "music/sun_temple-relic.webm",
       "kind": "stream",
       "duration": 132.309
+    },
+    "clay_archive.relic": {
+      "file": "music/clay_archive-relic.webm",
+      "kind": "stream",
+      "duration": 135.0
+    },
+    "root_halls.relic": {
+      "file": "music/root_halls-relic.webm",
+      "kind": "stream",
+      "duration": 125.0
+    },
+    "bronze_forge.relic": {
+      "file": "music/bronze_forge-relic.webm",
+      "kind": "stream",
+      "duration": 144.747
+    },
+    "wind_stair.relic": {
+      "file": "music/wind_stair-relic.webm",
+      "kind": "stream",
+      "duration": 118.796
+    },
+    "observatory.relic": {
+      "file": "music/observatory-relic.webm",
+      "kind": "stream",
+      "duration": 120.677
+    },
+    "ninth_chamber.relic": {
+      "file": "music/ninth_chamber-relic.webm",
+      "kind": "stream",
+      "duration": 133.979
     },
     "fanfare": {
       "file": "music/fanfare.webm",
@@ -487,6 +607,72 @@
       "loop": true,
       "from": 155.5,
       "duration": 23.04
+    },
+    "clay_archive.combat": {
+      "file": "music/clay_archive-combat.webm",
+      "kind": "loop",
+      "bpm": 106.106,
+      "bars": 12,
+      "length": 27.1426,
+      "rate": 32000,
+      "loop": true,
+      "from": 77.55,
+      "duration": 27.143
+    },
+    "root_halls.tension": {
+      "file": "music/root_halls-tension.webm",
+      "kind": "loop",
+      "bpm": 0,
+      "bars": 0,
+      "length": 29.88,
+      "rate": 24000,
+      "loop": true,
+      "from": 48.85,
+      "duration": 29.88
+    },
+    "root_halls.combat": {
+      "file": "music/root_halls-combat.webm",
+      "kind": "loop",
+      "bpm": 140.0,
+      "bars": 16,
+      "length": 27.4286,
+      "rate": 32000,
+      "loop": true,
+      "from": 24.2,
+      "duration": 27.429
+    },
+    "bronze_forge.tension": {
+      "file": "music/bronze_forge-tension.webm",
+      "kind": "loop",
+      "bpm": 0,
+      "bars": 0,
+      "length": 30.09,
+      "rate": 24000,
+      "loop": true,
+      "from": 190.75,
+      "duration": 30.09
+    },
+    "bronze_forge.combat": {
+      "file": "music/bronze_forge-combat.webm",
+      "kind": "loop",
+      "bpm": 141.283,
+      "bars": 12,
+      "length": 20.3847,
+      "rate": 32000,
+      "loop": true,
+      "from": 17.8,
+      "duration": 20.385
+    },
+    "wind_stair.tension": {
+      "file": "music/wind_stair-tension.webm",
+      "kind": "loop",
+      "bpm": 80.08,
+      "bars": 8,
+      "length": 23.976,
+      "rate": 24000,
+      "loop": true,
+      "from": 60.05,
+      "duration": 23.976
     },
     "chase": {
       "file": "music/chase.webm",

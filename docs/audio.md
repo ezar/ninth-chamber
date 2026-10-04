@@ -74,13 +74,19 @@ For example, a trap corridor: `{ "when": "z_traps.entered", "do": ["music tensio
 
 `score.ts` maps each level id to its cues; unknown levels use the Antechamber's.
 
-| Chamber                                 | Intro                      | Exploration                                                      | Tension          | Combat              | Relic         | Fanfare           |
-| --------------------------------------- | -------------------------- | ---------------------------------------------------------------- | ---------------- | ------------------- | ------------- | ----------------- |
-| `antechamber` (ancient, desert, solemn) | Memories Of Stone          | Passage of Time; Lost Frontier                                   | Oppressive Gloom | Curse of the Scarab | Arcadia       | Hero Theme        |
-| `cisterns` (dark, watery, echoing)      | Permafrost                 | Mirage; Decoherence                                              | Long Note Three  | Constance           | The Great Sea | Hero Theme        |
-| `sun_temple` (majestic, golden, a boss) | Hymn to the Dawn (opening) | Hymn to the Dawn (the build); Passage of Time (the regal finale) | Enter the Maze   | Juggernaut          | Victor Lux    | The Curtain Rises |
+| Chamber                                   | Intro                       | Exploration                                                                                                 | Tension                        | Combat                            | Relic                               | Fanfare           |
+| ----------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------ | --------------------------------- | ----------------------------------- | ----------------- |
+| `antechamber` (ancient, desert, solemn)   | Memories Of Stone           | Passage of Time; Lost Frontier                                                                              | Oppressive Gloom               | Curse of the Scarab               | Arcadia                             | Hero Theme        |
+| `cisterns` (dark, watery, echoing)        | Permafrost                  | Mirage; Decoherence                                                                                         | Long Note Three                | Constance                         | The Great Sea                       | Hero Theme        |
+| `sun_temple` (majestic, golden, a boss)   | Hymn to the Dawn (opening)  | Hymn to the Dawn (the build); Passage of Time (the regal finale)                                            | Enter the Maze                 | Juggernaut                        | Victor Lux                          | The Curtain Rises |
+| `clay_archive` (dry, dusty, hushed)       | Shadows and Dust            | Teller of the Tales; In Search Of Solitude                                                                  | Oppressive Gloom (Antechamber) | Ibn Al-Noor                       | Chronicle (the duduk theme)         | Hero Theme        |
+| `root_halls` (green, damp, alive)         | Borealis                    | Petrichor (the quiet first half); Willow and the Light                                                      | Magic Forest                   | Trouble with Tribals              | Within Our Nature (the climax)      | Hero Theme        |
+| `bronze_forge` (heavy, metallic, hot)     | Song Of The Forge (opening) | Crusade - Heavy Industry; Machina                                                                           | Evening of Chaos               | Mechanolith                       | Industrial Revolution               | The Curtain Rises |
+| `wind_stair` (airy, high, vertiginous)    | Path Through The Mountains  | Cirrus; When The Wind Blows                                                                                 | Crypto                         | Constance (Cisterns)              | Ride The Wind (the finale)          | Hero Theme        |
+| `observatory` (night sky, bronze, a boss) | Celestial                   | Adrift Among Infinite Stars; Infinite Perspective                                                           | Enter the Maze (Temple)        | Juggernaut (Temple)               | Where Stars Fall (the final chorus) | The Curtain Rises |
+| `ninth_chamber` (the finale)              | Last and First Light        | I Walk With Ghosts; Echoes; and in between, one exploration cue from each earlier chamber in campaign order | Oppressive Gloom (Antechamber) | Curse of the Scarab (Antechamber) | Light in Dark Places (the seal)     | Hero Theme        |
 
-Shared: title (Age of Wonder), chase (Mistake the Getaway), boss (Goliath). Stingers: Discovery Hit (vista), Greta Sting (journal), Mystery Sting (secret), Danse Macabre big hits (solved), Darkness Speaks (death).
+Shared: title (Age of Wonder), chase (Mistake the Getaway), boss (Goliath, also for Bazûr and Anzur). Stingers: Discovery Hit (vista), Greta Sting (journal), Mystery Sting (secret), Danse Macabre big hits (solved), Darkness Speaks (death).
 
 Composers: Scott Buckley (CC-BY 4.0) and Kevin MacLeod (CC-BY 4.0). Credits are in `CREDITS.md` and `public/audio/CREDITS.md`.
 
@@ -97,4 +103,4 @@ Composers: Scott Buckley (CC-BY 4.0) and Kevin MacLeod (CC-BY 4.0). Credits are 
 3. Run `python scripts/audio/build_audio.py --only <cue id>` (or `--only music`). It writes `public/audio/music/<id>.webm`, the entry in `src/audio/samples.json` and the credits.
 4. Use the cue id in a palette in `src/audio/score.ts`. `tests/music.test.ts` checks that every palette cue exists with the right kind and that loops hold whole bars.
 
-Budget: about 18 MB of music (Opus in WebM, 56–64 kbps). Streams are never decoded in the game. Loops decode at 24–32 kHz, and a level prefetches only its own loops and stingers after the start.
+Budget: about 45 MB of music for the nine chambers (Opus in WebM, 56–64 kbps), cached as it is first played, never precached. Streams are never decoded in the game. Loops decode at 24–32 kHz, and a level prefetches only its own loops and stingers after the start.
