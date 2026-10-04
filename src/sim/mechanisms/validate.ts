@@ -145,6 +145,9 @@ export function validateMechanisms(
             if (!s || s.wall) errors.push(`tangle '${e.id}' grows into a wall at ${x},${z}`);
             else if (top + e.top * CLICK <= (s.pit ? s.pitFloor : sectorTop(s)))
               errors.push(`tangle '${e.id}': its top is not above the floor at ${x},${z}`);
+            // Up to the ceiling is a full-height barrier; above it the roots would go through the rock.
+            else if (top + e.top * CLICK > s.ceil + 1e-6)
+              errors.push(`tangle '${e.id}': its top is above the ceiling at ${x},${z}`);
           }
         break;
       }
