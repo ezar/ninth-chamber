@@ -65,6 +65,10 @@ export interface Settings {
   /** Touch buttons: scale 0.8..1.4 and opacity 0.3..1. */
   touchSize: number;
   touchOpacity: number;
+  /** Where the player moved each touch button: an offset in px from its own place. */
+  touchLayout: TouchLayout;
+  /** Tips on how to play (Nora's remarks about each chamber always show). */
+  tutorialHints: boolean;
   /** Null follows the browser. */
   language: Language | null;
   /** The player's key and gamepad bindings over the defaults (core/bindings.ts). */
@@ -72,6 +76,12 @@ export interface Settings {
 }
 
 export type HoldMode = 'hold' | 'toggle';
+/** The touch buttons the player can move (index.html, data-button inside #touch). */
+export const TOUCH_BUTTONS = ['jump', 'action', 'walk', 'fire', 'weapons', 'torch'] as const;
+export type TouchButton = (typeof TOUCH_BUTTONS)[number];
+export type TouchLayout = Partial<Record<TouchButton, [number, number]>>;
+/** No button is moved further than this (px) from its place. */
+export const TOUCH_OFFSET_MAX = 2000;
 export const GAME_SPEEDS: readonly number[] = [1, 0.75];
 export const TOUCH_SIZE_RANGE = { min: 0.8, max: 1.4, step: 0.1 } as const;
 export const TOUCH_OPACITY_RANGE = { min: 0.3, max: 1, step: 0.1 } as const;
@@ -109,6 +119,8 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     colourSafe: false,
     touchSize: 1,
     touchOpacity: 1,
+    touchLayout: {},
+    tutorialHints: true,
     language: null,
     bindings: noOverrides(),
   };
@@ -121,6 +133,20 @@ const clamp = (v: unknown, min: number, max: number, fallback: number): number =
 const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
 const holdMode = (v: unknown, fallback: HoldMode): HoldMode =>
   v === 'hold' || v === 'toggle' ? v : fallback;
+function touchLayout(v: unknown): TouchLayout {
+  const out: TouchLayout = {};
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return out;
+  for (const b of TOUCH_BUTTONS) {
+    const o = (v as Record<string, unknown>)[b];
+    if (!Array.isArray(o) || o.length !== 2) continue;
+    const [x, y] = o as unknown[];
+    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y))
+      continue;
+    const c = (n: number): number => Math.round(Math.min(TOUCH_OFFSET_MAX, Math.max(-TOUCH_OFFSET_MAX, n)));
+    out[b] = [c(x), c(y)];
+  }
+  return out;
+}
 const optionalBool = (v: unknown, fallback: boolean | null): boolean | null =>
   typeof v === 'boolean' || v === null ? v : fallback;
 
@@ -204,6 +230,8 @@ export function loadSettings(
       TOUCH_OPACITY_RANGE.max,
       defaults.touchOpacity,
     ),
+    touchLayout: r.touchLayout === undefined ? defaults.touchLayout : touchLayout(r.touchLayout),
+    tutorialHints: bool(r.tutorialHints, defaults.tutorialHints),
     language: LANGUAGES.includes(r.language as Language) ? (r.language as Language) : defaults.language,
     bindings: r.bindings === undefined ? defaults.bindings : sanitizeBindings(r.bindings),
   };

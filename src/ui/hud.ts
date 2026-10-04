@@ -4,6 +4,7 @@
  * death fade. It only listens to sim events (the end of the level has its own
  * screen, ui/end-screen.ts).
  */
+import { isTutorialHint } from './hud-hints';
 import { conjunction } from '../sim/player/tuning';
 import { formatTime } from './end-screen';
 import { wallInReach } from '../sim/player/modes/wall';
@@ -47,6 +48,8 @@ export class Hud {
   private hintTimer = 0;
   private lastHealth = 100;
   device: Device = 'keyboard';
+  /** Options → Accessibility: tips on how to play (her remarks about a chamber always show). */
+  tutorialHints = true;
 
   constructor() {
     this.hurtFlash.id = 'hurt-flash';
@@ -88,11 +91,12 @@ export class Hud {
         break;
       }
       case 'hint':
-        this.showHint(t(String(e.key) as StringKey));
+        if (this.tutorialHints || !isTutorialHint(String(e.key)))
+          this.showHint(t(String(e.key) as StringKey));
         break;
       // Dispatched by main when Nora first has an idea about the room's puzzle.
       case 'hint.offer':
-        this.showHint(t('hint.offer'));
+        if (this.tutorialHints) this.showHint(t('hint.offer'));
         break;
       case 'player.hurt':
         this.hurtFlash.classList.remove('show');

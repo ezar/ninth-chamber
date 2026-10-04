@@ -83,6 +83,8 @@ export interface MenuCallbacks {
   };
   /** What Nora carries, for the inventory panel (ui/inventory.ts). */
   inventory?(): InventoryEntry[];
+  /** Opens the editor that moves the touch buttons (ui/touch-layout.ts). No row without it. */
+  arrangeTouch?(): void;
   /** The playtest log kept on the device (ui/playtest.ts). No rows without it. */
   playtest?: {
     /** Sessions stored. */
@@ -745,6 +747,19 @@ export class Menu {
         ),
       );
     }
+    const arrange = this.cb.arrangeTouch;
+    if (arrange) this.addRow(buttonRow('options.touchLayout', arrange, () => t('options.touchLayout.hint')));
+    this.addRow(
+      toggleRow(
+        'options.tutorialHints',
+        () => s.tutorialHints,
+        (v) => {
+          s.tutorialHints = v;
+          this.cb.change('tutorialHints');
+        },
+        () => t('options.tutorialHints.hint'),
+      ),
+    );
     this.addRow(
       choiceRow<Language>(
         'options.language',

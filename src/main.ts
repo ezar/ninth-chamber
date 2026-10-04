@@ -1,3 +1,4 @@
+import { applyTouchLayout, TouchLayoutEditor } from './ui/touch-layout';
 import './ui/style.css';
 import './ui/screens.css';
 import './ui/prelude.css';
@@ -467,6 +468,8 @@ async function main(): Promise<void> {
     const touchEl = $('#touch');
     touchEl.style.setProperty('--touch-scale', String(settings.touchSize));
     touchEl.style.setProperty('--touch-opacity', String(settings.touchOpacity));
+    applyTouchLayout(touchEl, settings.touchLayout);
+    hud.tutorialHints = settings.tutorialHints;
   };
   const applyCamera = (): void => {
     cameraTuning.sensitivity = baseSensitivity * settings.cameraSensitivity;
@@ -524,6 +527,8 @@ async function main(): Promise<void> {
       case 'colourSafe':
       case 'touchSize':
       case 'touchOpacity':
+      case 'touchLayout':
+      case 'tutorialHints':
         applyAccess();
         break;
       case 'language':
@@ -540,6 +545,7 @@ async function main(): Promise<void> {
     redraw = true;
   };
 
+  const touchEditor = new TouchLayoutEditor($('#touch'));
   const menu = new Menu(settings, {
     resume: () => resume(),
     restart: () => restartCheckpoint(),
@@ -550,6 +556,11 @@ async function main(): Promise<void> {
     },
     change: applySetting,
     vibration: { get: hapticsEnabled, set: setHapticsEnabled },
+    arrangeTouch: () =>
+      touchEditor.show(settings.touchLayout, (layout) => {
+        settings.touchLayout = layout;
+        applySetting('touchLayout');
+      }),
     graphics: {
       activeBackend: () => renderer.backendName,
       autoGrain: () => renderer.quality.filmGrain && !settings.reducedMotion,

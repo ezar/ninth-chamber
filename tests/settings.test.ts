@@ -7,6 +7,7 @@ import {
   migrateSettings,
   saveSettings,
 } from '../src/ui/settings';
+import { isTutorialHint } from '../src/ui/hud-hints';
 
 function memoryStorage(initial: Record<string, string> = {}): Pick<Storage, 'getItem' | 'setItem'> {
   const data = new Map(Object.entries(initial));
@@ -114,6 +115,36 @@ describe('settings', () => {
     expect(bad.filmGrain).toBeNull();
     expect(bad.sharpen).toBeNull();
     expect(bad.mobilePixelRatio).toBe(3);
+  });
+});
+
+describe('tutorial hints and the touch layout', () => {
+  it('starts with tutorial hints on and the touch buttons where they were', () => {
+    const s = defaultSettings();
+    expect(s.tutorialHints).toBe(true);
+    expect(s.touchLayout).toEqual({});
+  });
+
+  it('round-trips both, and drops unknown buttons or bad offsets', () => {
+    const storage = memoryStorage();
+    const s = defaultSettings();
+    s.tutorialHints = false;
+    s.touchLayout = { jump: [-40, 12], torch: [8, -60] };
+    saveSettings(storage, s);
+    expect(loadSettings(storage)).toEqual(s);
+    const bad = memoryStorage({
+      [SETTINGS_KEY]: JSON.stringify({
+        touchLayout: { jump: [10, 'x'], warp: [1, 2], walk: [5, 6], action: [1e9, 0] },
+      }),
+    });
+    expect(loadSettings(bad).touchLayout).toEqual({ walk: [5, 6], action: [2000, 0] });
+  });
+
+  it('tells the tutorial tips from Nora’s remarks about a chamber', () => {
+    expect(isTutorialHint('hint.grab')).toBe(true);
+    expect(isTutorialHint('hint.runningJump')).toBe(true);
+    expect(isTutorialHint('hint.roots.start')).toBe(false);
+    expect(isTutorialHint('hint.ninth.seal')).toBe(false);
   });
 });
 

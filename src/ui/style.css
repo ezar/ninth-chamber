@@ -1528,3 +1528,70 @@ body:not([data-phase='title']):not(.paused) #update-notice {
 body.reduce-motion #heat-haze.show {
   animation: none;
 }
+
+/* Options → Accessibility → Arrange touch buttons (ui/touch-layout.ts): the buttons over a veil, to drag. */
+body.touch-edit::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(8, 7, 6, 0.72);
+}
+/* :root wins over the rules that hide the touch controls outside play (screens.css). */
+:root body.touch-edit #touch {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  opacity: 1;
+  pointer-events: auto;
+}
+body.touch-edit #touch .tbtn,
+:root body.touch-edit #touch .tbtn-slot-c {
+  display: flex;
+  border-style: dashed;
+  border-color: var(--ui-amber);
+  cursor: grab;
+}
+body.touch-edit #stick-ghost,
+body.touch-edit #look-ghost {
+  display: none;
+}
+#touch-edit-bar {
+  position: fixed;
+  z-index: 62;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border: 1px solid rgba(236, 227, 208, 0.25);
+  border-radius: 10px;
+  background: var(--ui-veil);
+  color: var(--ui-bone);
+  font: 500 14px var(--font-ui);
+  transform: translateX(-50%);
+}
+#touch-edit-bar p {
+  margin: 0 6px 0 0;
+}
+#touch-edit-bar button.ghost {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgba(236, 227, 208, 0.4);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ui-bone);
+  font: 600 13px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+#touch-edit-bar button.ghost:focus-visible {
+  outline: 2px solid var(--ui-amber);
+  outline-offset: 2px;
+}
