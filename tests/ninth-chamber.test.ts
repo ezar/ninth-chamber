@@ -13,6 +13,7 @@ import { reachableCells, key } from '../src/sim/grid/reach';
 import { validateLevel } from '../src/sim/grid/validate';
 import { DIR_YAW, type Dir } from '../src/sim/grid/units';
 import { runActions } from '../src/sim/logic/rules';
+import { bladePose } from '../src/sim/mechanisms/traps';
 import { tangle as T } from '../src/sim/player/tuning';
 import { createWorld, findActor, respawn, type World } from '../src/sim/world';
 import { Bot } from './bot';
@@ -44,6 +45,34 @@ function place(w: World, room: string, x: number, z: number, face: Dir = 'N'): v
 }
 
 const seconds = (s: number): number => Math.ceil(s / TICK_DT);
+
+/** Waits for a wind zone's gust to blow and die down: the lull has just begun. */
+function freshLull(bot: Bot, id: string): void {
+  bot.waitFor(() => bot.on(`${id}.gust`), `a gust of ${id}`, 1200);
+  bot.waitFor(() => !bot.on(`${id}.gust`), `a lull in ${id}`, 1200);
+}
+
+/** Waits for a band of fire to burn and die down, then runs across it. */
+function passFire(bot: Bot, id: string, room: string, x: number, z: number): void {
+  const phase = (): string => bot.w.state.mechanisms.fires.find((f) => f.id === id)?.phase ?? '';
+  bot.waitFor(() => phase() === 'burn', `${id} to burn`);
+  bot.waitFor(() => phase() === 'idle', `${id} to die down`);
+  bot.goTo(...at(room, x, z));
+}
+
+/** Waits for a blade to sweep through the bottom of its arc, then runs to the next safe cell. */
+function passBlade(bot: Bot, id: string, room: string, x: number, z: number): void {
+  let last = bladePose(bot.w, id).angle;
+  let swept = false;
+  for (let i = 0; i < 300 && !swept; i++) {
+    bot.tick();
+    const now = bladePose(bot.w, id).angle;
+    swept = Math.sign(now) !== Math.sign(last);
+    last = now;
+  }
+  expect(swept, `a swing of ${id}`).toBe(true);
+  bot.goTo(...at(room, x, z));
+}
 
 /** Plays from the start to the seal room; returns the bot standing before the seal. */
 function playToSeal(): Bot {
@@ -92,8 +121,14 @@ function playToSeal(): Bot {
   go('eight', 5, 1);
   go('eight', 5, 0);
 
-  // 3 · The dome: two pulls set the ring.
+  // 3 · The dome: the block onto the new moon, and two pulls set the ring.
   go('dome', 4, 6);
+  go('dome', 2, 6);
+  bot.push('N');
+  bot.push('N');
+  bot.push('N');
+  expect(bot.on('plate_moon.pressed')).toBe(true);
+  go('dome', 3, 4);
   go('dome', 7, 5);
   bot.action();
   bot.action();
@@ -101,23 +136,29 @@ function playToSeal(): Bot {
   go('dome', 4, 1);
   go('dome', 4, 0);
 
-  // 4 · The wind: up the step on the updraught.
-  go('wind', 4, 5);
-  go('wind', 4, 3);
+  // 4 · The wind: up the step on the updraught, then over the bridge between gusts.
+  go('wind', 4, 7);
+  go('wind', 4, 6);
   bot.climb('N');
+  go('wind', 4, 4);
+  freshLull(bot, 'gust_bridge');
   go('wind', 4, 1);
   go('wind', 4, 0);
 
-  // 5 · The bronze: pour the bridge and cross it.
-  go('bronze', 4, 6);
-  go('bronze', 1, 6);
+  // 5 · The bronze: pour the bridge and cross it, then the fire as it dies down.
+  go('bronze', 4, 8);
+  go('bronze', 1, 8);
   bot.action();
   bot.waitFor(() => bot.on('pour_bridge.cast'), 'the bridge cast', 900);
-  go('bronze', 4, 5);
-  go('bronze', 4, 1);
+  go('bronze', 4, 7);
+  go('bronze', 4, 3);
+  passFire(bot, 'fire_bronze', 'bronze', 4, 1);
   go('bronze', 4, 0);
 
-  // 6 · The roots: the burning torch, up the wall, the tangle gives way to it.
+  // 6 · The roots: the scorpions, the burning torch, up the wall, the tangle gives way to it.
+  go('roots', 4, 6);
+  bot.fight('roots');
+  heal();
   go('roots', 2, 6);
   bot.action();
   expect(bot.p.torch.has && bot.p.torch.lit).toBe(true);
@@ -137,13 +178,19 @@ function playToSeal(): Bot {
   expect(bot.p.health).toBe(health);
   go('glyphs', 3, 2);
   bot.turnMirror('W', 3);
+  go('glyphs', 5, 2);
+  bot.turnMirror('E', 4);
   bot.waitFor(() => bot.on('door_glyphs.open'), 'the glyph door', 600);
   go('glyphs', 4, 1);
   go('glyphs', 4, 0);
 
-  // 8 · The mirrors: the timer starts. Two turns open the niche (stone idol), one more the door.
+  // 8 · The mirrors: the timer starts. The high mirror once; two turns of the low one open the
+  //     niche (stone idol), one more sends the light up and over to the door.
   go('mirrors', 5, 6);
   expect(w.state.timer).not.toBeNull();
+  go('mirrors', 3, 2);
+  go('mirrors', 3, 1);
+  bot.turnMirror('E', 1);
   go('mirrors', 5, 3);
   bot.turnMirror('W', 2);
   bot.waitFor(() => bot.on('door_niche.open'), 'the niche', 600);
@@ -157,6 +204,12 @@ function playToSeal(): Bot {
   go('mirrors', 6, 2);
   go('mirrors', 5, 1);
   go('mirrors', 5, 0);
+
+  // 8b · The blades.
+  go('blades', 2, 6);
+  passBlade(bot, 'blade_low', 'blades', 2, 4);
+  passBlade(bot, 'blade_high', 'blades', 2, 2);
+  go('blades', 2, 0);
 
   // 9 · The water: the sluice floods the hall; the ledge (jade idol), then the way out.
   go('water', 4, 6);
@@ -272,6 +325,24 @@ describe('The Ninth Chamber', () => {
       entities: levelJson.entities.filter((e) => e.id !== 'gate_water'),
     });
     expect(reachableCells(lv).has(key(...at('sand', 5, 9)))).toBe(false);
+  });
+
+  it('the dome door wants both the ring on its mark and the new moon weighed down', () => {
+    const w = createWorld(level);
+    place(w, 'dome', 4, 6);
+    runActions(w, ['ring_dome.turn', 'ring_dome.turn']);
+    run(w, frame(), 120);
+    expect(w.state.signals['ring_dome.set']).toBe(true);
+    expect(findActor(w, 'door_dome', 'door')?.target).toBe(0);
+  });
+
+  it('the glyph door wants both locks', () => {
+    const w = createWorld(level);
+    place(w, 'glyphs', 4, 3);
+    runActions(w, ['lock_glyphs.turn', 'lock_glyphs.turn', 'lock_glyphs.turn']);
+    run(w, frame(), 120);
+    expect(w.state.signals['lock_glyphs.set']).toBe(true);
+    expect(findActor(w, 'door_glyphs', 'door')?.target).toBe(0);
   });
 
   it('the sand door stays shut until the block is on the plate', () => {

@@ -1,0 +1,12 @@
+{
+  "id": "ninth_blades",
+  "background": "#080605",
+  "exposure": 1.02,
+  "hemi": { "sky": "#6b5a4a", "ground": "#15100c", "intensity": 0.2 },
+  "fog": { "color": "#32281f", "density": 0.035 },
+  "sun": null,
+  "fire": { "color": "#ff9a48", "intensity": 42, "flicker": 0.28 },
+  "bloom": { "strength": 0.7, "radius": 0.5, "threshold": 0.76 },
+  "grade": { "tint": "#f6e2c6", "saturation": 0.92, "contrast": 1.18, "vignette": 0.5 },
+  "trim": { "friezeHeight": 3.6 }
+}
