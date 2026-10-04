@@ -50,6 +50,7 @@
   "notice.conjunction": "The light of the conjunction faded. Returning to the last checkpoint…",
   "caption.timerWarn": "The light of the conjunction is fading",
   "prompt.lever": "Pull the lever",
+  "prompt.carve": "Write your name in the ninth segment",
   "prompt.rope": "Jump and hold to pull the rope",
   "prompt.pickup": "Pick up",
   "prompt.block": "Grab the block",

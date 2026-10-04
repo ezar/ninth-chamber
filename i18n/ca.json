@@ -50,6 +50,7 @@
   "notice.conjunction": "La llum de la conjunció s’ha apagat. Tornant al darrer punt de control…",
   "caption.timerWarn": "La llum de la conjunció s’apaga",
   "prompt.lever": "Accionar la palanca",
+  "prompt.carve": "Escriure el teu nom al novè segment",
   "prompt.rope": "Salta i mantén per estirar la corda",
   "prompt.pickup": "Recollir",
   "prompt.block": "Agafar el bloc",

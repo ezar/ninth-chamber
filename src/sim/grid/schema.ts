@@ -119,6 +119,8 @@ const entity = z.discriminatedUnion('type', [
       wall: z.enum(FACINGS),
       /** A spring lever returns to rest after each pull and can be pulled again (reset levers). */
       spring: z.boolean().default(false),
+      /** i18n key of what Action does here, when it is not pulling a lever (the seal's ninth segment). */
+      prompt: z.string().min(1).optional(),
     })
     .strict(),
   z
@@ -154,6 +156,28 @@ const entity = z.discriminatedUnion('type', [
     })
     .strict(),
   z.object({ ...entityBase, type: z.literal('relic') }).strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('statue'),
+      /**
+       * One of the eight keepers in stone (chamber IX), holding its chamber's relic: 1 to 8 in
+       * campaign order; 9 is the empty pedestal. The cell is solid.
+       */
+      relic: z.number().int().min(1).max(9),
+      face: z.enum(FACINGS).default('S'),
+    })
+    .strict(),
+  z
+    .object({
+      ...entityBase,
+      type: z.literal('seal'),
+      /** The great seal of the nine, carved on this wall of its sector (chamber IX). */
+      wall: z.enum(FACINGS),
+      /** The lever (Action at the ninth segment) whose use carves the ninth segment. */
+      lever: z.string().min(1).optional(),
+    })
+    .strict(),
   z.object({ ...entityBase, type: z.literal('medkit'), size: z.enum(['small', 'large']) }).strict(),
   z
     .object({

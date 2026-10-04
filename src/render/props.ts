@@ -20,6 +20,7 @@ import { materialColor, texture, uv, vec2 } from 'three/tsl';
 import { torchModel } from './torch';
 import { rootFaces } from './roots';
 import { TangleViews } from './tangles';
+import { Monuments } from './monuments';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
 
@@ -75,6 +76,7 @@ export class Props {
   private readonly actors = new Map<string, Actor>();
   private readonly tileViews = new Map<string, THREE.Mesh>();
   private readonly tangles: TangleViews;
+  private readonly monuments: Monuments;
   private readonly flames: {
     sprite: THREE.Sprite;
     base: THREE.Vector3;
@@ -196,6 +198,8 @@ export class Props {
     if (roots) this.group.add(roots);
     this.tangles = new TangleViews(this.level);
     this.group.add(this.tangles.group);
+    this.monuments = new Monuments(this.level);
+    this.group.add(this.monuments.group);
     this.buildCrumbleTiles();
     this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
   }
@@ -386,9 +390,12 @@ export class Props {
         obj = door(this.mats, a.height);
         obj.rotation.y = this.doorYaw(a.cx, a.cz);
         break;
-      case 'lever':
-        obj = lever(this.mats);
+      case 'lever': {
+        // A lever with its own prompt is not a lever to see (the seal's ninth segment is the handle).
+        const def = this.level.entities.find((e) => e.id === a.id);
+        obj = def?.type === 'lever' && def.prompt ? new THREE.Group() : lever(this.mats);
         break;
+      }
       case 'rope':
         obj = rope(this.mats);
         break;
@@ -480,6 +487,7 @@ export class Props {
 
   update(world: World, time: number, dt: number): void {
     this.tangles.update(world, dt);
+    this.monuments.update(world, dt);
     for (const a of world.state.actors) {
       const v = this.viewFor(a);
       if (!v) continue;

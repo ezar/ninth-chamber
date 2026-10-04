@@ -212,7 +212,11 @@ export class Hud {
     const cz = Math.floor(p.pos.z / BLOCK);
     for (const a of world.state.actors) {
       if (a.cx !== cx || a.cz !== cz) continue;
-      if (a.kind === 'lever' && !a.used) return 'prompt.lever';
+      if (a.kind === 'lever' && !a.used) {
+        // A lever may say what Action really does there (the seal's ninth segment).
+        const def = world.level.entities.find((e) => e.id === a.id);
+        return def?.type === 'lever' && def.prompt ? (def.prompt as StringKey) : 'prompt.lever';
+      }
       if (a.kind === 'rope' && !a.used) return 'prompt.rope';
       if ((a.kind === 'secret' || a.kind === 'relic') && !a.taken) return 'prompt.pickup';
       if (a.kind === 'note') return 'prompt.read';

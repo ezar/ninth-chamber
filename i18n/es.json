@@ -50,6 +50,7 @@
   "notice.conjunction": "La luz de la conjunción se apagó. Volviendo al último punto de control…",
   "caption.timerWarn": "La luz de la conjunción se apaga",
   "prompt.lever": "Accionar la palanca",
+  "prompt.carve": "Escribir tu nombre en el noveno segmento",
   "prompt.rope": "Salta y mantén para tirar de la cuerda",
   "prompt.pickup": "Recoger",
   "prompt.block": "Agarrar el bloque",

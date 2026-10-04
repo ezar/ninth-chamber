@@ -98,6 +98,15 @@ export function validateLevel(json: unknown, i18nKeys?: ReadonlySet<string>): Va
       const n = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] }[e.wall];
       const behind = level.sector(cx + (n?.[0] ?? 0), cz + (n?.[1] ?? 0));
       if (behind && !behind.wall) errors.push(`lever '${e.id}' is not against a wall on its ${e.wall} side`);
+      if (e.prompt && i18nKeys && !i18nKeys.has(e.prompt))
+        errors.push(`lever '${e.id}': missing i18n key '${e.prompt}'`);
+    }
+    if (e.type === 'seal') {
+      const n = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] }[e.wall];
+      const behind = level.sector(cx + (n?.[0] ?? 0), cz + (n?.[1] ?? 0));
+      if (behind && !behind.wall) errors.push(`seal '${e.id}' is not against a wall on its ${e.wall} side`);
+      if (e.lever && !level.entities.some((x) => x.id === e.lever && x.type === 'lever'))
+        errors.push(`seal '${e.id}': no lever '${e.lever}'`);
     }
     if (e.type === 'note') {
       if (e.wall) {
