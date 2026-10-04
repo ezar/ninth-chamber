@@ -239,6 +239,10 @@ export class MusicDirector {
         // The main theme returns under the end screen once the fanfare has rung out.
         if (this.base !== 'end') this.enterEnd();
         break;
+      // The campaign's credits roll to the title's theme.
+      case 'credits.roll':
+        this.setBase('title', TITLE, { loop: true, fadeIn: 2 });
+        break;
       case 'end.reveal':
         this.sting(this.palette.stingers.journal, -6);
         break;

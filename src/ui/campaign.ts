@@ -11,6 +11,7 @@
  * ninth. Every relic shows eight signs and the empty place of a ninth, like
  * the seal.
  */
+import type { Ending } from '../sim/grid/schema';
 import type { StringKey } from './i18n';
 
 /** How the end screen draws a relic's clue: eight signs and a missing ninth. */
@@ -29,6 +30,20 @@ export interface Relic {
   cleared: StringKey;
 }
 
+/** One ending of the campaign (chamber IX): the end screen's moment, and the note Nora leaves. */
+export interface EndingStory {
+  /** End screen kicker and title. */
+  cleared: StringKey;
+  title: StringKey;
+  moment: readonly [StringKey, StringKey, StringKey];
+  /** Accessible description of the seal drawn for it. */
+  figureLabel: StringKey;
+  /** The note Nora writes at the end. */
+  note: StringKey;
+  /** Signatures under it, in order: Elena's beside Nora's on the bare segment. */
+  signatures: readonly StringKey[];
+}
+
 export interface Chamber {
   /** Roman numeral on the map and in kickers. */
   numeral: string;
@@ -37,7 +52,7 @@ export interface Chamber {
   name: StringKey;
   /** One-line description for the campaign map. */
   line: StringKey;
-  /** Chambers with no level yet: not found (IX). */
+  /** Chambers with no level yet: sealed or not found (none in this build). */
   status?: 'sealed' | 'unknown';
   /** Kicker above the level title, e.g. "Tomb of Qarrum · First chamber". */
   kicker?: StringKey;
@@ -50,6 +65,8 @@ export interface Chamber {
   teaser?: StringKey;
   /** i18n prefixes of the chamber's journal notes (`<prefix>.meta|title|body`), in story order. */
   journal?: readonly string[];
+  /** The last chamber ends one way or another (`level.end <ending>`) instead of with a relic. */
+  endings?: Readonly<Record<Ending, EndingStory>>;
 }
 
 export const CHAMBERS: readonly Chamber[] = [
@@ -210,10 +227,49 @@ export const CHAMBERS: readonly Chamber[] = [
     teaser: 'teaser.observatory',
     journal: ['journal.observatory.1', 'journal.observatory.2', 'journal.observatory.3'],
   },
-  { numeral: 'IX', name: 'chamber.9.name', line: 'chamber.9.line', status: 'unknown' },
+  {
+    numeral: 'IX',
+    level: 'ninth_chamber',
+    name: 'chamber.9.name',
+    line: 'chamber.9.line',
+    kicker: 'kicker.ninth_chamber',
+    premise: 'premise.ninth_chamber',
+    intro: ['intro.ninth_chamber.1', 'intro.ninth_chamber.2', 'intro.ninth_chamber.3'],
+    teaser: 'teaser.ninth_chamber',
+    journal: ['journal.ninth_chamber.1', 'journal.ninth_chamber.2'],
+    endings: {
+      keeper: {
+        cleared: 'end.ninth_chamber.keeper.kicker',
+        title: 'end.ninth_chamber.keeper.title',
+        moment: ['end.ninth_chamber.keeper.1', 'end.ninth_chamber.keeper.2', 'end.ninth_chamber.keeper.3'],
+        figureLabel: 'end.ninth_chamber.keeper.figure',
+        note: 'end.ninth_chamber.keeper.note',
+        signatures: ['end.ninth_chamber.signature.nora'],
+      },
+      blank: {
+        cleared: 'end.ninth_chamber.blank.kicker',
+        title: 'end.ninth_chamber.blank.title',
+        moment: ['end.ninth_chamber.blank.1', 'end.ninth_chamber.blank.2', 'end.ninth_chamber.blank.3'],
+        figureLabel: 'end.ninth_chamber.blank.figure',
+        note: 'end.ninth_chamber.blank.note',
+        signatures: ['end.ninth_chamber.signature.elena', 'end.ninth_chamber.signature.nora'],
+      },
+    },
+  },
 ];
 
 export const chamberOf = (levelId: string): Chamber | undefined => CHAMBERS.find((c) => c.level === levelId);
+
+/** What the end screen tells for a level: its relic, or (the last chamber) the ending reached. */
+export type EndStory =
+  { kind: 'relic'; relic: Relic } | { kind: 'ending'; ending: Ending; story: EndingStory } | { kind: 'none' };
+
+export function endStory(levelId: string, ending: Ending | null): EndStory {
+  const c = chamberOf(levelId);
+  if (c?.endings && ending) return { kind: 'ending', ending, story: c.endings[ending] };
+  if (c?.relic) return { kind: 'relic', relic: c.relic };
+  return { kind: 'none' };
+}
 
 /**
  * The chamber after a level's, in campaign order: the next one that can be

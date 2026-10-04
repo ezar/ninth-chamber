@@ -1,5 +1,23 @@
 # Changelog
 
+## Version 0.8.6 (2026-10-04): The finale
+
+The second of three releases on the way to 0.9.0.
+
+- **The two endings on the end screen**:
+  - The Ninth Chamber's end screen tells the ending reached instead of a relic.
+  - _The Ninth Keeper_: the seal drawn whole, with the ninth segment carved.
+  - _The Bare Segment_: the seal drawn with the ninth segment still bare.
+  - Each ending has its three lines and the note Nora writes at the end. The bare segment carries Elena's signature, "E. V. — 1956", beside Nora's.
+- **The credits roll**: a Credits button on the campaign's last end screen. The roll lists the eight keepers and the credits, says thank you, and ends on the ending's signatures. It plays to the title's theme, any key closes it, and with reduced motion it is a still list.
+- **Campaign**: chamber IX has its entry (intro, notes, endings). It shows as coming until its level arrives in 0.9.0.
+- **Texts** in English, Spanish and Catalan:
+  - the promise on the empty pedestal;
+  - Elena's 1956 letter;
+  - both endings, and Nora's two notes;
+  - the chamber's intro.
+- **Tests**: a new case in tests/campaign.test.ts for the two endings.
+
 ## Version 0.8.5 (2026-10-04): The conjunction timer and the endings
 
 The first of three releases on the way to 0.9.0 (docs/roadmap.md), chamber IX. The owner chose two endings, a real but generous timer, Elena's 1956 letter shown, and the names as final.

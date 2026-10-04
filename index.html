@@ -241,6 +241,9 @@
       </div>
     </div>
 
+    <div id="roll" hidden role="dialog" aria-modal="true" data-i18n-label="end.credits">
+      <div id="roll-track"></div>
+    </div>
     <div id="end" hidden role="dialog" aria-modal="true" aria-labelledby="end-title">
       <div class="end-grid">
         <section class="end-relic">
@@ -250,6 +253,8 @@
           <p class="relic-line"></p>
           <p class="relic-line"></p>
           <p class="relic-line"></p>
+          <p id="end-note" class="end-note" hidden></p>
+          <p id="end-signatures" class="end-signatures" hidden></p>
         </section>
         <section class="end-record">
           <div class="end-rank">
@@ -270,6 +275,7 @@
           </div>
           <div id="end-actions" class="end-actions">
             <button id="end-next" type="button" data-nav data-i18n="end.continue" hidden></button>
+            <button id="end-credits" type="button" data-nav data-i18n="end.credits" hidden></button>
             <button id="end-restart" type="button" data-nav data-i18n="end.restart"></button>
             <button id="end-menu" type="button" data-nav data-i18n="end.menu"></button>
           </div>
