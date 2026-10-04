@@ -203,6 +203,14 @@ function playRootHalls(): Bot {
 }
 
 describe('The Root Halls', () => {
+  it('names only reverb presets the audio has (an unknown one broke the mixer)', () => {
+    const bad = {
+      ...levelJson,
+      rooms: levelJson.rooms.map((r, i) => (i === 0 ? { ...r, reverb: 'water_cave' } : r)),
+    };
+    expect(() => Level.parse(bad)).toThrow();
+  });
+
   it('passes the level validator, reachability included', () => {
     const { errors } = validateLevel(levelJson);
     expect(errors).toEqual([]);

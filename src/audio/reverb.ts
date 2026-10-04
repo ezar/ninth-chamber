@@ -6,8 +6,10 @@
  * discrete early reflections and, for the cistern, long-ringing room modes
  * and a faint flutter echo off the water.
  */
+import type { REVERBS } from '../sim/grid/schema';
 
-export type ReverbPreset = 'stone_small' | 'stone_medium' | 'hall_large' | 'water_cistern';
+/** The presets rooms may name, kept with the level schema so a level cannot name a missing one. */
+export type ReverbPreset = (typeof REVERBS)[number];
 
 interface IrSpec {
   /** Time to decay 60 dB (s). */

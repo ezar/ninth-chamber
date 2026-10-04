@@ -21,6 +21,8 @@ export const SECTOR_FLAGS = [
   'shade',
 ] as const;
 export const FACINGS = ['N', 'E', 'S', 'W'] as const;
+/** The audio's reverb presets a room can name (audio/reverb.ts): an unknown one breaks the mixer. */
+export const REVERBS = ['stone_small', 'stone_medium', 'hall_large', 'water_cistern'] as const;
 /** How a journal note is presented: a typed expedition log, a handwritten page or a carving. */
 export const NOTE_STYLES = ['diary', 'letter', 'carving'] as const;
 
@@ -71,7 +73,7 @@ const room = z
     /** Water surface in clicks for the whole room: every sector whose floor lies under it is wet. */
     water: clicks.optional(),
     look: z.string().optional(),
-    reverb: z.string().optional(),
+    reverb: z.enum(REVERBS).optional(),
     music: z.string().optional(),
     /**
      * How the camera frames the room (the Wind Stair's shaft, spec §19): a preferred pitch in

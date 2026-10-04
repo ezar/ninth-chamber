@@ -29,6 +29,7 @@ The last of the three releases on the way to 0.8.0 (docs/roadmap.md): chamber V 
   - The exits of rooms with a raised floor were at the lower height.
   - The root bridge had no way off at the far end.
   - The gold idol first sat under water, where nothing can be picked up.
+  - The pool named a reverb preset the audio does not have, which broke the page (caught by `pnpm smoke`). The level schema now accepts only the presets the audio has.
 
 ## Version 0.7.6 (2026-10-04): Tangles, scorpions and root floors
 
