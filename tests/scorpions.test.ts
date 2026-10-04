@@ -68,4 +68,19 @@ describe('scorpions', () => {
     damageEnemy(w, e, 1);
     expect(e.mode).toBe('dead');
   });
+
+  it('a floor of roots that gives way says so, for its creaking sound', () => {
+    const w = testLevel(['#####', '#...#', '#.c.#', '#.S.#', '#####'], {
+      legend: { c: { floor: 0, mat: 'wood', flags: ['crumble'] } },
+    });
+    const p = w.state.player;
+    p.pos = { x: 2 * 2 + 1, y: 0, z: 2 * 2 + 1 };
+    const events: { type: string; mat?: unknown }[] = [];
+    for (let i = 0; i < ticks(2); i++) {
+      stepWorld(w, frame());
+      events.push(...w.events.drain());
+    }
+    expect(events.find((e) => e.type === 'tile.cracked')?.mat).toBe('wood');
+    expect(events.find((e) => e.type === 'tile.fell')?.mat).toBe('wood');
+  });
 });

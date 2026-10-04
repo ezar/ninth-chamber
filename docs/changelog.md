@@ -1,5 +1,28 @@
 # Changelog
 
+## Version 0.7.6 (2026-10-04): Tangles, scorpions and root floors
+
+The second of three releases on the way to 0.8.0 (docs/roadmap.md).
+
+- **Tangles of roots** (`src/sim/mechanisms/tangles.ts`, entity `tangle`: cells, a top in clicks, grown or not at the start).
+  - Grown, a tangle fills its cells up to its top. It is solid, and climbable on every side.
+  - A lit torch in Nora's hand within 2.2 m makes it shrink back in 0.8 s. That opens the way and takes its handholds away: if she is climbing it, she falls.
+  - With the torch out or away it waits 2.5 s, then grows back over 6 s. It never grows back onto Nora or onto a living enemy.
+  - Rules: `<id>.seal` makes it grow whatever the torch, `<id>.part` keeps it open, and `<id>.free` hands it back to the torch. It emits the signal `<id>.open`.
+  - A tangle can also fill a hole in the floor: held over it, the torch opens it.
+- **Scorpions**: a new enemy type, `scorpion`. They are small, quick and hunt in packs. Their sting does little damage but poisons, like the darts. A pistol hit or two kills one.
+- **Root floors and thorns**:
+  - A crumbling floor with the `wood` material is a mat of woven roots that creaks under her, instead of the stone cracking.
+  - A deadly pit floored with `wood` grows thorns instead of spikes.
+- **Seeing and hearing it**:
+  - tangles grow from the rock around them and shrink back into it, or rise from the floor when they stand free;
+  - a stand-in scorpion model with legs, pincers and a stinging tail;
+  - root creaks, a scorpion's chitter and sting;
+  - captions in English, Spanish and Catalan.
+- **Saves**: migration 006 adds the tangles to older saves (schema 7).
+- **Level tools**: the reachability check counts tangles as both open and grown. The validator rejects a tangle that grows into rock or never rises above the floor.
+- **Tests**: tests/tangles.test.ts (12) and tests/scorpions.test.ts (5).
+
 ## Version 0.7.5 (2026-10-04): Wall climbing
 
 The first of three releases on the way to 0.8.0 (docs/roadmap.md), chamber V, the Root Halls.
