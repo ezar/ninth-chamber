@@ -119,6 +119,22 @@ export const PALETTES: Record<string, Palette> = {
     stingers: { ...STINGERS, solved: 'sting.solved.2' },
   },
   /**
+   * Green, damp and alive: the Root Halls draw on the Cisterns' quiet, echoing
+   * cues and the Antechamber's tension until they have their own
+   * (docs/changelog.md, 0.8.0).
+   */
+  root_halls: {
+    intro: 'cisterns.intro',
+    explore: ['cisterns.explore.1', 'antechamber.explore.1'],
+    tension: 'antechamber.tension',
+    combat: 'cisterns.combat',
+    chase: 'chase',
+    boss: 'boss',
+    relic: 'cisterns.relic',
+    fanfare: 'fanfare',
+    stingers: STINGERS,
+  },
+  /**
    * Heavy, metallic, hot: the Bronze Forge draws on the Temple of the Sun's
    * weightier cues until it has its own (docs/changelog.md, 0.5.0).
    */

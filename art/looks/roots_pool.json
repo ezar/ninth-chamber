@@ -1,0 +1,46 @@
+{
+  "id": "roots_pool",
+  "background": "#060a06",
+  "exposure": 1.1,
+  "hemi": {
+    "sky": "#7f9a6c",
+    "ground": "#141008",
+    "intensity": 0.34
+  },
+  "fog": {
+    "color": "#2a3a24",
+    "density": 0.024
+  },
+  "sun": {
+    "color": "#c8e8b0",
+    "intensity": 2.2,
+    "direction": [0.1, 0.98, 0.1]
+  },
+  "fire": {
+    "color": "#ffa24e",
+    "intensity": 34,
+    "flicker": 0.22
+  },
+  "bloom": {
+    "strength": 0.55,
+    "radius": 0.6,
+    "threshold": 0.8
+  },
+  "grade": {
+    "tint": "#d6e8bc",
+    "saturation": 0.78,
+    "contrast": 1.12,
+    "vignette": 0.42
+  },
+  "fill": 1.1,
+  "water": {
+    "deep": "#06140e",
+    "tint": "#2e5a3c",
+    "sky": "#8fb08a",
+    "caustics": 0.5,
+    "fog": {
+      "color": "#0c2016",
+      "density": 0.18
+    }
+  }
+}

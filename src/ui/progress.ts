@@ -37,6 +37,10 @@ export function loadReached(storage: ProgressStorage | null): Set<string> {
   } catch {
     // Corrupt or blocked: the first chamber only.
   }
+  // A chamber built after the ones beyond it (the Root Halls, V, came after VI to VIII) counts as
+  // reached by anyone who got further: they were sent past it while it was sealed.
+  const last = CHAMBERS.reduce((m, c, i) => (c.level && reached.has(c.level) ? i : m), -1);
+  for (const c of CHAMBERS.slice(0, last)) if (c.level) reached.add(c.level);
   return reached;
 }
 
@@ -58,7 +62,7 @@ export function markReached(storage: ProgressStorage | null, levelId: string): S
  * - `open`: reached and playable in this build;
  * - `locked`: playable in this build but not reached yet;
  * - `soon`: a known chamber whose level is not in this build yet;
- * - `sealed`: the sealed chambers (IV–VIII);
+ * - `sealed`: a chamber known but sealed (none in this build);
  * - `unknown`: the ninth, which nobody has found.
  */
 export type ChamberState = 'open' | 'locked' | 'soon' | 'sealed' | 'unknown';

@@ -1,0 +1,32 @@
+{
+  "id": "roots_nest",
+  "background": "#060a06",
+  "exposure": 1.0,
+  "hemi": {
+    "sky": "#5f6e4c",
+    "ground": "#100c06",
+    "intensity": 0.22
+  },
+  "fog": {
+    "color": "#1c2616",
+    "density": 0.034
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ffa24e",
+    "intensity": 34,
+    "flicker": 0.22
+  },
+  "bloom": {
+    "strength": 0.55,
+    "radius": 0.6,
+    "threshold": 0.8
+  },
+  "grade": {
+    "tint": "#d6e8bc",
+    "saturation": 0.78,
+    "contrast": 1.12,
+    "vignette": 0.42
+  },
+  "fill": 0.8
+}

@@ -169,6 +169,22 @@ function astrolabe(): string {
   );
 }
 
+/** The Stone Seed: a seed with nine veins from its tip; eight are closed lines, the ninth an open channel. */
+function seed(): string {
+  const veins = Array.from({ length: 8 }, (_, i) => {
+    const [x, y] = at(angle(i), 92);
+    const [cx, cy] = at(angle(i) + 18, 52);
+    return `<path class="map-line map-star" style="--i:${i}" pathLength="1" d="M0 0 Q${cx} ${cy} ${x} ${y}"/>`;
+  }).join('');
+  const [nx, ny] = at(angle(8), 92);
+  const [x0, y0] = at(angle(8), 12);
+  return (
+    `<ellipse class="map-line" pathLength="1" rx="20" ry="26"/>${veins}` +
+    `<path class="map-gap" d="M${x0} ${y0} L${nx} ${ny}"/>` +
+    `<circle class="map-ninth" cx="${nx}" cy="${ny}" r="9"/><circle class="map-here" cx="${nx}" cy="${ny}" r="3"/>`
+  );
+}
+
 export function relicFigureSvg(figure: RelicFigure, label: string): string {
   const body =
     figure === 'moons'
@@ -183,6 +199,8 @@ export function relicFigureSvg(figure: RelicFigure, label: string): string {
               ? notes()
               : figure === 'astrolabe'
                 ? astrolabe()
-                : stars();
+                : figure === 'seed'
+                  ? seed()
+                  : stars();
   return frame(label, body);
 }

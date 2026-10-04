@@ -31,6 +31,7 @@ const center = (c: number): number => c * BLOCK + BLOCK / 2;
 const RELIC_TINTS: Readonly<Record<string, { color: string; emissive: string; light: string }>> = {
   cisterns: { color: '#bfeee6', emissive: '#46d0c4', light: '#7ee6dc' },
   clay_archive: { color: '#b4683e', emissive: '#ff6a2a', light: '#ff9a5a' },
+  root_halls: { color: '#9cc9a0', emissive: '#3fb05e', light: '#86e09a' },
 };
 
 /** Chambers whose relic is a tablet of fired clay rather than a gem in a cage. */

@@ -1,0 +1,32 @@
+{
+  "id": "roots_tangles",
+  "background": "#060a06",
+  "exposure": 1.1,
+  "hemi": {
+    "sky": "#6c7f58",
+    "ground": "#120e07",
+    "intensity": 0.26
+  },
+  "fog": {
+    "color": "#22301c",
+    "density": 0.03
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ffa24e",
+    "intensity": 34,
+    "flicker": 0.22
+  },
+  "bloom": {
+    "strength": 0.55,
+    "radius": 0.6,
+    "threshold": 0.8
+  },
+  "grade": {
+    "tint": "#d6e8bc",
+    "saturation": 0.78,
+    "contrast": 1.12,
+    "vignette": 0.42
+  },
+  "fill": 0.9
+}
