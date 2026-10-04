@@ -1,13 +1,15 @@
 /**
  * Wall mode (spec §5 "Escalar paredes", §19 chamber V): climbing a face of
  * roots up, down and sideways. A sector flag `climb<D>` marks the face of
- * that sector looking towards D. Nora faces the other way, `p.dir`, while on
+ * that sector looking towards D, and a grown tangle of roots is climbable on
+ * every side. Nora faces the other way, `p.dir`, while on
  * it. At the top she hangs from its edge, at the bottom she steps off, and a
  * jump takes her back off the face.
  */
 import { blocks, distanceToEdge } from '../../grid/collision';
 import type { SectorFlag } from '../../grid/schema';
 import { BLOCK, DIR_VEC, OPPOSITE, RIGHT_OF, yawToDir, type Dir } from '../../grid/units';
+import { tangleAt } from '../../mechanisms/tangles';
 import { tearingGust } from '../../mechanisms/wind';
 import type { World } from '../../world';
 import { emit, faceDir, setMode, wishAlong, type Ctx } from '../context';
@@ -18,7 +20,8 @@ const FLAG: Record<Dir, SectorFlag> = { N: 'climbN', E: 'climbE', S: 'climbS', W
 
 /** Whether the face of a cell that looks towards `look` can be climbed. */
 export function climbableFace(world: World, cx: number, cz: number, look: Dir): boolean {
-  return world.level.sector(cx, cz)?.flags.has(FLAG[look]) ?? false;
+  // A grown tangle of roots is climbable on every side.
+  return (world.level.sector(cx, cz)?.flags.has(FLAG[look]) ?? false) || tangleAt(world, cx, cz) !== null;
 }
 
 /** The cell in front of a point, looking `dir`. */

@@ -332,6 +332,19 @@ export const wallClimb = {
   fromLedge: 0.2,
 };
 
+/** Tangles of roots (spec §19, chamber V): they shrink back from a lit torch and grow back slowly. */
+export const tangle = {
+  /** A lit torch in her hand this close to the roots makes them shrink (m, from the torch). */
+  reach: 2.2,
+  /** Height of the torch above her feet (m). */
+  handHeight: 1.3,
+  /** Shrinking back from fully grown (s). */
+  shrinkTime: 0.8,
+  /** With no torch close, they wait this long (s), then grow back over this long (s). */
+  regrowDelay: 2.5,
+  regrowTime: 6,
+};
+
 /** Mild poison from darts (spec §19): it drains health for a while but never kills; a medkit cures it. */
 export const poison = {
   /** Seconds a dart poisons for (a second dart restarts it). */

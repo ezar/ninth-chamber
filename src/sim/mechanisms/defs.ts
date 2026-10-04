@@ -175,6 +175,13 @@ export interface OculusDef extends Rect {
   on: boolean;
 }
 
+export interface TangleDef extends Rect {
+  id: string;
+  /** Top of the grown roots (m). */
+  top: number;
+  grown: boolean;
+}
+
 export interface MechanismDefs {
   platforms: Map<string, PlatformDef>;
   trapdoors: Map<string, TrapdoorDef>;
@@ -193,6 +200,7 @@ export interface MechanismDefs {
   winds: Map<string, WindDef>;
   rings: Map<string, RingDef>;
   oculi: Map<string, OculusDef>;
+  tangles: Map<string, TangleDef>;
   /** Trench cells of each pour: the pour and the cell's place in its order. */
   pourCells: Map<number, { id: string; i: number }[]>;
   /** Cells taken by mirror drums and receiver pedestals: solid for bodies. */
@@ -234,6 +242,7 @@ function buildDefs(level: Level): MechanismDefs {
     winds: new Map(),
     rings: new Map(),
     oculi: new Map(),
+    tangles: new Map(),
     pourCells: new Map(),
     solid: new Set(),
     trapdoorCells: new Set(),
@@ -422,6 +431,17 @@ function buildDefs(level: Level): MechanismDefs {
           maxX: cx + e.size[0],
           maxZ: cz + e.size[1],
           on: e.on,
+        });
+        break;
+      case 'tangle':
+        d.tangles.set(e.id, {
+          id: e.id,
+          minX: cx,
+          minZ: cz,
+          maxX: cx + e.size[0],
+          maxZ: cz + e.size[1],
+          top: o.y + e.top * CLICK,
+          grown: e.grown,
         });
         break;
       default:
