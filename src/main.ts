@@ -1,4 +1,4 @@
-import { applyTouchLayout, TouchLayoutEditor } from './ui/touch-layout';
+import { applyTouchLayout, TouchLayoutEditor, watchTouchLayout } from './ui/touch-layout';
 import './ui/style.css';
 import './ui/screens.css';
 import './ui/prelude.css';
@@ -548,6 +548,7 @@ async function main(): Promise<void> {
   };
 
   const touchEditor = new TouchLayoutEditor($('#touch'));
+  watchTouchLayout($('#touch'), () => settings.touchLayout);
   const menu = new Menu(settings, {
     resume: () => resume(),
     restart: () => restartCheckpoint(),

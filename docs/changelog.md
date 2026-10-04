@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 0.9.8 (2026-10-04): Touch layout fixes, again
+
+- **A button that was hidden is clamped when it shows again.** This covers the note reader closing after a rotation, the torch button once the torch is found, and the start of play. Each button is watched for its size, which changes when it shows.
+- **The editor drags from where a button is drawn.** A saved offset clamped to a smaller screen no longer jumps back off screen at the first drag. Only the buttons moved are saved with their new place.
+- Reading a drawn offset back accepts the browser's short form ("-742px" for "-742px 0px"), which a browser check found.
+- **Tests**: tests/touch-layout.test.ts.
+
 ## Version 0.9.7 (2026-10-04): Touch layout fixes
 
 - **Moved touch buttons stay on screen.** A saved layout is drawn only as far as the screen allows. It is checked again when the game starts, on every resize and rotation, and after the button size changes. The saved layout itself is not changed, so turning the phone back restores it.
