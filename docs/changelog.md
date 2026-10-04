@@ -13,6 +13,11 @@ The first release on the way to 1.0 (docs/roadmap.md, rewritten for 1.0).
   - _the mirrors_: two mirrors, the high one sending the light on to the door;
   - _the blades_: a twelfth room in the run under the conjunction's light, with two blades swinging in turn.
   - Nora's remarks and the hints follow, in English, Spanish and Catalan; the lightmap is baked again.
+- **Music of their own for chambers IV to IX**: 30 new cues, by Scott Buckley and Kevin MacLeod (CC-BY 4.0), credited in `public/audio/CREDITS.md` and the in-game credits.
+  - Each chamber has its own intro, two exploration cues and a relic cue. For the Ninth Chamber, the relic cue is the seal.
+  - New tension or combat beds where the borrowed ones did not fit: the Archive's combat, the Root Halls' and the Forge's tension and combat, and the Wind Stair's tension (a flute).
+  - The Ninth Chamber's exploration returns to one cue from each earlier chamber, in campaign order, between its own two.
+  - About 28 MB more music, cached as it is first played and never precached (the service worker's precache is unchanged).
 - **Golden replays** (spec §16):
   - Each chamber's golden path is recorded as the bot's input frames in `tests/replays/<level>.replay.json.gz`, with the world's hash every 60 ticks.
   - `tests/golden-replays.test.ts` plays every replay back on a fresh world. A difference names the first stretch of 60 ticks that diverged.
