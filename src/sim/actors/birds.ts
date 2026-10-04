@@ -99,8 +99,8 @@ function shove(world: World, e: EnemyState, s: EnemyStats): void {
   const dx = h > 0.3 ? e.vel.x / h : -Math.sin(e.yaw);
   const dz = h > 0.3 ? e.vel.z / h : -Math.cos(e.yaw);
   emit(world, 'enemy.shove', e, { hit: true });
-  if (p.mode === 'hang' || p.mode === 'rope') {
-    // Knocked off the ledge or the rope.
+  if (p.mode === 'hang' || p.mode === 'wall' || p.mode === 'rope') {
+    // Knocked off the ledge, the wall or the rope.
     p.vel = { x: dx * 1.5, y: 0, z: dz * 1.5 };
     p.airSpeedCap = tuning.airControlMinCap;
     p.fallFrom = p.pos.y;
@@ -108,6 +108,7 @@ function shove(world: World, e: EnemyState, s: EnemyStats): void {
     p.jumped = false;
     p.ledge = null;
     p.target = null;
+    p.dir = null;
     setPlayerMode(p, 'air');
     world.events.emit({ type: 'player.torn', tick: world.tick });
   } else if (p.mode === 'ground' || p.mode === 'air') {

@@ -17,6 +17,7 @@ export type PlayerMode =
   | 'ground'
   | 'air'
   | 'hang'
+  | 'wall'
   | 'climb'
   | 'block'
   | 'push'

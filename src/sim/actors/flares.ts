@@ -21,7 +21,7 @@ export function flareHand(p: PlayerState): Vec3 {
   // Swimming she holds it up out of the water; diving, ahead of her chest.
   if (p.mode === 'swim') up = swimming.surfaceSink + 0.25;
   else if (p.mode === 'dive') up = (swimming.bodyLow + swimming.bodyHigh) / 2;
-  else if (p.mode === 'hang') up = 1.4;
+  else if (p.mode === 'hang' || p.mode === 'wall') up = 1.4;
   return {
     x: p.pos.x + r.x * h.right + f.x * h.forward,
     y: p.pos.y + up,

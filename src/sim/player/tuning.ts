@@ -311,6 +311,27 @@ export const wind = {
   throw: 1.5,
 };
 
+/** Climbing walls of roots (spec §5 "Escalar paredes", §19 chamber V). */
+export const wallClimb = {
+  /** Climbing speed up, down and sideways (m/s). */
+  up: 0.9,
+  down: 1.3,
+  side: 0.9,
+  /** Furthest from the face she gets on or catches it (m), like a ledge grab. */
+  reach: 0.5,
+  /** A face is climbed only if its top is at least this far above her hands (m); a lower one is a ledge. */
+  minAbove: 0.6,
+  /** She gets on this far up from the floor, so she is off the ground (m). */
+  lift: 0.15,
+  /** Gap kept between her body and the face (m). */
+  gap: 0.02,
+  /** A jump back off the face: away from it (m/s) and up, as a fraction of a jump. */
+  backSpeed: 3.4,
+  backLift: 0.6,
+  /** From the top edge, pulling back puts her on the face this far below the hang (m). */
+  fromLedge: 0.2,
+};
+
 /** Mild poison from darts (spec §19): it drains health for a while but never kills; a medkit cures it. */
 export const poison = {
   /** Seconds a dart poisons for (a second dart restarts it). */

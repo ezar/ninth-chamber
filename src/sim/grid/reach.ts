@@ -6,7 +6,8 @@
  * at every height on their path, and any cell of a room with a pushable
  * block as possibly holding that block, to stand on, and every wind zone as
  * blowing whichever way helps: jumps from a windy cell reach further, and an
- * updraught lets her reach higher ledges. A cell this graph cannot reach can never be reached
+ * updraught lets her reach higher ledges. A climbable face is climbed to its
+ * top from any height, and traversed sideways while it continues. A cell this graph cannot reach can never be reached
  * in play, so an exit, secret or checkpoint outside it is a broken level.
  * Being reachable here does not prove a cell is reachable in play: the bot
  * walkthroughs do that.
@@ -143,8 +144,15 @@ export function reachableCells(level: Level): Set<string> {
     if (blockRooms.has(s.room)) out.push(floor + BLOCK_BONUS);
     return out.filter((h) => s.ceil - h >= HEADROOM || (w !== null && h < w));
   };
-  const climbable = (s: Sector): boolean =>
-    s.flags.has('climbN') || s.flags.has('climbE') || s.flags.has('climbS') || s.flags.has('climbW');
+  /** Whether the cell at (cx, cz) has a climbable face looking along (dx, dz). */
+  const faceLooking = (cx: number, cz: number, dx: number, dz: number): boolean => {
+    const s = level.sector(cx, cz);
+    const flag = dx > 0 ? 'climbE' : dx < 0 ? 'climbW' : dz > 0 ? 'climbS' : 'climbN';
+    return s?.flags.has(flag) ?? false;
+  };
+  /** The faces a cell has in front of it: she can be on them at any height. */
+  const facesAt = (cx: number, cz: number): (readonly [number, number])[] =>
+    NEIGHBOURS.filter(([dx, dz]) => faceLooking(cx + dx, cz + dz, -dx, -dz));
 
   const start = level.sector(level.start.x, level.start.z);
   const seen = new Set<string>();
@@ -175,13 +183,23 @@ export function reachableCells(level: Level): Set<string> {
     for (const [dx, dz] of NEIGHBOURS) {
       const next = level.sector(n.cx + dx, n.cz + dz);
       if (next && !next.wall) {
-        const climb = climbable(here) || climbable(next);
+        // Up the face of the neighbour that looks at her.
+        const climb = faceLooking(next.cx, next.cz, -dx, -dz);
         for (const h of heights(next)) {
           const nw = water(next);
           // Under water she swims to any depth of a flooded neighbour.
           const underwater = swimming && nw !== null && h <= nw + 1e-6;
           if (h - n.h <= reach || climb || underwater) visit({ cx: next.cx, cz: next.cz, h });
         }
+      }
+      // Along a face that continues beside her, at any height: to the cell beside and the top above it.
+      for (const [fx, fz] of facesAt(n.cx, n.cz)) {
+        if (dx === fx && dz === fz) continue;
+        if (dx === -fx && dz === -fz) continue;
+        if (!next || next.wall || !faceLooking(next.cx + fx, next.cz + fz, -fx, -fz)) continue;
+        for (const h of heights(next)) visit({ cx: next.cx, cz: next.cz, h });
+        const top = level.sector(next.cx + fx, next.cz + fz);
+        if (top) for (const h of heights(top)) visit({ cx: top.cx, cz: top.cz, h });
       }
       // Running jumps over gaps: nothing taller than a grab in the way, landing not much higher.
       if (swimming) continue;
