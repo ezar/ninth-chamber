@@ -1,5 +1,27 @@
 # Changelog
 
+## Version 0.9.6 (2026-10-04): Accessibility and the whole campaign
+
+The second release on the way to 1.0 (docs/roadmap.md).
+
+- **Tutorial hints** (Options → Accessibility): they can be turned off.
+  - Off hides the tips on how to play and the "Nora has an idea" prompt.
+  - Her remarks about each chamber, story and puzzles, always show.
+  - The ideas stay in the pause menu.
+- **Touch buttons that can be moved** (Options → Accessibility → Arrange touch buttons):
+  - The buttons show over a veil. Each one is dragged where the thumbs want it, and kept on screen.
+  - Reset puts them all back, and Done keeps the layout.
+  - Each button keeps an offset from its own place, so the size and opacity options still apply.
+- **The campaign, I to IX, as one**:
+  - _The timed run in chamber IX could trap a player._ After a fall Nora went back to the hall of mirrors with one minute, and had to solve it again and cross two more rooms before the next checkpoint. The bot needs 58 seconds for that stretch.
+    - Every room of the run now starts with a checkpoint, and she gets at least two minutes back after a fall.
+    - A test checks that the longest stretch, at a third of the bot's pace, fits in that time.
+  - _Softlocks_: every pushable block in the nine chambers has a reset lever or was audited in 0.3.6. Chamber IX's sand room gains its lever.
+  - _Texts_: each chamber's last line and the next one's first were read in a row. The Forge's last line said "the way down", but the stair goes up. It now reads "The way on is open", and Spanish and Catalan were already right.
+  - _Par times_: chambers IV to IX use the lower bound of the spec's durations. Chamber IX's par time is now 30 minutes, up from 25.
+  - _Download_: the game is 86 MB in all, and 45 MB of it is music. Only the engine and the first room are precached. Each chamber then loads its own lightmap (about 1.3 MB), and its music streams as it first plays.
+- **Tests**: tutorial hints and the touch layout in tests/settings.test.ts, and the timed run's checkpoints in tests/ninth-chamber.test.ts.
+
 ## Version 0.9.5 (2026-10-04): The Ninth Chamber in full, its own music, golden replays
 
 The first release on the way to 1.0 (docs/roadmap.md, rewritten for 1.0).
