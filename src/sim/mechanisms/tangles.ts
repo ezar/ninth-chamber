@@ -22,7 +22,7 @@ import type { TangleState } from './types';
 export const tangleClosed = (st: TangleState): boolean => st.grown >= 0.5;
 
 export function createTangle(d: TangleDef): TangleState {
-  return { id: d.id, grown: d.grown ? 1 : 0, idle: T.regrowDelay, hold: 'free' };
+  return { id: d.id, grown: d.grown ? 1 : 0, idle: T.regrowDelay, hold: d.hold };
 }
 
 /** The grown tangle covering a cell, if any. */

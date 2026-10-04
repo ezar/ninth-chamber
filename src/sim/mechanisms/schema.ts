@@ -219,6 +219,8 @@ export const mechanismEntities = [
       size: z.tuple([int.min(1), int.min(1)]).default([1, 1]),
       top: int,
       grown: z.boolean().default(true),
+      /** Who decides at the start: the torch (free), or rules have it sealed or parted already. */
+      hold: z.enum(['free', 'sealed', 'parted']).default('free'),
     })
     .strict(),
   z

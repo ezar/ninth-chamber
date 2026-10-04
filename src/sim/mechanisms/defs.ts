@@ -180,6 +180,7 @@ export interface TangleDef extends Rect {
   /** Top of the grown roots (m). */
   top: number;
   grown: boolean;
+  hold: 'free' | 'sealed' | 'parted';
 }
 
 export interface MechanismDefs {
@@ -442,6 +443,7 @@ function buildDefs(level: Level): MechanismDefs {
           maxZ: cz + e.size[1],
           top: o.y + e.top * CLICK,
           grown: e.grown,
+          hold: e.hold,
         });
         break;
       default:

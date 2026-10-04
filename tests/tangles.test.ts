@@ -214,4 +214,14 @@ describe('tangles of roots', () => {
     expect(errs(0, [2, 1])).toEqual(["tangle 'roots': its top is not above the floor at 2,1"]);
     expect(errs(4, [0, 1])).toEqual(["tangle 'roots' grows into a wall at 0,1"]);
   });
+
+  it('can start parted, waiting for a rule to seal it', () => {
+    const w = corridor({ grown: false, hold: 'parted' } as Partial<EntityFile>);
+    stand(w, 2, 5);
+    run(w, idle, ticks(T.regrowDelay + T.regrowTime + 1));
+    expect(st(w).grown).toBe(0);
+    runActions(w, ['roots.seal']);
+    run(w, idle, ticks(T.regrowTime + 0.5));
+    expect(st(w).grown).toBe(1);
+  });
 });
