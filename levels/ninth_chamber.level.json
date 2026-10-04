@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "ninth_chamber",
   "name": "level.ninth_chamber",
-  "par": 1500,
+  "par": 1800,
   "start": {
     "room": "ray",
     "at": [5, 9],
@@ -942,6 +942,14 @@
       "at": [3, 6]
     },
     {
+      "id": "lever_reset_sand",
+      "type": "lever",
+      "room": "sand",
+      "at": [9, 8],
+      "wall": "E",
+      "spring": true
+    },
+    {
       "id": "door_sand",
       "type": "door",
       "room": "sand",
@@ -1126,11 +1134,11 @@
     },
     {
       "when": "z_blades.entered",
-      "do": ["hint hint.ninth.blades"]
+      "do": ["checkpoint", "hint hint.ninth.blades"]
     },
     {
       "when": "z_water.entered",
-      "do": ["hint hint.ninth.water"]
+      "do": ["checkpoint", "hint hint.ninth.water"]
     },
     {
       "when": "lever_water.used",
@@ -1139,6 +1147,11 @@
     {
       "when": "z_sand.entered",
       "do": ["timer.add 60s", "checkpoint", "music tension", "hint hint.ninth.sand"]
+    },
+    {
+      "when": "lever_reset_sand.used",
+      "do": ["block_sand.reset"],
+      "once": false
     },
     {
       "when": "plate_sand.pressed",

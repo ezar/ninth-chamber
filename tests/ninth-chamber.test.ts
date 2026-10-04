@@ -14,10 +14,10 @@ import { validateLevel } from '../src/sim/grid/validate';
 import { DIR_YAW, type Dir } from '../src/sim/grid/units';
 import { runActions } from '../src/sim/logic/rules';
 import { bladePose } from '../src/sim/mechanisms/traps';
-import { tangle as T } from '../src/sim/player/tuning';
-import { createWorld, findActor, respawn, type World } from '../src/sim/world';
+import { conjunction, tangle as T } from '../src/sim/player/tuning';
+import { createWorld, findActor, respawn, stepWorld, type World } from '../src/sim/world';
 import { Bot } from './bot';
-import { recordGolden } from './golden';
+import { loadReplays, recordGolden, replayFrames } from './golden';
 import { frame, run } from './helpers';
 
 const level = Level.parse(levelJson);
@@ -350,6 +350,28 @@ describe('The Ninth Chamber', () => {
     place(w, 'sand', 3, 7);
     run(w, frame(), 120);
     expect(findActor(w, 'door_sand', 'door')?.target).toBe(0);
+  });
+
+  it('after a fall in the timed run there is always time to reach the next checkpoint', () => {
+    // Every room of the run starts with a checkpoint, and the time she gets back after a fall
+    // covers the longest stretch between two of them at a third of the bot's pace.
+    const run = ['z_mirrors', 'z_blades', 'z_water', 'z_sand', 'z_seal'];
+    for (const z of run.slice(0, -1)) {
+      const rule = levelJson.logic.find((r) => r.when === `${z}.entered`);
+      expect(rule?.do, z).toContain('checkpoint');
+    }
+    const replay = loadReplays().find((r) => r.level === 'ninth_chamber');
+    if (!replay) throw new Error('no replay');
+    const w = createWorld(level);
+    const at: Record<string, number> = {};
+    for (const f of replayFrames(replay)) {
+      stepWorld(w, f);
+      for (const z of run) if (w.state.signals[`${z}.entered`] && !(z in at)) at[z] = w.tick * TICK_DT;
+    }
+    for (let i = 1; i < run.length; i++) {
+      const stretch = (at[run[i] as string] ?? Infinity) - (at[run[i - 1] as string] ?? 0);
+      expect(stretch * 3, `${run[i - 1]} to ${run[i]}`).toBeLessThanOrEqual(conjunction.minAfterRespawn);
+    }
   });
 
   it('when the timer runs out she goes back to the last checkpoint, with time to finish', () => {
