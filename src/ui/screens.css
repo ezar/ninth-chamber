@@ -982,9 +982,27 @@ body.reduce-motion #start-seal.open .seal-svg path {
   font: italic 500 clamp(18px, 1.5vw, 22px) / 1.45 var(--font-display);
 }
 
-.relic-line:last-child {
+.relic-line:nth-child(6) {
   color: var(--ui-bone);
   font-style: normal;
+}
+
+/* The campaign's end (chamber IX): Nora's own note, and the signatures under it. */
+.end-note {
+  max-width: 34em;
+  margin: 18px 0 8px;
+  white-space: pre-line;
+  color: #d9ccb2;
+  font: 400 clamp(15px, 1.2vw, 18px) / 1.55 var(--font-display);
+}
+
+.end-signatures {
+  display: flex;
+  gap: 2.5em;
+  margin: 6px 0 0;
+  color: var(--ui-amber);
+  font: italic 500 clamp(16px, 1.3vw, 20px) / 1.2 var(--font-display);
+  letter-spacing: 0.06em;
 }
 
 .map-ring {
@@ -1216,6 +1234,12 @@ body.reduce-motion #start-seal.open .seal-svg path {
 #end.show .end-relic > :nth-child(6) {
   animation-delay: 5.5s;
 }
+#end.show .end-relic > :nth-child(7) {
+  animation-delay: 6.4s;
+}
+#end.show .end-relic > :nth-child(8) {
+  animation-delay: 7.2s;
+}
 #end.show .end-record {
   animation-delay: 7s;
 }
@@ -1305,6 +1329,85 @@ body.reduce-motion #start-seal.open .seal-svg path {
     border-left: 0;
     border-top: 1px solid var(--ui-line);
   }
+}
+
+/* The credits roll after the campaign's end: the lines rise slowly over black. */
+#roll {
+  position: fixed;
+  inset: 0;
+  /* Over the end screen (5), under the curtain (9) and the menu (10). */
+  z-index: 7;
+  overflow: hidden;
+  background: #000;
+  color: var(--ui-bone);
+  text-align: center;
+  cursor: pointer;
+}
+
+#roll-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  padding: 0 max(16px, env(safe-area-inset-left));
+}
+
+#roll.rolling #roll-track {
+  animation: roll-up var(--roll-seconds, 75s) linear forwards;
+}
+
+@keyframes roll-up {
+  to {
+    transform: translateY(calc(-100% - 100vh));
+  }
+}
+
+.roll-title {
+  margin: 0 0 3em;
+  font: 500 clamp(32px, 4vw, 52px) / 1.1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.roll-label {
+  margin: 2.2em 0 0.4em;
+  color: #a89a80;
+  font: 600 12px / 1.4 var(--font-ui);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.roll-value {
+  margin: 0.2em auto;
+  max-width: 40em;
+  font: 400 clamp(16px, 1.4vw, 20px) / 1.45 var(--font-display);
+}
+
+.roll-thanks {
+  margin: 5em 0 2em;
+  font: italic 500 clamp(22px, 2vw, 30px) / 1.3 var(--font-display);
+}
+
+/* With reduced motion the roll is a still list, scrolled by hand. */
+@media (prefers-reduced-motion: reduce) {
+  #roll {
+    overflow-y: auto;
+  }
+  #roll-track {
+    position: static;
+    padding-top: 12vh;
+    padding-bottom: 12vh;
+  }
+  #roll.rolling #roll-track {
+    animation: none;
+  }
+}
+
+.roll-signature {
+  margin: 0.6em 0;
+  color: var(--ui-amber);
+  font: italic 500 clamp(18px, 1.6vw, 24px) / 1.2 var(--font-display);
+  letter-spacing: 0.08em;
 }
 
 @media (prefers-reduced-motion: reduce) {

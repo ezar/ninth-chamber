@@ -52,10 +52,10 @@ describe('campaign progress', () => {
     expect(markReached(broken, 'cisterns').has('cisterns')).toBe(true);
   });
 
-  it('shows reached chambers open, the rest locked or coming, and IX unknown', () => {
+  it('shows reached chambers open, and the rest locked or coming', () => {
     const playable = new Set(['antechamber', 'cisterns']);
     const states = CHAMBERS.map((c) => chamberState(c, new Set(['antechamber']), playable));
-    expect(states).toEqual(['open', 'locked', 'soon', 'soon', 'soon', 'soon', 'soon', 'soon', 'unknown']);
+    expect(states).toEqual(['open', 'locked', 'soon', 'soon', 'soon', 'soon', 'soon', 'soon', 'soon']);
   });
 
   it('remembers the endings reached, alongside the chambers', () => {

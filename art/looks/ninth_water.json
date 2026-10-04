@@ -1,0 +1,41 @@
+{
+  "id": "ninth_water",
+  "background": "#07090a",
+  "exposure": 1.08,
+  "hemi": {
+    "sky": "#56685f",
+    "ground": "#12140f",
+    "intensity": 0.18
+  },
+  "fog": {
+    "color": "#2c3530",
+    "density": 0.032
+  },
+  "sun": null,
+  "fire": {
+    "color": "#ffa050",
+    "intensity": 48,
+    "flicker": 0.26
+  },
+  "bloom": {
+    "strength": 0.6,
+    "radius": 0.5,
+    "threshold": 0.78
+  },
+  "grade": {
+    "tint": "#e6e4d2",
+    "saturation": 0.9,
+    "contrast": 1.14,
+    "vignette": 0.44
+  },
+  "water": {
+    "deep": "#08191a",
+    "tint": "#6a9a88",
+    "sky": "#1c2522",
+    "caustics": 0.6,
+    "fog": {
+      "color": "#12302a",
+      "density": 0.17
+    }
+  }
+}

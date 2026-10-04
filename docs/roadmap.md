@@ -2,7 +2,7 @@
 
 Agreed with the owner on 2026-10-04, after 0.8.1: chamber IX, the Ninth Chamber, the end of the campaign. The owner took the four open decisions of spec §19 (below). Claude takes the remaining design decisions from the spec; each is listed here for review. The roadmap to 0.8.0 is closed; its record is in the changelog.
 
-**Status:** in progress.
+**Status:** done. 0.8.5, 0.8.6 and 0.9.0 are released; their notes are in the changelog.
 
 **Goal:** chamber IX: the night of the conjunction, a crack seen only in its light, a walk back through every chamber in reverse order, and the seal, where Nora chooses whether to write her name in the ninth segment.
 
@@ -19,7 +19,7 @@ Agreed with the owner on 2026-10-04, after 0.8.1: chamber IX, the Ninth Chamber,
 
 | Topic         | Decision                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rooms         | Twelve, as spec §19 proposes: the crack of the ray, the antechamber of the eight, one echo room for each earlier chamber and the seal. The echo rooms run in reverse campaign order (VIII to I), as the spec's own rule says, rather than in the order its list gives.                                                                                                                                                          |
+| Rooms         | Eleven, as spec §19 proposes: the crack of the ray, the antechamber of the eight, one echo room for each earlier chamber and the seal. The echo rooms run in reverse campaign order (VIII to I), as the spec's own rule says, rather than in the order its list gives.                                                                                                                                                          |
 | The five keys | The crack's door opens with what the five middle relics give, each through the mechanism its chamber taught: the name written with light (a beam onto a receiver), the roots parted by the seed, the bronze segment set in its slot, the shell's note (a flute), and the astrolabe's moment (a ring set to its mark). Nora carries the relics, so the level's rules hand her each step rather than ask her to find items again. |
 | The timer     | A countdown the rules start and stop (`timer.start <s>`, `timer.stop`), shown on the HUD. When it runs out she goes back to the last checkpoint, with the time she had there. It runs only from the last echo rooms to the seal.                                                                                                                                                                                                |
 | The choice    | At the seal: Action at the ninth segment carves her name (the keeper's ending). The way back up into the open opens behind her; walking out through it leaves the segment blank (the grandmother's ending). Nothing else ends the chamber.                                                                                                                                                                                      |
@@ -41,7 +41,7 @@ Agreed with the owner on 2026-10-04, after 0.8.1: chamber IX, the Ninth Chamber,
 ## 0.9.0 · Chamber IX, the Ninth Chamber
 
 1. **The level**, following spec §19:
-   - twelve rooms;
+   - eleven rooms;
    - three secrets and three notes, Elena's letter among them;
    - looks, a baked lightmap, a music palette, the campaign entry, hints, and texts in English, Spanish and Catalan.
 2. **Verification**: bot walkthroughs to both endings with every secret and no deaths, "every puzzle is needed" tests, the timer's checkpoints, `pnpm smoke`, reference shots and the reachability check.

@@ -1,5 +1,44 @@
 # Changelog
 
+## Version 0.9.0 (2026-10-04): Chamber IX, the Ninth Chamber
+
+The last of the three releases on the way to 0.9.0 (docs/roadmap.md): the campaign is complete, I to IX.
+
+- **The Ninth Chamber** (`levels/ninth_chamber.level.json`, spec §19): eleven rooms, walked back through every chamber in reverse order.
+  - _The crack of the ray_: the five middle relics open the way, each through its own chamber's mechanism. The name is written with light (a mirror onto a disc), the bronze segment is cast in its mould, the shell's note is a flute, and the astrolabe's moment is a ring set to its mark. Then the seed parts the roots.
+  - _The antechamber of the eight_: the eight keepers in stone with their relics, and the empty pedestal. The promise Elena read, and her 1956 letter.
+  - _Eight echo rooms_, VIII to I, each in its chamber's palette and with its mechanism: the dome's ring, the wind's updraught, a bronze bridge, a wall of roots and a tangle, painted slabs and a glyph lock, a mirror, a flooding hall, and sand with a block, a plate, jackals and a floor that gives way.
+  - _The conjunction's light_: the timer starts in the hall of mirrors (four minutes, one more at the sand's checkpoint) and stops at the seal, with a checkpoint every two rooms.
+  - _The seal_: Action at the ninth segment carves Nora's name (the keeper's ending). The way back up into the open opens as she comes in, and walking out leaves the segment bare (the grandmother's ending).
+  - Three secrets, the last of the game, one in each echo room of chambers III, II and I. Two notes; Nora writes the third at the end.
+  - Room looks, a baked lightmap, a music palette drawn from every chamber, Nora's remarks and the hints, in English, Spanish and Catalan.
+- **Campaign**: chamber IX is playable once the eighth is cleared.
+- **Level validator**: a level that ends with a choice needs no relic.
+- **Tests**: tests/ninth-chamber.test.ts (9): the bot plays to each ending with every secret and no deaths; the five keys, the updraught, the bronze bridge, the flood and the plate are each needed; and the timer sends her back to its checkpoint with time to finish.
+
+## Version 0.8.6 (2026-10-04): The finale
+
+The second of three releases on the way to 0.9.0.
+
+- **The two endings on the end screen**:
+  - The Ninth Chamber's end screen tells the ending reached instead of a relic.
+  - _The Ninth Keeper_: the seal drawn whole, with the ninth segment carved.
+  - _The Bare Segment_: the seal drawn with the ninth segment still bare.
+  - Each ending has its three lines and the note Nora writes at the end. The bare segment carries Elena's signature, "E. V. — 1956", beside Nora's.
+- **The credits roll**: a Credits button on the campaign's last end screen. The roll lists the eight keepers and the credits, says thank you, and ends on the ending's signatures. It plays to the title's theme, any key closes it, and with reduced motion it is a still list.
+- **The monuments of chamber IX**, as procedural stand-ins until the owner's models arrive:
+  - `statue`: one of the eight keepers in stone, holding its chamber's relic in that chamber's light, or the empty ninth pedestal. Its cell is solid.
+  - `seal`: the great seal of the nine on a wall. Its ninth segment is an outline that fills with amber light once its lever is used.
+  - A lever can name what Action does there (`prompt`): at the seal, "Write your name in the ninth segment".
+  - The validator checks the seal's wall and lever and the prompt's text.
+- **Campaign**: chamber IX has its entry (intro, notes, endings). It shows as coming until its level arrives in 0.9.0.
+- **Texts** in English, Spanish and Catalan:
+  - the promise on the empty pedestal;
+  - Elena's 1956 letter;
+  - both endings, and Nora's two notes;
+  - the chamber's intro.
+- **Tests**: a new case in tests/campaign.test.ts for the two endings.
+
 ## Version 0.8.5 (2026-10-04): The conjunction timer and the endings
 
 The first of three releases on the way to 0.9.0 (docs/roadmap.md), chamber IX. The owner chose two endings, a real but generous timer, Elena's 1956 letter shown, and the names as final.

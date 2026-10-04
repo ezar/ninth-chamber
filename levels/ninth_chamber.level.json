@@ -1,0 +1,999 @@
+{
+  "schema": 1,
+  "id": "ninth_chamber",
+  "name": "level.ninth_chamber",
+  "par": 1500,
+  "start": {
+    "room": "ray",
+    "at": [5, 9],
+    "face": "N"
+  },
+  "rooms": [
+    {
+      "id": "ray",
+      "origin": [0, 0, 0],
+      "ceil": 24,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "m": -2
+      },
+      "rows": [
+        "#####.#####",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#........m#",
+        "#........m#",
+        "#........m#",
+        "#.........#",
+        "#.........#",
+        "#####.#####"
+      ],
+      "look": "ninth_ray",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -12
+      }
+    },
+    {
+      "id": "eight",
+      "origin": [0, -11, 0],
+      "ceil": 28,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "rows": [
+        "#####.#####",
+        "#.........#",
+        "#.4.....5.#",
+        "#.........#",
+        "#.3.....6.#",
+        "#....9....#",
+        "#.2.....7.#",
+        "#.........#",
+        "#.1.....8.#",
+        "#.........#",
+        "#####.#####"
+      ],
+      "look": "ninth_eight",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": -10
+      }
+    },
+    {
+      "id": "dome",
+      "origin": [1, -19, 0],
+      "ceil": 28,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": [
+        "####.####",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "ninth_dome",
+      "reverb": "hall_large"
+    },
+    {
+      "id": "wind",
+      "origin": [1, -27, 0],
+      "ceil": 32,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "u": 9
+      },
+      "rows": [
+        "####u####",
+        "#uuuuuuu#",
+        "#uuuuuuu#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "ninth_wind",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": -16
+      }
+    },
+    {
+      "id": "bronze",
+      "origin": [1, -35, 9],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "c": -8,
+        "b": -8
+      },
+      "rows": [
+        "####.####",
+        "#.......#",
+        "#cccbccc#",
+        "#cccbccc#",
+        "#cccbccc#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "ninth_bronze",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "roots",
+      "origin": [1, -43, 9],
+      "ceil": 24,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "u": 10,
+        "C": {
+          "floor": 10,
+          "mat": "wood",
+          "flags": ["climbS"]
+        }
+      },
+      "rows": [
+        "####u####",
+        "#uuuuuuu#",
+        "#uuuuuuu#",
+        "#uCCCCCu#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "ninth_roots",
+      "reverb": "stone_medium",
+      "camera": {
+        "pitch": -14
+      }
+    },
+    {
+      "id": "glyphs",
+      "origin": [1, -55, 19],
+      "ceil": 12,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": [
+        "####.####",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####",
+        "####.####",
+        "####.####",
+        "####.####",
+        "####.####",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "ninth_glyphs",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "mirrors",
+      "origin": [0, -63, 19],
+      "ceil": 16,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "s": 0
+      },
+      "rows": [
+        "#####.#####",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#.........#",
+        "#........##",
+        "#.........s",
+        "#####.#####"
+      ],
+      "look": "ninth_mirrors",
+      "reverb": "stone_medium"
+    },
+    {
+      "id": "water",
+      "origin": [1, -71, 19],
+      "ceil": 20,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "P": -10,
+        "e": 8,
+        "k": 8
+      },
+      "rows": [
+        "####e####",
+        "#PPPPPPP#",
+        "#PPPPPPPk",
+        "#PPPPPPP#",
+        "#.......#",
+        "#.......#",
+        "#.......#",
+        "####.####"
+      ],
+      "look": "ninth_water",
+      "reverb": "water_cistern"
+    },
+    {
+      "id": "sand",
+      "origin": [0, -82, 27],
+      "ceil": 20,
+      "legend": {
+        "#": "wall",
+        ".": 0,
+        "C": {
+          "floor": 0,
+          "mat": "sand",
+          "flags": ["crumble"]
+        },
+        "n": 4
+      },
+      "rows": [
+        "#####.#####",
+        "#.........#",
+        "#.........#",
+        "#CCCCCCCCC#",
+        "#CCCCCCCCC#",
+        "#.........#",
+        "#.........#",
+        "n.........#",
+        "#.........#",
+        "#.........#",
+        "#####.#####"
+      ],
+      "look": "ninth_sand",
+      "reverb": "stone_medium",
+      "mat": "sand",
+      "pitDepth": -16
+    },
+    {
+      "id": "seal",
+      "origin": [-1, -92, 27],
+      "ceil": 32,
+      "legend": {
+        "#": "wall",
+        ".": 0
+      },
+      "rows": [
+        "#################",
+        "#...........#####",
+        "#...........#####",
+        "#...........#####",
+        "#...........#####",
+        "#................",
+        "#...........#####",
+        "#...........#####",
+        "#...........#####",
+        "######.##########"
+      ],
+      "look": "ninth_seal",
+      "reverb": "hall_large",
+      "camera": {
+        "pitch": -14
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": "z_start",
+      "type": "zone",
+      "room": "ray",
+      "at": [3, 8],
+      "size": [5, 2]
+    },
+    {
+      "id": "ray_crack",
+      "type": "sunbeam",
+      "room": "ray",
+      "at": [9, 4],
+      "dir": "W",
+      "y": 3
+    },
+    {
+      "id": "mirror_name",
+      "type": "mirror",
+      "room": "ray",
+      "at": [6, 4],
+      "facing": "SE"
+    },
+    {
+      "id": "disc_name",
+      "type": "receiver",
+      "room": "ray",
+      "at": [6, 2],
+      "face": "S"
+    },
+    {
+      "id": "lever_pour",
+      "type": "lever",
+      "room": "ray",
+      "at": [9, 8],
+      "wall": "E"
+    },
+    {
+      "id": "pour_segment",
+      "type": "pour",
+      "room": "ray",
+      "at": [9, 7],
+      "path": [
+        [9, 7],
+        [9, 5]
+      ],
+      "h": 0
+    },
+    {
+      "id": "lever_voice",
+      "type": "lever",
+      "room": "ray",
+      "at": [1, 2],
+      "wall": "W"
+    },
+    {
+      "id": "wind_voice",
+      "type": "wind",
+      "room": "ray",
+      "at": [1, 1],
+      "dir": "up",
+      "on": false
+    },
+    {
+      "id": "ring_moment",
+      "type": "ring",
+      "room": "ray",
+      "at": [3, 5],
+      "kind": "sky",
+      "radius": 2.2,
+      "start": 6,
+      "target": 8
+    },
+    {
+      "id": "lever_moment",
+      "type": "lever",
+      "room": "ray",
+      "at": [1, 6],
+      "wall": "W",
+      "spring": true
+    },
+    {
+      "id": "tg_door",
+      "type": "tangle",
+      "room": "ray",
+      "at": [5, 1],
+      "top": 24,
+      "hold": "sealed"
+    },
+    {
+      "id": "brazier_ray_w",
+      "type": "brazier",
+      "room": "ray",
+      "at": [1, 9]
+    },
+    {
+      "id": "brazier_ray_e",
+      "type": "brazier",
+      "room": "ray",
+      "at": [9, 1]
+    },
+    {
+      "id": "keeper1",
+      "type": "statue",
+      "room": "eight",
+      "at": [2, 8],
+      "relic": 1,
+      "face": "E"
+    },
+    {
+      "id": "keeper2",
+      "type": "statue",
+      "room": "eight",
+      "at": [2, 6],
+      "relic": 2,
+      "face": "E"
+    },
+    {
+      "id": "keeper3",
+      "type": "statue",
+      "room": "eight",
+      "at": [2, 4],
+      "relic": 3,
+      "face": "E"
+    },
+    {
+      "id": "keeper4",
+      "type": "statue",
+      "room": "eight",
+      "at": [2, 2],
+      "relic": 4,
+      "face": "E"
+    },
+    {
+      "id": "keeper5",
+      "type": "statue",
+      "room": "eight",
+      "at": [8, 2],
+      "relic": 5,
+      "face": "W"
+    },
+    {
+      "id": "keeper6",
+      "type": "statue",
+      "room": "eight",
+      "at": [8, 4],
+      "relic": 6,
+      "face": "W"
+    },
+    {
+      "id": "keeper7",
+      "type": "statue",
+      "room": "eight",
+      "at": [8, 6],
+      "relic": 7,
+      "face": "W"
+    },
+    {
+      "id": "keeper8",
+      "type": "statue",
+      "room": "eight",
+      "at": [8, 8],
+      "relic": 8,
+      "face": "W"
+    },
+    {
+      "id": "pedestal_ninth",
+      "type": "statue",
+      "room": "eight",
+      "at": [5, 5],
+      "relic": 9,
+      "face": "S"
+    },
+    {
+      "id": "z_eight",
+      "type": "zone",
+      "room": "eight",
+      "at": [4, 9],
+      "size": [3, 1]
+    },
+    {
+      "id": "note_promise",
+      "type": "note",
+      "room": "eight",
+      "at": [1, 5],
+      "text": "journal.ninth_chamber.1",
+      "style": "carving",
+      "wall": "W"
+    },
+    {
+      "id": "note_letter",
+      "type": "note",
+      "room": "eight",
+      "at": [5, 6],
+      "text": "journal.ninth_chamber.2",
+      "style": "letter"
+    },
+    {
+      "id": "medkit_eight",
+      "type": "medkit",
+      "room": "eight",
+      "at": [9, 9],
+      "size": "small"
+    },
+    {
+      "id": "brazier_eight_w",
+      "type": "brazier",
+      "room": "eight",
+      "at": [1, 1]
+    },
+    {
+      "id": "brazier_eight_e",
+      "type": "brazier",
+      "room": "eight",
+      "at": [9, 1]
+    },
+    {
+      "id": "z_dome",
+      "type": "zone",
+      "room": "dome",
+      "at": [3, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "ring_dome",
+      "type": "ring",
+      "room": "dome",
+      "at": [4, 3],
+      "kind": "moon",
+      "radius": 2.8,
+      "start": 6,
+      "target": 8
+    },
+    {
+      "id": "lever_dome",
+      "type": "lever",
+      "room": "dome",
+      "at": [7, 5],
+      "wall": "E",
+      "spring": true
+    },
+    {
+      "id": "door_dome",
+      "type": "door",
+      "room": "dome",
+      "at": [4, 0],
+      "height": 8
+    },
+    {
+      "id": "brazier_dome",
+      "type": "brazier",
+      "room": "dome",
+      "at": [1, 6]
+    },
+    {
+      "id": "z_wind",
+      "type": "zone",
+      "room": "wind",
+      "at": [3, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "updraught",
+      "type": "wind",
+      "room": "wind",
+      "at": [3, 3],
+      "size": [3, 1],
+      "dir": "up"
+    },
+    {
+      "id": "brazier_wind",
+      "type": "brazier",
+      "room": "wind",
+      "at": [7, 6]
+    },
+    {
+      "id": "z_bronze",
+      "type": "zone",
+      "room": "bronze",
+      "at": [3, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "lever_bronze",
+      "type": "lever",
+      "room": "bronze",
+      "at": [1, 6],
+      "wall": "W"
+    },
+    {
+      "id": "pour_bridge",
+      "type": "pour",
+      "room": "bronze",
+      "at": [4, 4],
+      "path": [
+        [4, 4],
+        [4, 2]
+      ],
+      "h": 0
+    },
+    {
+      "id": "brazier_bronze",
+      "type": "brazier",
+      "room": "bronze",
+      "at": [7, 6]
+    },
+    {
+      "id": "z_roots",
+      "type": "zone",
+      "room": "roots",
+      "at": [3, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "torch_roots",
+      "type": "torch",
+      "room": "roots",
+      "at": [2, 6],
+      "lit": true
+    },
+    {
+      "id": "brazier_roots",
+      "type": "brazier",
+      "room": "roots",
+      "at": [7, 6]
+    },
+    {
+      "id": "tg_roots",
+      "type": "tangle",
+      "room": "roots",
+      "at": [3, 1],
+      "size": [3, 1],
+      "top": 24
+    },
+    {
+      "id": "z_glyphs",
+      "type": "zone",
+      "room": "glyphs",
+      "at": [3, 10],
+      "size": [3, 1]
+    },
+    {
+      "id": "darts_low",
+      "type": "darts",
+      "room": "glyphs",
+      "at": [4, 5],
+      "from": "W"
+    },
+    {
+      "id": "darts_high",
+      "type": "darts",
+      "room": "glyphs",
+      "at": [4, 7],
+      "from": "E"
+    },
+    {
+      "id": "lock_glyphs",
+      "type": "glyphlock",
+      "room": "glyphs",
+      "at": [2, 2],
+      "facing": "E",
+      "glyph": 0,
+      "target": 3
+    },
+    {
+      "id": "door_glyphs",
+      "type": "door",
+      "room": "glyphs",
+      "at": [4, 0],
+      "height": 8
+    },
+    {
+      "id": "brazier_glyphs",
+      "type": "brazier",
+      "room": "glyphs",
+      "at": [7, 1]
+    },
+    {
+      "id": "z_mirrors",
+      "type": "zone",
+      "room": "mirrors",
+      "at": [4, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "sun_mirrors",
+      "type": "sunbeam",
+      "room": "mirrors",
+      "at": [1, 3],
+      "dir": "E",
+      "y": 3
+    },
+    {
+      "id": "mirror_mirrors",
+      "type": "mirror",
+      "room": "mirrors",
+      "at": [4, 3],
+      "facing": "NE"
+    },
+    {
+      "id": "disc_door",
+      "type": "receiver",
+      "room": "mirrors",
+      "at": [4, 1],
+      "face": "S"
+    },
+    {
+      "id": "disc_niche",
+      "type": "receiver",
+      "room": "mirrors",
+      "at": [4, 5],
+      "face": "N"
+    },
+    {
+      "id": "door_mirrors",
+      "type": "door",
+      "room": "mirrors",
+      "at": [5, 0],
+      "height": 8
+    },
+    {
+      "id": "door_niche",
+      "type": "door",
+      "room": "mirrors",
+      "at": [9, 6],
+      "height": 6
+    },
+    {
+      "id": "idol_stone",
+      "type": "secret",
+      "room": "mirrors",
+      "at": [10, 6],
+      "idol": "stone"
+    },
+    {
+      "id": "brazier_mirrors",
+      "type": "brazier",
+      "room": "mirrors",
+      "at": [1, 1]
+    },
+    {
+      "id": "z_water",
+      "type": "zone",
+      "room": "water",
+      "at": [3, 6],
+      "size": [3, 1]
+    },
+    {
+      "id": "gate_water",
+      "type": "watergate",
+      "room": "water",
+      "at": [1, 3],
+      "wall": "W",
+      "low": -2,
+      "high": 7
+    },
+    {
+      "id": "lever_water",
+      "type": "lever",
+      "room": "water",
+      "at": [2, 6],
+      "wall": "S"
+    },
+    {
+      "id": "idol_jade",
+      "type": "secret",
+      "room": "water",
+      "at": [8, 2],
+      "idol": "jade"
+    },
+    {
+      "id": "brazier_water",
+      "type": "brazier",
+      "room": "water",
+      "at": [7, 6]
+    },
+    {
+      "id": "z_sand",
+      "type": "zone",
+      "room": "sand",
+      "at": [4, 9],
+      "size": [3, 1]
+    },
+    {
+      "id": "block_sand",
+      "type": "block",
+      "room": "sand",
+      "at": [3, 8]
+    },
+    {
+      "id": "plate_sand",
+      "type": "plate",
+      "room": "sand",
+      "at": [3, 6]
+    },
+    {
+      "id": "door_sand",
+      "type": "door",
+      "room": "sand",
+      "at": [5, 0],
+      "height": 8
+    },
+    {
+      "id": "idol_gold",
+      "type": "secret",
+      "room": "sand",
+      "at": [0, 7],
+      "idol": "gold"
+    },
+    {
+      "id": "j1",
+      "type": "enemy",
+      "enemy": "jackal",
+      "room": "sand",
+      "at": [8, 5],
+      "face": "S",
+      "pack": "sand"
+    },
+    {
+      "id": "j2",
+      "type": "enemy",
+      "enemy": "jackal",
+      "room": "sand",
+      "at": [8, 7],
+      "face": "W",
+      "pack": "sand"
+    },
+    {
+      "id": "medkit_sand",
+      "type": "medkit",
+      "room": "sand",
+      "at": [9, 9],
+      "size": "small"
+    },
+    {
+      "id": "brazier_sand",
+      "type": "brazier",
+      "room": "sand",
+      "at": [1, 9]
+    },
+    {
+      "id": "z_seal",
+      "type": "zone",
+      "room": "seal",
+      "at": [5, 7],
+      "size": [3, 2]
+    },
+    {
+      "id": "seal",
+      "type": "seal",
+      "room": "seal",
+      "at": [6, 1],
+      "wall": "N",
+      "lever": "seal_ninth"
+    },
+    {
+      "id": "seal_ninth",
+      "type": "lever",
+      "room": "seal",
+      "at": [6, 1],
+      "wall": "N",
+      "prompt": "prompt.carve"
+    },
+    {
+      "id": "door_leave",
+      "type": "door",
+      "room": "seal",
+      "at": [12, 5],
+      "height": 8
+    },
+    {
+      "id": "z_leave",
+      "type": "zone",
+      "room": "seal",
+      "at": [15, 5],
+      "size": [2, 1]
+    },
+    {
+      "id": "brazier_seal_w",
+      "type": "brazier",
+      "room": "seal",
+      "at": [1, 8]
+    },
+    {
+      "id": "brazier_seal_e",
+      "type": "brazier",
+      "room": "seal",
+      "at": [11, 8]
+    }
+  ],
+  "logic": [
+    {
+      "when": "z_start.entered",
+      "do": ["hint hint.ninth.start", "music vista"]
+    },
+    {
+      "when": "lever_pour.used",
+      "do": ["pour_segment.pour", "sfx rumble"]
+    },
+    {
+      "when": "lever_voice.used",
+      "do": ["wind_voice.on", "hint hint.ninth.voice"]
+    },
+    {
+      "when": "lever_moment.used",
+      "do": ["ring_moment.turn"],
+      "once": false
+    },
+    {
+      "when": "disc_name.lit and pour_segment.cast and lever_voice.used and ring_moment.set",
+      "do": ["tg_door.part", "camera.focus tg_door 3s", "music solved", "hint hint.ninth.seed"]
+    },
+    {
+      "when": "z_eight.entered",
+      "do": ["checkpoint", "hint hint.ninth.eight", "music calm"]
+    },
+    {
+      "when": "z_dome.entered",
+      "do": ["checkpoint", "hint hint.ninth.dome"]
+    },
+    {
+      "when": "lever_dome.used",
+      "do": ["ring_dome.turn"],
+      "once": false
+    },
+    {
+      "when": "ring_dome.set",
+      "do": ["door_dome.open", "camera.focus door_dome 2s"]
+    },
+    {
+      "when": "z_wind.entered",
+      "do": ["hint hint.ninth.wind"]
+    },
+    {
+      "when": "z_bronze.entered",
+      "do": ["checkpoint", "hint hint.ninth.bronze"]
+    },
+    {
+      "when": "lever_bronze.used",
+      "do": ["pour_bridge.pour", "sfx rumble"]
+    },
+    {
+      "when": "z_roots.entered",
+      "do": ["checkpoint", "hint hint.ninth.roots"]
+    },
+    {
+      "when": "z_glyphs.entered",
+      "do": ["checkpoint", "hint hint.ninth.glyphs"]
+    },
+    {
+      "when": "lock_glyphs.set",
+      "do": ["door_glyphs.open", "camera.focus door_glyphs 2s", "sfx rumble"]
+    },
+    {
+      "when": "z_mirrors.entered",
+      "do": ["timer.start 240s", "checkpoint", "music chase", "hint hint.ninth.timer"]
+    },
+    {
+      "when": "disc_door.lit",
+      "do": ["door_mirrors.open", "camera.focus door_mirrors 2s", "sfx rumble"]
+    },
+    {
+      "when": "disc_niche.lit",
+      "do": ["door_niche.open", "sfx rumble"]
+    },
+    {
+      "when": "z_water.entered",
+      "do": ["hint hint.ninth.water"]
+    },
+    {
+      "when": "lever_water.used",
+      "do": ["gate_water.raise", "camera.focus gate_water 2s", "sfx rumble"]
+    },
+    {
+      "when": "z_sand.entered",
+      "do": ["timer.add 60s", "checkpoint", "music tension", "hint hint.ninth.sand"]
+    },
+    {
+      "when": "plate_sand.pressed",
+      "do": ["door_sand.open", "camera.focus door_sand 2s", "sfx rumble"]
+    },
+    {
+      "when": "z_seal.entered",
+      "do": ["timer.stop", "checkpoint", "music relic", "door_leave.open", "hint hint.ninth.seal"]
+    },
+    {
+      "when": "seal_ninth.used and not z_leave.entered",
+      "do": ["camera.focus seal 3s", "music fanfare", "wait 3s", "level.end keeper"]
+    },
+    {
+      "when": "z_leave.entered and not seal_ninth.used",
+      "do": ["music calm", "wait 2s", "level.end blank"]
+    }
+  ]
+}

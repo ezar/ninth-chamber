@@ -8,7 +8,9 @@
 import { rating } from '../sim/player/tuning';
 import { rateLevel } from '../sim/rating';
 import type { World } from '../sim/world';
-import { chamberOf, nextChamber } from './campaign';
+import type { Ending } from '../sim/grid/schema';
+import { chamberOf, endStory, nextChamber } from './campaign';
+import { CreditsRoll } from './credits-roll';
 import { t, type StringKey } from './i18n';
 import { focusFirst, menuKey, menuPad, type PadEdges } from './nav';
 import { recordRun } from './records';
@@ -39,12 +41,20 @@ export class EndScreen {
   private revealTimer = 0;
   private shownAt = 0;
 
+  private readonly roll: CreditsRoll;
+  private signatures: readonly StringKey[] = [];
+
   constructor(
     onRestart: () => void,
     onMenu: () => void,
     private readonly cue: (type: string, data?: Record<string, unknown>) => void,
     onNext: (levelId: string) => void = () => {},
   ) {
+    this.roll = new CreditsRoll(cue);
+    // The campaign's last chamber: the credits roll, then back to these actions.
+    $('end-credits').addEventListener('click', () =>
+      this.roll.show(this.signatures, () => $('end-credits').focus({ preventScroll: true })),
+    );
     $('end-next').addEventListener('click', () => {
       const id = $('end-next').dataset.level;
       if (id) onNext(id);
@@ -53,7 +63,7 @@ export class EndScreen {
     $('end-menu').addEventListener('click', onMenu);
     this.root.addEventListener('pointerdown', () => this.skip());
     window.addEventListener('keydown', (e) => {
-      if (!this.visible || e.repeat) return;
+      if (!this.visible || e.repeat || this.roll.visible) return;
       if (!this.revealed) {
         e.preventDefault();
         this.skip();
@@ -77,7 +87,7 @@ export class EndScreen {
    */
   show(world: World, playable: (levelId: string) => boolean = () => false): void {
     const { stats, level } = world;
-    this.showStory(level.id, playable);
+    this.showStory(level.id, playable, world.ending);
     const count = (type: string): number => level.entities.filter((e) => e.type === type).length;
     const totals = { secrets: count('secret'), notes: count('note') };
     const result = rateLevel(stats, totals, level.par ?? rating.defaultPar);
@@ -142,16 +152,36 @@ export class EndScreen {
     this.cue('end.show', { rank: result.rank, score: result.score, newRecord });
   }
 
-  /** The relic moment and the teaser for what comes next. */
-  private showStory(levelId: string, playable: (levelId: string) => boolean): void {
-    const relic = chamberOf(levelId)?.relic;
+  /** The relic moment (or the campaign's ending) and the teaser for what comes next. */
+  private showStory(levelId: string, playable: (levelId: string) => boolean, ending: Ending | null): void {
+    const story = endStory(levelId, ending);
     const text = (key: StringKey | undefined): string => (key ? t(key) : '');
-    $('end-kicker').textContent = text(relic?.cleared);
-    $('end-title').textContent = text(relic?.name);
-    $('end-figure').innerHTML = relic ? relicFigureSvg(relic.figure, t(relic.figureLabel)) : '';
+    const relic = story.kind === 'relic' ? story.relic : null;
+    const end = story.kind === 'ending' ? story.story : null;
+    $('end-kicker').textContent = text(relic?.cleared ?? end?.cleared);
+    $('end-title').textContent = text(relic?.name ?? end?.title);
+    // The ending draws the seal itself: whole with her name, or with the ninth still bare.
+    $('end-figure').innerHTML = relic
+      ? relicFigureSvg(relic.figure, t(relic.figureLabel))
+      : end
+        ? sealSvg({ lit: 8, ninth: ending === 'keeper' ? 'filled' : 'outline', label: t(end.figureLabel) })
+        : '';
     this.root.querySelectorAll<HTMLElement>('.relic-line').forEach((el, i) => {
-      el.textContent = text(relic?.moment[i]);
+      el.textContent = text(relic?.moment[i] ?? end?.moment[i]);
     });
+    // Nora's own note, and the signatures under it.
+    $('end-note').textContent = text(end?.note);
+    $('end-note').hidden = !end;
+    this.signatures = end?.signatures ?? [];
+    $('end-signatures').replaceChildren(
+      ...this.signatures.map((s) => {
+        const span = document.createElement('span');
+        span.textContent = t(s);
+        return span;
+      }),
+    );
+    $('end-signatures').hidden = !end;
+    $('end-credits').hidden = !end;
 
     // Next chamber, or the chambers still sealed after the last playable one.
     const next = nextChamber(levelId);
@@ -192,6 +222,10 @@ export class EndScreen {
 
   pad(p: PadEdges): void {
     if (!this.visible) return;
+    if (this.roll.visible) {
+      this.roll.pad(p);
+      return;
+    }
     if (!this.revealed) {
       if (p.any) this.skip();
       return;

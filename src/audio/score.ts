@@ -179,6 +179,22 @@ export const PALETTES: Record<string, Palette> = {
     fanfare: 'fanfare',
     stingers: { ...STINGERS, solved: 'sting.solved.2' },
   },
+  /**
+   * Everything heard before: the Ninth Chamber walks back through every
+   * chamber, so its score borrows from all of them, and its relic cue (the
+   * seal) is the Antechamber's, where the campaign began.
+   */
+  ninth_chamber: {
+    intro: 'sun_temple.intro',
+    explore: ['antechamber.explore.1', 'cisterns.explore.1', 'sun_temple.explore.2', 'cisterns.explore.2'],
+    tension: 'antechamber.tension',
+    combat: 'antechamber.combat',
+    chase: 'chase',
+    boss: 'boss',
+    relic: 'antechamber.relic',
+    fanfare: 'fanfare',
+    stingers: STINGERS,
+  },
 };
 
 export function paletteFor(levelId: string): Palette {

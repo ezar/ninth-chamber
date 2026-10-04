@@ -67,3 +67,13 @@ The owner makes these models (Blender, MiniMax or similar). Until each one arriv
 | -------------- | ------------------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `root_kit.glb` | 2 × 2 × 0.3 each    | ≤ 3 000   | `roots` | Modular root panels for climbable faces: a 2 m square, tiling up and sideways, pale enough to read against the stone. A plain panel, a top piece that curls over the edge and a bottom piece that spreads into the floor. |
 | Climbing clips | -                   | -         | -       | Mixamo clips on Nora's skeleton: `wall_idle`, `wall_up`, `wall_down`, `wall_left`, `wall_right` and `wall_jump_back`. Until they arrive the climbing pose is procedural.                                                  |
+
+## 0.9.0: Chamber IX, the Ninth Chamber (spec §19)
+
+| File             | Size (m, x × y × z)   | Triangles | Meshes                      | Notes                                                                                                                                                                                                                                         |
+| ---------------- | --------------------- | --------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keeper_<n>.glb` | about 1.3 × 3.2 × 1.3 | ≤ 8 000   | `pedestal`, `body`, `relic` | The eight keepers in stone, one file each (`keeper_1` Qarrum … `keeper_8` Anzur), each on its 0.6 m pedestal and holding its chamber's relic at the chest, facing -Z. `relic` is emissive; the game tints it in its chamber's light.          |
+| `pedestal_9.glb` | 1.3 × 0.6 × 1.3       | ≤ 1 500   | `pedestal`                  | The ninth pedestal, empty, with the promise carved on its front and Elena's initials scratched under it.                                                                                                                                      |
+| `great_seal.glb` | 5 × 5 × 0.2           | ≤ 6 000   | `seal`, `ninth`             | The great seal of the nine, to hang on a wall facing -Z: eight carved segments round a boss, in the layout of the seal on the title screen. `ninth` is the bare ninth segment, kept apart so the game can light it when Nora carves her name. |
+
+Until they arrive, `src/render/monuments.ts` draws procedural stand-ins.

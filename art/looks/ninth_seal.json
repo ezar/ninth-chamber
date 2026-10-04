@@ -1,0 +1,37 @@
+{
+  "id": "ninth_seal",
+  "background": "#d8dce6",
+  "exposure": 1.08,
+  "hemi": {
+    "sky": "#f4f6ff",
+    "ground": "#8a8c96",
+    "intensity": 0.9
+  },
+  "fog": {
+    "color": "#e6e8f0",
+    "density": 0.008
+  },
+  "sun": {
+    "color": "#fff6e6",
+    "intensity": 4.2,
+    "direction": [0.1, 0.95, 0.25]
+  },
+  "fire": {
+    "color": "#fff1d8",
+    "intensity": 18,
+    "flicker": 0.06
+  },
+  "bloom": {
+    "strength": 0.9,
+    "radius": 0.7,
+    "threshold": 0.8
+  },
+  "grade": {
+    "tint": "#f2f4ff",
+    "saturation": 0.55,
+    "contrast": 1.04,
+    "vignette": 0.25
+  },
+  "fill": 1.2,
+  "stars": true
+}

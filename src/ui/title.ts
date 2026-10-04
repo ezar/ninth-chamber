@@ -3,8 +3,8 @@
  * artboard e, main menu over the live entrance scene): the logo lockup, the
  * menu, the version string and the copyright line.
  */
-import { audioCredits, versionLabel } from './build-info';
-import { t, type StringKey } from './i18n';
+import { versionLabel } from './build-info';
+import { creditRows } from './credits-data';
 import { focusFirst, menuKey, menuPad, type PadEdges } from './nav';
 import { sealSvg } from './seal';
 import { SealEgg } from './seal-egg';
@@ -14,16 +14,6 @@ const $ = (id: string): HTMLElement => {
   if (!el) throw new Error(`Missing #${id}`);
   return el;
 };
-
-/** Credits rows: label and value keys (spec §13 "Menús": créditos). */
-const CREDITS: [StringKey, StringKey][] = [
-  ['credits.game.label', 'credits.game.value'],
-  ['credits.engine.label', 'credits.engine.value'],
-  ['credits.fonts.label', 'credits.fonts.value'],
-  ['credits.textures.label', 'credits.textures.value'],
-  ['credits.animation.label', 'credits.animation.value'],
-  ['credits.art.label', 'credits.art.value'],
-];
 
 export class TitleScreen {
   private readonly root = $('start');
@@ -119,7 +109,6 @@ export class TitleScreen {
       }
       list.append(dt, dd);
     };
-    for (const [label, value] of CREDITS) row(t(label), [t(value)]);
-    row(t('credits.audio.label'), audioCredits.length ? audioCredits : [t('credits.audio.fallback')]);
+    for (const [label, values] of creditRows()) row(label, values);
   }
 }
