@@ -28,7 +28,7 @@ import { setSignal } from '../logic/rules';
 import { isTrapdoorCell } from '../mechanisms';
 import { knockback } from '../mechanisms/traps';
 import { bronzeBurnsAt } from '../mechanisms/bronze';
-import { inOculusLight } from '../mechanisms/rings';
+import { inOculusLight, underOculus } from '../mechanisms/rings';
 import { damagePlayer } from '../player/context';
 import { giantFloor, giantTuning, guardianTuning as G, tuning } from '../player/tuning';
 import type { PlayerMode } from '../state';
@@ -448,8 +448,8 @@ function slam(world: World, g: GuardianState): void {
 /**
  * Anzur's phase-2 slams break the floor a stride ahead of it: those cells crack
  * and fall after the usual warning, leaving pits. Only floor at its own
- * level (ledges above it hold); never under itself, never in the oculus
- * light (the way to stop it stays), never outside its hall.
+ * level (ledges above it hold); never under itself, never under the oculus,
+ * lit or not yet (the way to stop it stays), never outside its hall.
  */
 function breakFloor(world: World, g: GuardianState): void {
   const ix = g.pos.x - Math.sin(g.yaw) * giantFloor.ahead;
@@ -459,7 +459,7 @@ function breakFloor(world: World, g: GuardianState): void {
   const r = giantFloor.radius;
   for (let cx = icx - r; cx <= icx + r; cx++)
     for (let cz = icz - r; cz <= icz + r; cz++) {
-      if (!inArena(g, cx, cz) || (cx === gcx && cz === gcz) || inOculusLight(world, cx, cz)) continue;
+      if (!inArena(g, cx, cz) || (cx === gcx && cz === gcz) || underOculus(world, cx, cz)) continue;
       const s = world.level.sector(cx, cz);
       // Only the floor it stands on: ledges above it (where Nora takes refuge) hold.
       if (!s || s.wall || s.pit || Math.abs(sectorTop(s) - g.pos.y) > 0.6) continue;

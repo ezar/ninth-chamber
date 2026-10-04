@@ -66,11 +66,16 @@ export function oculusAction(world: World, def: OculusDef, st: OculusState, op: 
 
 /** Whether a cell lies in the light of an open oculus. */
 export function inOculusLight(world: World, cx: number, cz: number): boolean {
+  return underOculus(world, cx, cz, true);
+}
+
+/** Whether a cell lies under an oculus, open or not (or, with `open`, only an open one). */
+export function underOculus(world: World, cx: number, cz: number, open = false): boolean {
   const oculi = world.state.mechanisms.oculi;
   if (oculi.length === 0) return false;
   const d = defsOf(world.level).oculi;
   return oculi.some((o) => {
     const def = d.get(o.id);
-    return o.on && def !== undefined && inRect(def, cx, cz);
+    return (o.on || !open) && def !== undefined && inRect(def, cx, cz);
   });
 }
