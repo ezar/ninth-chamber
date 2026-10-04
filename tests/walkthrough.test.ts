@@ -11,6 +11,7 @@ import { validateLevel } from '../src/sim/grid/validate';
 import { createWorld, findActor } from '../src/sim/world';
 import en from '../i18n/en.json';
 import { Bot } from './bot';
+import { recordGolden } from './golden';
 import { frame } from './helpers';
 
 /** Plays the whole level; returns the bot for inspection. */
@@ -198,6 +199,7 @@ describe('The Antechamber', () => {
   // About 13 000 simulated ticks: allow more than the default 5 s on a busy machine.
   it('can be finished through every room with all three secrets and no deaths', { timeout: 30_000 }, () => {
     const bot = playAntechamber();
+    recordGolden(bot);
     const w = bot.w;
     expect(w.ended).toBe(true);
     expect(w.stats.deaths).toBe(0);

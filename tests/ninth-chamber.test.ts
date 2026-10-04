@@ -16,6 +16,7 @@ import { runActions } from '../src/sim/logic/rules';
 import { tangle as T } from '../src/sim/player/tuning';
 import { createWorld, findActor, respawn, type World } from '../src/sim/world';
 import { Bot } from './bot';
+import { recordGolden } from './golden';
 import { frame, run } from './helpers';
 
 const level = Level.parse(levelJson);
@@ -211,7 +212,8 @@ describe('The Ninth Chamber', () => {
     bot.goTo(...at('seal', 6, 1));
     bot.action();
     expect(w.state.signals['seal_ninth.used']).toBe(true);
-    run(w, frame(), seconds(4));
+    bot.wait(seconds(4));
+    recordGolden(bot);
     expect(w.ended).toBe(true);
     expect(w.ending).toBe('keeper');
   });
