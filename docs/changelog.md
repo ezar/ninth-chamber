@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 0.9.11 (2026-10-05): A missing wall clip
+
+- **A climbing direction whose clip did not load fades to the idle.** A missing loop no longer takes weight from the idle, which had left the previous direction's clip frozen at full strength until it popped to the idle.
+- **Tests**: tests/anim.test.ts.
+
 ## Version 0.9.10 (2026-10-05): Wall clip fixes
 
 - **Taking hold of a wall no longer starts a climb.** The root moves onto the face on the frame she takes hold (up 0.15 m from the ground, down from a ledge). That move no longer counts as climbing speed, so she holds still in the idle.
