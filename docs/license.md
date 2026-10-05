@@ -4,11 +4,11 @@
 
 The full text is in [LICENSE](../LICENSE) at the root. In short:
 
-| Part                  | Folders                                                                                                                                         | Terms                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Code                  | `src/`, `scripts/`, `tests/`, `index.html`, `.github/`, the configuration files                                                                 | MIT License                                                                 |
-| The game's own assets | `levels/`, `i18n/`, `art/`, `docs/art/`, `docs/spec.md`, `public/` (except third-party files), the names, the characters, the logo and the seal | © 2026 César, all rights reserved                                           |
-| Third-party work      | listed in [CREDITS.md](../CREDITS.md) and `public/audio/CREDITS.md`                                                                             | their own licences (CC0, CC BY 4.0, SIL OFL 1.1, MIT, Adobe's Mixamo terms) |
+| Part                  | Folders                                                                                                                                                                                                                                  | Terms                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Code                  | `src/`, `scripts/`, `tests/`, `index.html`, `.github/`, the configuration files                                                                                                                                                          | MIT License                                                                 |
+| The game's own assets | `levels/`, `i18n/`, `art/`, `docs/art/`, `docs/spec.md`, `public/` (except third-party files), any image, screenshot, model, animation, audio or video file anywhere in the repository, the names, the characters, the logo and the seal | © 2026 César, all rights reserved                                           |
+| Third-party work      | listed in [CREDITS.md](../CREDITS.md) and `public/audio/CREDITS.md`                                                                                                                                                                      | their own licences (CC0, CC BY 4.0, SIL OFL 1.1, MIT, Adobe's Mixamo terms) |
 
 `package.json` says `"license": "SEE LICENSE IN LICENSE"`, because a single SPDX identifier would not describe the split.
 
@@ -16,6 +16,7 @@ The full text is in [LICENSE](../LICENSE) at the root. In short:
 
 - The title screen's copyright line (`start.copyright` in `i18n/*.json`).
 - The header of `CREDITS.md`, which the build also ships as `credits.txt`.
+- The README's "Credits and licence" section.
 
 ## Adding files
 

@@ -9,9 +9,10 @@ for reuse.
 1. Code: MIT License
 --------------------
 
-Everything in this repository that part 2 below does not list is code and is
-licensed under the MIT License: in particular src/, scripts/, tests/,
-index.html, .github/ and the configuration files at the root.
+Everything in this repository that part 2 below does not list is code (and its
+documentation) and is licensed under the MIT License: in particular src/,
+scripts/, tests/, index.html, .github/ and the configuration files at the
+root.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -46,6 +47,8 @@ redistributed or reused without written permission:
 - docs/spec.md: the game's design document;
 - public/: models, animation clips, level lightmaps, icons, loading and share
   images, and everything else in it, except the third-party files below;
+- any image, screenshot, model, animation, audio or video file anywhere in the
+  repository, wherever it is, except the third-party files below;
 - the names "The Ninth Chamber" and "La Novena Cámara", the characters (Nora
   Vidal, Elena and the guardians) and the game's logo and seal.
 

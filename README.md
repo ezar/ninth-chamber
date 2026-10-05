@@ -89,4 +89,4 @@ The simulation emits events; render, audio and UI only listen. The rules for con
 
 All third-party assets are CC0 or CC-BY, or were made for the project. The full list with authors and licences is in [CREDITS.md](CREDITS.md), and the game shows it on its Credits screen.
 
-© 2026 César. All rights reserved for now; the licence is still an open decision ([docs/license.md](docs/license.md)). Progress notes are in [docs/changelog.md](docs/changelog.md).
+© 2026 César. The code is open source under the [MIT License](LICENSE); the game's own assets (levels, texts, art, models, animation, images and sound made for it) are all rights reserved. Third-party assets keep their own licences. The split, folder by folder, is in [docs/license.md](docs/license.md). Progress notes are in [docs/changelog.md](docs/changelog.md).
