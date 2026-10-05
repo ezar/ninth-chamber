@@ -22,7 +22,7 @@ Agreed with the owner on 2026-10-04, after 0.9.0: the campaign is complete (I to
 - playtests with five people (spec §16);
 - the iPhone check: 30 fps or more, and a save that survives a reload;
 - the name search (EUIPO, USPTO), and the final name;
-- the licence (docs/license.md);
+- ~~the licence~~: MIT for the code, the game's own assets closed (decided on 2026-10-05, 0.9.14; docs/license.md);
 - the owner's models (docs/art/models-brief.md), or the decision to ship with the stand-ins;
 - ~~the open decisions of spec §18~~: settled by the owner on 2026-10-05 (0.9.12):
   - hints: pregenerated only, no adaptive hints (no API calls);

@@ -1,6 +1,6 @@
 # Credits
 
-The Ninth Chamber (La Novena Cámara) · © 2026 César. All rights reserved: the licence is still an open decision, see [docs/license.md](docs/license.md).
+The Ninth Chamber (La Novena Cámara) · © 2026 César. The code is open source under the MIT License; the game's own assets (levels, texts, art, models and animation) are all rights reserved. See [LICENSE](LICENSE) and [docs/license.md](docs/license.md). Third-party work below keeps its own licence.
 
 The in-game Credits screen reads the bullet items of the **Audio** and **Music** sections of this file at build time (`scripts/vite-site.ts`), so keep them as short bullet lists. The build ships this file as `credits.txt`, linked from that screen.
 
