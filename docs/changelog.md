@@ -2,7 +2,7 @@
 
 ## Version 0.9.15 (2026-10-05): Licence fixes
 
-- **Every image, screenshot, model, animation, audio or video file in the repository is closed, wherever it is.** Before, a file outside the listed asset folders fell under the MIT part.
+- **Every image, screenshot, model, animation, audio or video file made for the game is closed, wherever it is in the repository.** Before, such a file outside the listed asset folders fell under the MIT part. Third-party media keeps its own licence (CC0, CC BY 4.0, Adobe's Mixamo terms), as `LICENSE` says.
 - **`bind-capture.png` removed.** It was a stray Options screenshot at the root, committed by mistake in 0.2.6 and used nowhere.
 - **The README** says the licence: MIT for the code, the game's own assets closed. Before, it still called the licence an open decision.
 
