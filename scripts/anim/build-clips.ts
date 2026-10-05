@@ -62,12 +62,22 @@ interface ClipSpec {
    * lines up with the simulation (climb, death).
    */
   rootMotion?: 'remove' | 'keep';
-  /** "hands": place the clip so its hands start where the hanging Nora grips the ledge. */
-  anchor?: 'hands';
+  /**
+   * "hands": place the clip so its hands start where the hanging Nora grips the ledge;
+   * "wall": so its hands, on average, are where the climbing Nora holds the face.
+   */
+  anchor?: 'hands' | 'wall';
+  /**
+   * A climbing loop on a wall: its travel up, down or along the face is taken out too, and
+   * its speed is measured along that travel (the runtime matches it to the climbing speed).
+   */
+  climb?: boolean;
 }
 
 /** Where the procedural rig grips a ledge while hanging (wrist, model space; nora.ts evalHang). */
 const HANG_WRIST = new THREE.Vector3(0, 1.925, -0.285);
+/** Where the procedural rig's hands hold a wall of roots, on average (nora.ts evalWall). */
+const WALL_HANDS = new THREE.Vector3(0, 1.72, -0.29);
 
 interface Manifest {
   rig: string;
@@ -399,6 +409,7 @@ for (const spec of manifest.clips) {
       const u = i / Math.max(1, frames.length - 1);
       f.hips.x -= travel.x * u;
       f.hips.z -= travel.z * u;
+      if (spec.climb) f.hips.y -= travel.y * u;
     });
   }
   if (spec.anchor === 'hands') {
@@ -413,6 +424,23 @@ for (const spec of manifest.clips) {
       const shift = HANG_WRIST.clone().sub(hands);
       for (const f of frames) f.hips.add(shift);
     }
+  }
+  if (spec.anchor === 'wall') {
+    const pos: THREE.Vector3[] = [];
+    const hands = new THREE.Vector3();
+    for (const f of frames) {
+      nora.positions(f.rot, f.hips, pos);
+      hands
+        .add(pos[JOINT_INDEX.hand_L] ?? new THREE.Vector3())
+        .add(pos[JOINT_INDEX.hand_R] ?? new THREE.Vector3());
+    }
+    hands.multiplyScalar(0.5 / Math.max(1, frames.length));
+    const shift = WALL_HANDS.clone().sub(hands);
+    for (const f of frames) f.hips.add(shift);
+    // Clips that hang from the hands (the shimmies) would put her feet through the floor at the
+    // foot of a wall: those go up until the lowest sole is on it, the hands higher on the face.
+    const lowest = Math.min(...frames.flatMap((f) => soles(nora, f).flatMap((sd) => [sd.heel.y, sd.ball.y])));
+    if (lowest < 0) for (const f of frames) f.hips.y -= lowest;
   }
   if (spec.rootMotion === 'keep') {
     const last = frames[frames.length - 1];
@@ -430,7 +458,7 @@ for (const spec of manifest.clips) {
 
   let speed = recordedSpeed(spec) * retarget.k;
   if (spec.speed === undefined && !spec.speedFrom && (spec.rootMotion ?? 'remove') === 'remove')
-    speed = Math.hypot(travel.x, travel.z) / Math.max(1e-3, t1 - t0);
+    speed = (spec.climb ? travel.length() : Math.hypot(travel.x, travel.z)) / Math.max(1e-3, t1 - t0);
   if (speed < 0.05 && spec.gait) speed = stanceSpeed(sole);
   // Backwards travel (towards +Z): planted feet move forwards under the body.
   const signed = travel.z > 0.05 ? -speed : speed;

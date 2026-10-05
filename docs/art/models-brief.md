@@ -63,10 +63,10 @@ The owner makes these models (Blender, MiniMax or similar). Until each one arriv
 
 ## 0.8.0: Chamber V, the Root Halls (spec §19)
 
-| File           | Size (m, x × y × z) | Triangles | Meshes  | Notes                                                                                                                                                                                                                     |
-| -------------- | ------------------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `root_kit.glb` | 2 × 2 × 0.3 each    | ≤ 3 000   | `roots` | Modular root panels for climbable faces: a 2 m square, tiling up and sideways, pale enough to read against the stone. A plain panel, a top piece that curls over the edge and a bottom piece that spreads into the floor. |
-| Climbing clips | -                   | -         | -       | Mixamo clips on Nora's skeleton: `wall_idle`, `wall_up`, `wall_down`, `wall_left`, `wall_right` and `wall_jump_back`. Until they arrive the climbing pose is procedural.                                                  |
+| File           | Size (m, x × y × z) | Triangles | Meshes  | Notes                                                                                                                                                                                                                                                                                    |
+| -------------- | ------------------- | --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `root_kit.glb` | 2 × 2 × 0.3 each    | ≤ 3 000   | `roots` | Modular root panels for climbable faces: a 2 m square, tiling up and sideways, pale enough to read against the stone. A plain panel, a top piece that curls over the edge and a bottom piece that spreads into the floor.                                                                |
+| Climbing clips | -                   | -         | -       | Arrived in 0.9.9 (Hanging Idle 1, Climbing Up/Down Wall, Left/Right Shimmy). Still wanted: a shimmy along a wall with the feet on it (the ones in use hang from the hands). The jump back off a wall keeps the standing jump: she turns round in the air, so Jump Backward does not fit. |
 
 ## 0.9.0: Chamber IX, the Ninth Chamber (spec §19)
 

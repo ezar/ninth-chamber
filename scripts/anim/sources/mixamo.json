@@ -25,6 +25,11 @@
       "anchor": "hands",
       "rootMotion": "keep"
     },
+    { "name": "wall_idle", "file": "Hanging Idle 1.fbx", "loop": true, "anchor": "wall" },
+    { "name": "wall_up", "file": "Climbing Up Wall.fbx", "loop": true, "climb": true, "anchor": "wall" },
+    { "name": "wall_down", "file": "Climbing Down Wall.fbx", "loop": true, "climb": true, "anchor": "wall" },
+    { "name": "wall_left", "file": "Left Shimmy.fbx", "loop": true, "climb": true, "anchor": "wall" },
+    { "name": "wall_right", "file": "Right Shimmy.fbx", "loop": true, "climb": true, "anchor": "wall" },
     { "name": "push", "file": "Pushing.fbx", "loop": true, "gait": true },
     { "name": "pull", "file": "Pull Heavy Object.fbx", "loop": true },
     { "name": "pickup", "file": "Picking Up.fbx", "loop": false, "from": 0.7, "to": 4.6 },

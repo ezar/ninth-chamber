@@ -15,27 +15,30 @@ Everything meets in one space (`src/render/anim/skeleton.ts`): for each of the 1
 
 The clips are the owner's **Mixamo** set (Adobe; free to use in games), made on Nora's own mesh (the Meshy scan, auto-rigged in Mixamo): FBX, 30 fps, 41 `mixamorig` bones. The FBX files stay outside the repo; `scripts/anim/sources/mixamo.json` lists them.
 
-| Clip                                  | Mixamo animation                           | Used for                     | Notes                                                  |
-| ------------------------------------- | ------------------------------------------ | ---------------------------- | ------------------------------------------------------ |
-| `idle`                                | Breathing Idle                             | standing                     | 9.9 s loop                                             |
-| `walk`                                | Walking                                    | walking (2.2 m/s)            | in place; 1.67 m/s measured from the planted feet      |
-| `run`                                 | Running                                    | running (5.4 m/s)            | in place; 4.08 m/s measured                            |
-| `walk_back`                           | Walking Backwards                          | backing up (walk + action)   | travel removed, -1.08 m/s                              |
-| `jump`                                | Jump                                       | standing jump take-off       | take-off 0.83 s, touch-down 1.4 s                      |
-| `jump_run`                            | Running Jump                               | running jump take-off        | travel removed; played at 0.75×                        |
-| `fall`                                | Falling Idle                               | airborne loop, falls         |                                                        |
-| `land`                                | Falling To Landing                         | landing, from its touch-down | weight 30–75 % with the fall speed                     |
-| `hang`                                | Hanging Idle                               | hanging                      | hands anchored on the grip                             |
-| `shimmy_left`, `shimmy_right`         | Braced Hang Shimmy (and mirror)            | shimmying                    | 0.48 m/s, played up to 2.2×                            |
-| `climb`                               | Braced Hang To Crouch                      | climbing up                  | keeps its travel (ends 2.04 m up, like the game's 2 m) |
-| `push`                                | Pushing                                    | block, push                  | one cycle per push                                     |
-| `pull`                                | Pull Heavy Object                          | pull                         | one cycle per pull                                     |
-| `pickup`                              | Picking Up                                 | pickup                       | cropped 0.7–4.6 s, fitted to the 0.8 s pickup          |
-| `hit`                                 | Hit Reaction                               | hurt, upper body             | cropped 0.3–2.0 s                                      |
-| `die`                                 | Dying                                      | dead                         | cropped 1.8–4.6 s                                      |
-| `run_stop`, `turn_left`, `turn_right` | Run To Stop, Left/Right Turn 90            | baked, not used yet          | see below                                              |
-| `pistol_idle`, `pistol_run`, `shoot`  | Pistol Idle, Pistol Run, Shooting          | baked, not used yet          | see below                                              |
-| `tread`, `swim`, `swim_to_edge`       | Treading Water, Swimming, Swimming To Edge | registered for level 2       | `WATER_CLIPS` in `animator.ts`                         |
+| Clip                                  | Mixamo animation                           | Used for                     | Notes                                                    |
+| ------------------------------------- | ------------------------------------------ | ---------------------------- | -------------------------------------------------------- |
+| `idle`                                | Breathing Idle                             | standing                     | 9.9 s loop                                               |
+| `walk`                                | Walking                                    | walking (2.2 m/s)            | in place; 1.67 m/s measured from the planted feet        |
+| `run`                                 | Running                                    | running (5.4 m/s)            | in place; 4.08 m/s measured                              |
+| `walk_back`                           | Walking Backwards                          | backing up (walk + action)   | travel removed, -1.08 m/s                                |
+| `jump`                                | Jump                                       | standing jump take-off       | take-off 0.83 s, touch-down 1.4 s                        |
+| `jump_run`                            | Running Jump                               | running jump take-off        | travel removed; played at 0.75×                          |
+| `fall`                                | Falling Idle                               | airborne loop, falls         |                                                          |
+| `land`                                | Falling To Landing                         | landing, from its touch-down | weight 30–75 % with the fall speed                       |
+| `hang`                                | Hanging Idle                               | hanging                      | hands anchored on the grip                               |
+| `shimmy_left`, `shimmy_right`         | Braced Hang Shimmy (and mirror)            | shimmying                    | 0.48 m/s, played up to 2.2×                              |
+| `climb`                               | Braced Hang To Crouch                      | climbing up                  | keeps its travel (ends 2.04 m up, like the game's 2 m)   |
+| `wall_idle`                           | Hanging Idle 1                             | on a wall of roots, still    | hands anchored on the face                               |
+| `wall_up`, `wall_down`                | Climbing Up Wall, Climbing Down Wall       | climbing a wall              | 1.2 m of travel taken out; 0.6 m/s, matched to hers      |
+| `wall_left`, `wall_right`             | Left Shimmy, Right Shimmy                  | along a wall                 | raised so the feet clear the floor; 0.27 m/s, up to 3.5× |
+| `push`                                | Pushing                                    | block, push                  | one cycle per push                                       |
+| `pull`                                | Pull Heavy Object                          | pull                         | one cycle per pull                                       |
+| `pickup`                              | Picking Up                                 | pickup                       | cropped 0.7–4.6 s, fitted to the 0.8 s pickup            |
+| `hit`                                 | Hit Reaction                               | hurt, upper body             | cropped 0.3–2.0 s                                        |
+| `die`                                 | Dying                                      | dead                         | cropped 1.8–4.6 s                                        |
+| `run_stop`, `turn_left`, `turn_right` | Run To Stop, Left/Right Turn 90            | baked, not used yet          | see below                                                |
+| `pistol_idle`, `pistol_run`, `shoot`  | Pistol Idle, Pistol Run, Shooting          | baked, not used yet          | see below                                                |
+| `tread`, `swim`, `swim_to_edge`       | Treading Water, Swimming, Swimming To Edge | registered for level 2       | `WATER_CLIPS` in `animator.ts`                           |
 
 Not used yet, and why:
 

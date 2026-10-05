@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 0.9.9 (2026-10-05): Nora climbs with her own clips
+
+- **Climbing walls of roots with Mixamo clips** made on Nora's mesh. They replace the procedural pose, which stays as the fallback:
+  - _still on the face_: Hanging Idle 1;
+  - _up and down_: Climbing Up Wall and Climbing Down Wall;
+  - _left and right_: Left Shimmy and Right Shimmy.
+  - Each move blends in from the idle as she starts. Its cadence follows her speed along the face.
+- **The clip baker** (`pnpm anim:build`) gains two options for wall clips:
+  - `climb` takes out the travel up, down or along the face, and measures the clip's speed along it;
+  - `anchor: "wall"` puts the hands on the face where the climbing pose holds it, and raises a clip until no foot is below the floor.
+- **Not used**: Jump Backward. Off a wall, Nora turns round in the air to catch what is behind her, and that clip ends facing the wall. The jump keeps the standing jump clip.
+
 ## Version 0.9.8 (2026-10-04): Touch layout fixes, again
 
 - **A button that was hidden is clamped when it shows again.** This covers the note reader closing after a rotation, the torch button once the torch is found, and the start of play. Each button is watched for its size, which changes when it shows.
