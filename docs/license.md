@@ -1,16 +1,24 @@
 # Licence
 
-**Status: open decision.** The spec (§18 "Decisiones abiertas") leaves it to the owner: open-source code (MIT) with closed assets, or everything closed.
+**Status: decided by the owner on 2026-10-05 (0.9.14).** The code is open source under the MIT License, and the game's own assets stay closed. This settles the licence question of spec §18 ("Decisiones abiertas").
 
-Until that decision is made, nothing in this repository is licensed for reuse:
+The full text is in [LICENSE](../LICENSE) at the root. In short:
 
-> © 2026 César · La Novena Cámara. All rights reserved.
+| Part                  | Folders                                                                                                                                         | Terms                                                                       |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Code                  | `src/`, `scripts/`, `tests/`, `index.html`, `.github/`, the configuration files                                                                 | MIT License                                                                 |
+| The game's own assets | `levels/`, `i18n/`, `art/`, `docs/art/`, `docs/spec.md`, `public/` (except third-party files), the names, the characters, the logo and the seal | © 2026 César, all rights reserved                                           |
+| Third-party work      | listed in [CREDITS.md](../CREDITS.md) and `public/audio/CREDITS.md`                                                                             | their own licences (CC0, CC BY 4.0, SIL OFL 1.1, MIT, Adobe's Mixamo terms) |
 
-Third-party code, fonts, textures and animation keep their own licences; see [CREDITS.md](../CREDITS.md).
+`package.json` says `"license": "SEE LICENSE IN LICENSE"`, because a single SPDX identifier would not describe the split.
 
-## When the decision is made
+## Where it shows
 
-- Add a `LICENSE` file at the root (and, if the assets stay closed, say which folders it covers).
-- Set `license` in `package.json`.
-- Update the copyright line on the title screen (`start.copyright` in `i18n/*.json`) and the header of `CREDITS.md`.
-- Update this page and tick the item in spec §18.
+- The title screen's copyright line (`start.copyright` in `i18n/*.json`).
+- The header of `CREDITS.md`, which the build also ships as `credits.txt`.
+
+## Adding files
+
+- New code (TypeScript, scripts, tests, styles) is MIT.
+- New levels, texts, models, animation, textures or images made for the game are closed: put them in the folders listed above.
+- A third-party file goes in `CREDITS.md` with its source and licence, and must allow redistribution in a web game.

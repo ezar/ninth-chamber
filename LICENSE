@@ -1,0 +1,56 @@
+The Ninth Chamber (La Novena Cámara)
+Copyright (c) 2026 César
+
+This repository holds two kinds of work under different terms: the code is
+open source under the MIT License, and the game's own assets are not licensed
+for reuse.
+
+
+1. Code: MIT License
+--------------------
+
+Everything in this repository that part 2 below does not list is code and is
+licensed under the MIT License: in particular src/, scripts/, tests/,
+index.html, .github/ and the configuration files at the root.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+2. Assets: all rights reserved
+------------------------------
+
+The game's own assets are Copyright (c) 2026 César, all rights reserved. The
+MIT License above does not cover them, and they may not be copied,
+redistributed or reused without written permission:
+
+- levels/: the chambers' level designs and their hint files;
+- i18n/: the game's texts (story, notes, letters, Nora's remarks, endings and
+  every other player-facing line), in every language;
+- art/ and docs/art/: looks, concept art and art briefs;
+- docs/spec.md: the game's design document;
+- public/: models, animation clips, level lightmaps, icons, loading and share
+  images, and everything else in it, except the third-party files below;
+- the names "The Ninth Chamber" and "La Novena Cámara", the characters (Nora
+  Vidal, Elena and the guardians) and the game's logo and seal.
+
+Third-party work keeps its own licence. The sound effects, music, textures,
+fonts, libraries and the Mixamo animations used for Nora's clips are listed,
+with their licences, in CREDITS.md and public/audio/CREDITS.md. The music under
+CC BY 4.0 and the CC0 sound and textures stay under those licences, and the
+Mixamo animations stay under Adobe's Mixamo terms.

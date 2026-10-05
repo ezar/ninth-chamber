@@ -1,5 +1,17 @@
 # Changelog
 
+## Version 0.9.14 (2026-10-05): The licence
+
+The owner chose the licence (spec §18): **the code is open source under the MIT License, and the game's own assets stay closed.**
+
+- **`LICENSE`** at the root:
+  - MIT for the code: `src/`, `scripts/`, `tests/`, `index.html`, `.github/` and the configuration files;
+  - all rights reserved for the game's own assets: levels, texts in every language, art, models, animation, lightmaps, icons, the names, the characters, the logo and the seal.
+  - Third-party work keeps its own licence, as listed in `CREDITS.md`.
+- **`package.json`**: `"license": "SEE LICENSE IN LICENSE"`.
+- **Where it shows**: the title screen's copyright line (in English, Spanish and Catalan) and the header of `CREDITS.md` say so.
+- **`docs/license.md`** gives the split in a table and what to do with new files.
+
 ## Version 0.9.13 (2026-10-05): Classic mode fixes
 
 - **No auto-grab of ropes and climbable walls in classic mode.** Action must be held for them too, as for ledges. One rule now decides all three grabs (`reachesForHold`).
