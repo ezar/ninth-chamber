@@ -492,9 +492,10 @@ export class NoraAnimator {
     const k = 1 - Math.exp(-dt / WALL_FADE_TAU);
     let rate = 0;
     for (const m of WALL_MOVES) {
-      const target = speed > 0.05 && m === moving ? Math.min(1, speed / WALL_FULL) : 0;
-      this.wallW[m] += (target - this.wallW[m]) * k;
       const clip = c[m];
+      // A loop that did not load keeps no weight: that way she fades to the idle.
+      const target = clip && speed > 0.05 && m === moving ? Math.min(1, speed / WALL_FULL) : 0;
+      this.wallW[m] += (target - this.wallW[m]) * k;
       if (m === moving && clip) rate = Math.min(WALL_MAX_RATE, speed / Math.max(0.05, Math.abs(clip.speed)));
     }
     // One phase for all four loops, at the cadence of the way she moves now.

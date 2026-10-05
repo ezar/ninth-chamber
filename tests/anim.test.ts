@@ -249,9 +249,10 @@ describe('Nora on a wall of roots', () => {
     aimPitch: 0,
   });
   /** Plays root positions at 60 Hz (on the ground until `attach`, on the wall after); returns every shown pose. */
-  function play(roots: THREE.Vector3[], attach: number): AnimPose[] {
+  function play(roots: THREE.Vector3[], attach: number, missing?: ClipName): AnimPose[] {
     const anim = new NoraAnimator(probe.sk, {
       ...clips,
+      ...(missing ? { [missing]: undefined } : {}),
       idle: loadClip('idle'),
       walk: loadClip('walk'),
       run: loadClip('run'),
@@ -277,8 +278,8 @@ describe('Nora on a wall of roots', () => {
     a.forEach((p, i) => expect(step(p, b[i] ?? p)).toBeLessThan(1e-6));
   });
 
-  it('cross-fades between climbing directions', () => {
-    // Climbing up at 0.6 m/s for a second, then straight to the right at 0.28 m/s.
+  /** Climbing up at 0.6 m/s for a second, then straight to the right at 0.28 m/s. */
+  function upThenRight(): THREE.Vector3[] {
     const roots: THREE.Vector3[] = [];
     const at = new THREE.Vector3();
     for (let i = 0; i < 120; i++) {
@@ -286,12 +287,31 @@ describe('Nora on a wall of roots', () => {
       if (i < 60) at.y += 0.6 / 60;
       else at.x += 0.28 / 60;
     }
-    const shown = play(roots, 0);
-    /** The largest frame-to-frame turn over frames [from, to]. */
-    const largest = (from: number, to: number): number =>
-      Math.max(...shown.slice(from, to).map((p, i) => step(p, shown[from + i + 1] ?? p)));
-    const steady = largest(30, 59);
-    const across = largest(55, 90);
-    expect(across).toBeLessThan(steady * 2);
+    return roots;
+  }
+  /** The largest frame-to-frame turn over frames [from, to]. */
+  const largest = (shown: AnimPose[], from: number, to: number): number =>
+    Math.max(...shown.slice(from, to).map((p, i) => step(p, shown[from + i + 1] ?? p)));
+
+  it('cross-fades between climbing directions', () => {
+    const shown = play(upThenRight(), 0);
+    expect(largest(shown, 55, 90)).toBeLessThan(largest(shown, 30, 59) * 2);
+  });
+
+  it('fades to the idle when the clip of the new direction is missing', () => {
+    const shown = play(upThenRight(), 0, 'wall_right');
+    expect(largest(shown, 55, 90)).toBeLessThan(largest(shown, 30, 59) * 2);
+    // Moving right with no clip for it: the idle, as if still.
+    const still = play(
+      Array.from({ length: 120 }, () => new THREE.Vector3()),
+      0,
+    );
+    // Half a second on, the climb up has faded as it would into the idle (about e^-4 of it left).
+    const half = shown[90];
+    const idle = still[90];
+    expect(half && idle && step(half, idle)).toBeLessThan(0.06);
+    const last = shown.at(-1);
+    const end = still.at(-1);
+    expect(last && end && step(last, end)).toBeLessThan(1e-3);
   });
 });
