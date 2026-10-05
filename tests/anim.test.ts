@@ -222,3 +222,76 @@ describe('Nora in the water', () => {
     expect(mid.q(JOINT_COUNT - 1).angleTo(end.q(JOINT_COUNT - 1))).toBeGreaterThan(0.05);
   });
 });
+
+describe('Nora on a wall of roots', () => {
+  const probe = new LocomotionProbe();
+  const names: ClipName[] = [
+    'idle',
+    'walk',
+    'run',
+    'wall_idle',
+    'wall_up',
+    'wall_down',
+    'wall_left',
+    'wall_right',
+  ];
+  const clips = Object.fromEntries(names.map((n) => [n, loadClip(n)]));
+  const pose = (mode: NoraPose['mode']): NoraPose => ({
+    mode,
+    modeTime: 0,
+    speed: 0,
+    vy: 0,
+    climbT: 0,
+    health: 100,
+    weapons: 0,
+    aiming: 0,
+    aimYaw: 0,
+    aimPitch: 0,
+  });
+  /** Plays root positions at 60 Hz (on the ground until `attach`, on the wall after); returns every shown pose. */
+  function play(roots: THREE.Vector3[], attach: number): AnimPose[] {
+    const anim = new NoraAnimator(probe.sk, {
+      ...clips,
+      idle: loadClip('idle'),
+      walk: loadClip('walk'),
+      run: loadClip('run'),
+    });
+    const proc = new AnimPose();
+    proc.hips.copy(probe.sk.hipsBind);
+    return roots.map((r, i) => {
+      const out = new AnimPose();
+      anim.update(pose(i < attach ? 'ground' : 'wall'), 1 / 60, proc, r, 0, out);
+      return out;
+    });
+  }
+  /** The largest turn of any joint between two frames (rad). */
+  const step = (a: AnimPose, b: AnimPose): number =>
+    Math.max(...Array.from({ length: JOINT_COUNT }, (_, j) => a.q(j).angleTo(b.q(j))));
+
+  it('holds still on the face after the attach snap', () => {
+    const still = Array.from({ length: 60 }, () => new THREE.Vector3());
+    // From the ground the root is raised 0.15 m on the frame she takes hold.
+    const snapped = still.map((v, i) => (i < 20 ? v.clone() : new THREE.Vector3(0, 0.15, 0)));
+    const a = play(still, 20);
+    const b = play(snapped, 20);
+    a.forEach((p, i) => expect(step(p, b[i] ?? p)).toBeLessThan(1e-6));
+  });
+
+  it('cross-fades between climbing directions', () => {
+    // Climbing up at 0.6 m/s for a second, then straight to the right at 0.28 m/s.
+    const roots: THREE.Vector3[] = [];
+    const at = new THREE.Vector3();
+    for (let i = 0; i < 120; i++) {
+      roots.push(at.clone());
+      if (i < 60) at.y += 0.6 / 60;
+      else at.x += 0.28 / 60;
+    }
+    const shown = play(roots, 0);
+    /** The largest frame-to-frame turn over frames [from, to]. */
+    const largest = (from: number, to: number): number =>
+      Math.max(...shown.slice(from, to).map((p, i) => step(p, shown[from + i + 1] ?? p)));
+    const steady = largest(30, 59);
+    const across = largest(55, 90);
+    expect(across).toBeLessThan(steady * 2);
+  });
+});

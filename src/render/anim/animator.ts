@@ -116,6 +116,10 @@ const SHIMMY_FULL = 0.3;
 /** Climbing a wall: fastest playback rate, and the speed along the face (m/s) at which a move is fully in. */
 const WALL_MAX_RATE = 3.5;
 const WALL_FULL = 0.3;
+/** Fade time of the climbing loops (s): long enough to cross-fade a change of direction. */
+const WALL_FADE_TAU = 0.12;
+const WALL_MOVES = ['wall_up', 'wall_down', 'wall_left', 'wall_right'] as const;
+type WallMove = (typeof WALL_MOVES)[number];
 /** Hit reaction: playback rate and upper-body weight. */
 const HIT_RATE = 1.4;
 const HIT_WEIGHT = 0.7;
@@ -206,8 +210,13 @@ export class NoraAnimator {
   private velY = 0;
   private wallT = 0;
   private wallPhase = 0;
-  private wallW = 0;
-  private wallMove: 'wall_up' | 'wall_down' | 'wall_left' | 'wall_right' = 'wall_up';
+  /** Weight of each climbing loop over the idle: the one she moves in fades in, the others out. */
+  private readonly wallW: Record<WallMove, number> = {
+    wall_up: 0,
+    wall_down: 0,
+    wall_left: 0,
+    wall_right: 0,
+  };
   private lastHealth = Number.NaN;
   /** Cross-fade time of the current mode change (s). */
   private fadeTime = FADE;
@@ -263,6 +272,12 @@ export class NoraAnimator {
     dt = Math.min(0.1, Math.max(0, dt));
     const c = this.clips;
     const mode = pose.mode;
+    // Taking hold of a wall moves the root onto the face in one frame: not climbing speed.
+    const takesHold = mode === 'wall' && this.mode !== 'wall';
+    if (takesHold) {
+      this.velY = 0;
+      this.vel.set(0, 0, 0);
+    }
     if (mode !== this.mode) {
       this.from.copy(out);
       this.fade = this.mode === null ? 1 : 0;
@@ -293,7 +308,7 @@ export class NoraAnimator {
       this.ik.reset();
       this.stepOffset = 0;
       this.vel.set(0, 0, 0);
-    } else if (dt > 0) {
+    } else if (dt > 0 && !takesHold) {
       // Riding still: the root's motion is the platform's.
       if (pose.riding && pose.speed < 0.3) this.ik.carry(this._carry.subVectors(rootPos, this.lastRoot));
       else if (mode === 'ground' && Math.abs(rootPos.y - this.lastRoot.y) > STEP_SNAP)
@@ -466,23 +481,34 @@ export class NoraAnimator {
     const up = this.velY;
     const side = this.vel.x;
     const speed = Math.max(Math.abs(up), Math.abs(side));
-    if (speed > 0.05)
-      this.wallMove =
-        Math.abs(up) >= Math.abs(side)
-          ? up > 0
-            ? 'wall_up'
-            : 'wall_down'
-          : side > 0
-            ? 'wall_right'
-            : 'wall_left';
-    const move = c[this.wallMove];
-    const target = Math.min(1, speed / WALL_FULL);
-    this.wallW += (target - this.wallW) * (1 - Math.exp(-dt / 0.08));
-    if (move && this.wallW > 0.001) {
-      const rate = Math.min(WALL_MAX_RATE, speed / Math.max(0.05, Math.abs(move.speed)));
-      this.wallPhase = (this.wallPhase + (dt * rate) / move.duration) % 1;
-      move.samplePhase(this.wallPhase, this.tmp.rot, this.tmp.hips);
-      p.blend(p, this.tmp, this.wallW);
+    const moving: WallMove =
+      Math.abs(up) >= Math.abs(side)
+        ? up > 0
+          ? 'wall_up'
+          : 'wall_down'
+        : side > 0
+          ? 'wall_right'
+          : 'wall_left';
+    const k = 1 - Math.exp(-dt / WALL_FADE_TAU);
+    let rate = 0;
+    for (const m of WALL_MOVES) {
+      const target = speed > 0.05 && m === moving ? Math.min(1, speed / WALL_FULL) : 0;
+      this.wallW[m] += (target - this.wallW[m]) * k;
+      const clip = c[m];
+      if (m === moving && clip) rate = Math.min(WALL_MAX_RATE, speed / Math.max(0.05, Math.abs(clip.speed)));
+    }
+    // One phase for all four loops, at the cadence of the way she moves now.
+    const lead = c[moving];
+    if (lead) this.wallPhase = (this.wallPhase + (dt * rate) / lead.duration) % 1;
+    // A weighted mix of the idle and each loop: blending each in by its share of the weight so far.
+    let sum = Math.max(0, 1 - WALL_MOVES.reduce((s, m) => s + this.wallW[m], 0));
+    for (const m of WALL_MOVES) {
+      const w = this.wallW[m];
+      const clip = c[m];
+      if (!clip || w < 0.001) continue;
+      sum += w;
+      clip.samplePhase(this.wallPhase, this.tmp.rot, this.tmp.hips);
+      p.blend(p, this.tmp, w / sum);
     }
     return true;
   }
