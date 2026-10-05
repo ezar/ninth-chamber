@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.9.10 (2026-10-05): Wall clip fixes
+
+- **Taking hold of a wall no longer starts a climb.** The root moves onto the face on the frame she takes hold (up 0.15 m from the ground, down from a ledge). That move no longer counts as climbing speed, so she holds still in the idle.
+- **A change of direction on the wall cross-fades.** Each climbing loop has its own weight: the new direction fades in while the old one fades out. Going from up to sideways no longer swaps one clip for another in a frame.
+- **Tests**: tests/anim.test.ts.
+
 ## Version 0.9.9 (2026-10-05): Nora climbs with her own clips
 
 - **Climbing walls of roots with Mixamo clips** made on Nora's mesh. They replace the procedural pose, which stays as the fallback:
