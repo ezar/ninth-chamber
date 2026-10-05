@@ -122,6 +122,8 @@ export class Menu {
   private confirming: ConfirmAction | null = null;
   /** A renderer picked in options, waiting for the reload to be confirmed. */
   private pendingRenderer: RendererChoice | null = null;
+  /** The classic mode row, hidden until the campaign has been finished. */
+  private classicRow: OptionRow | null = null;
   private rendererRow: OptionRow | null = null;
   private readonly rows: OptionRow[] = [];
   private readonly repeat = new DirectionRepeat();
@@ -157,6 +159,7 @@ export class Menu {
     // Ask Nora only while she has an idea for this room.
     const ask = this.root.querySelector<HTMLElement>('[data-action="hint"]');
     if (ask) ask.hidden = context !== 'pause' || !this.cb.hint?.available();
+    if (this.classicRow) this.classicRow.el.hidden = !this.cb.classicUnlocked?.();
     this.root.hidden = false;
     this.root.dataset.context = context;
     this.repeat.reset();
@@ -762,18 +765,20 @@ export class Menu {
         () => t('options.tutorialHints.hint'),
       ),
     );
-    if (this.cb.classicUnlocked?.())
-      this.addRow(
-        toggleRow(
-          'options.classic',
-          () => s.classic,
-          (v) => {
-            s.classic = v;
-            this.cb.change('classic');
-          },
-          () => t('options.classic.hint'),
-        ),
+    // Built always and shown once unlocked (open() checks again: the first ending can come in play).
+    if (this.cb.classicUnlocked) {
+      this.classicRow = toggleRow(
+        'options.classic',
+        () => s.classic,
+        (v) => {
+          s.classic = v;
+          this.cb.change('classic');
+        },
+        () => t('options.classic.hint'),
       );
+      this.classicRow.el.hidden = !this.cb.classicUnlocked();
+      this.addRow(this.classicRow);
+    }
     this.addRow(
       choiceRow<Language>(
         'options.language',

@@ -13,7 +13,7 @@ import { BLOCK, DIR_VEC, OPPOSITE, RIGHT_OF, yawToDir, type Dir } from '../../gr
 import { tangleAt } from '../../mechanisms/tangles';
 import { tearingGust } from '../../mechanisms/wind';
 import type { World } from '../../world';
-import { emit, faceDir, setMode, wishAlong, type Ctx } from '../context';
+import { emit, faceDir, reachesForHold, setMode, wishAlong, type Ctx } from '../context';
 import { tuning, wallClimb as W, wind as windTuning } from '../tuning';
 import { startHang } from './hang';
 
@@ -89,7 +89,7 @@ export function tryGetOnWall(c: Ctx): boolean {
 export function tryCatchWall(c: Ctx): boolean {
   const { p } = c;
   if (p.sinceRelease < tuning.regrabDelay) return false;
-  if (!c.held('action') && !p.jumped) return false;
+  if (!reachesForHold(c)) return false;
   const dir = yawToDir(p.yaw);
   if (!faceAhead(c.world, dir)) return false;
   if (p.pos.y <= c.q.floorAt(p.pos.x, p.pos.z) + 0.05) return false;

@@ -70,6 +70,14 @@ export function wishAlong(c: Ctx, dir: Dir): number {
   return c.wish.x * v.x + c.wish.z * v.z;
 }
 
+/**
+ * Whether she takes hold of something within reach in the air (a ledge, a rope, a climbable face):
+ * with Action held, or after a jump by the auto-grab assist (spec §5 "Ayudas"), off in classic mode.
+ */
+export function reachesForHold(c: Ctx): boolean {
+  return c.held('action') || (c.p.jumped && c.assisted);
+}
+
 /** Tank controls: the sides turn her on the spot, in the modes where she turns. */
 export function tankTurn(c: Ctx): void {
   if (!c.tank || !TANK_TURNING.has(c.p.mode)) return;
