@@ -15,24 +15,41 @@ export interface Ctx {
   q: GridQuery;
   input: InputFrame;
   dt: number;
-  /** Desired movement direction in world space (camera-relative input), length ≤ 1. */
+  /**
+   * Desired movement direction in world space, length ≤ 1: camera-relative input, or in classic
+   * mode relative to her facing (where she turns, only forward and back; the sides turn her).
+   */
   wish: { x: number; z: number; mag: number };
+  /** Classic mode's tank controls (spec §5 "Esquemas de control"). */
+  tank: boolean;
+  /** The assists of spec §5 (coyote time, jump buffer, auto-grab): on unless in classic mode. */
+  assisted: boolean;
   held(b: Button): boolean;
   pressed(b: Button): boolean;
 }
 
+/** The modes where the tank controls' sides turn her instead of moving her sideways. */
+const TANK_TURNING: ReadonlySet<PlayerMode> = new Set<PlayerMode>(['ground', 'swim', 'dive']);
+
 export function makeCtx(world: World, input: InputFrame, dt: number): Ctx {
-  const sin = Math.sin(input.camYaw);
-  const cos = Math.cos(input.camYaw);
-  const x = input.moveX * cos - input.moveY * sin;
-  const z = -input.moveX * sin - input.moveY * cos;
+  const p = world.state.player;
+  const tank = world.classic;
+  // Tank controls read the stick in her own frame: the same maths with her yaw for the camera's.
+  const yaw = tank ? p.yaw : input.camYaw;
+  const moveX = tank && TANK_TURNING.has(p.mode) ? 0 : input.moveX;
+  const sin = Math.sin(yaw);
+  const cos = Math.cos(yaw);
+  const x = moveX * cos - input.moveY * sin;
+  const z = -moveX * sin - input.moveY * cos;
   return {
     world,
-    p: world.state.player,
+    p,
     q: world.grid,
     input,
     dt,
     wish: { x, z, mag: Math.hypot(x, z) },
+    tank,
+    assisted: !tank,
     held: (b) => isHeld(input, b),
     pressed: (b) => isPressed(input, b),
   };
@@ -53,9 +70,15 @@ export function wishAlong(c: Ctx, dir: Dir): number {
   return c.wish.x * v.x + c.wish.z * v.z;
 }
 
-/** Turns the player towards the wish direction at the configured rate. */
+/** Tank controls: the sides turn her on the spot, in the modes where she turns. */
+export function tankTurn(c: Ctx): void {
+  if (!c.tank || !TANK_TURNING.has(c.p.mode)) return;
+  c.p.yaw = wrapAngle(c.p.yaw - c.input.moveX * tuning.tankTurnSpeed * c.dt);
+}
+
+/** Turns the player towards the wish direction at the configured rate (not with tank controls). */
 export function turnTowardsWish(c: Ctx): void {
-  if (c.wish.mag < 0.05) return;
+  if (c.tank || c.wish.mag < 0.05) return;
   const target = Math.atan2(-c.wish.x, -c.wish.z);
   const diff = wrapAngle(target - c.p.yaw);
   const max = tuning.turnSpeed * c.dt;

@@ -5,7 +5,7 @@
 import type { InputFrame } from '../../core/input-frame';
 import type { PlayerMode } from '../state';
 import type { World } from '../world';
-import { makeCtx, type Ctx } from './context';
+import { makeCtx, tankTurn, type Ctx } from './context';
 import { air } from './modes/air';
 import { ground } from './modes/ground';
 import { climb, hang } from './modes/hang';
@@ -42,6 +42,7 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
   p.sinceGround = p.mode === 'ground' ? 0 : p.sinceGround + dt;
   p.modeTime += dt;
   const before = p.mode;
+  tankTurn(c);
   MODES[p.mode](c);
   if (p.mode !== before)
     world.events.emit({ type: 'player.mode', tick: world.tick, from: before, to: p.mode });

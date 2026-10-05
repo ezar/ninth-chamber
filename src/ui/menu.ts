@@ -76,6 +76,8 @@ export interface MenuCallbacks {
     autoGrain(): boolean;
     autoSharpen(): boolean;
   };
+  /** Whether classic mode is unlocked (the campaign was finished). No row until it is. */
+  classicUnlocked?(): boolean;
   /** Nora's ideas (sim/hints): whether she has one now, and the next one. No menu item without it. */
   hint?: {
     available(): boolean;
@@ -760,6 +762,18 @@ export class Menu {
         () => t('options.tutorialHints.hint'),
       ),
     );
+    if (this.cb.classicUnlocked?.())
+      this.addRow(
+        toggleRow(
+          'options.classic',
+          () => s.classic,
+          (v) => {
+            s.classic = v;
+            this.cb.change('classic');
+          },
+          () => t('options.classic.hint'),
+        ),
+      );
     this.addRow(
       choiceRow<Language>(
         'options.language',

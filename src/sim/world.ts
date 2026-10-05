@@ -40,6 +40,11 @@ export interface World {
   /** Which ending the level ended with (`level.end <ending>`, chamber IX), or null. */
   ending: Ending | null;
   grid: GridQuery;
+  /**
+   * Classic mode (spec §5, §18): tank controls and no assists. Set by the game from the player's
+   * option; not part of the state, so saves and replays are the same either way.
+   */
+  classic: boolean;
 }
 
 const tileKey = (cx: number, cz: number): string => `${cx},${cz}`;
@@ -189,6 +194,7 @@ export function createWorld(level: Level, seed = 1): World {
     ended: false,
     ending: null,
     grid: null as unknown as GridQuery,
+    classic: false,
   };
   world.grid = makeGrid(world);
   return world;

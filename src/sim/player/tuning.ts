@@ -20,6 +20,8 @@ export const tuning = {
   accel: 12,
   /** Turn rate towards the movement direction (rad/s). */
   turnSpeed: 12,
+  /** Classic mode's tank controls (spec §5): how fast the sides turn her on the spot (rad/s). */
+  tankTurnSpeed: 3.5,
 
   /** Gravity (m/s²). */
   gravity: 24,

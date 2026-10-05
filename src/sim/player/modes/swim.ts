@@ -184,7 +184,7 @@ function roll(c: Ctx): boolean {
 }
 
 function turn(c: Ctx): void {
-  if (c.wish.mag < 0.05) return;
+  if (c.tank || c.wish.mag < 0.05) return;
   const target = Math.atan2(-c.wish.x, -c.wish.z);
   const diff = wrapAngle(target - c.p.yaw);
   const max = S.swimTurn * c.dt;

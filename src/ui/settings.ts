@@ -69,6 +69,11 @@ export interface Settings {
   touchLayout: TouchLayout;
   /** Tips on how to play (Nora's remarks about each chamber always show). */
   tutorialHints: boolean;
+  /**
+   * Classic mode (spec §5, §18): tank controls and no assists. The option shows once the
+   * campaign has been finished; until then the game plays assisted whatever this says.
+   */
+  classic: boolean;
   /** Null follows the browser. */
   language: Language | null;
   /** The player's key and gamepad bindings over the defaults (core/bindings.ts). */
@@ -121,6 +126,7 @@ export function defaultSettings(prefersReducedMotion = false): Settings {
     touchOpacity: 1,
     touchLayout: {},
     tutorialHints: true,
+    classic: false,
     language: null,
     bindings: noOverrides(),
   };
@@ -232,6 +238,7 @@ export function loadSettings(
     ),
     touchLayout: r.touchLayout === undefined ? defaults.touchLayout : touchLayout(r.touchLayout),
     tutorialHints: bool(r.tutorialHints, defaults.tutorialHints),
+    classic: bool(r.classic, defaults.classic),
     language: LANGUAGES.includes(r.language as Language) ? (r.language as Language) : defaults.language,
     bindings: r.bindings === undefined ? defaults.bindings : sanitizeBindings(r.bindings),
   };

@@ -1146,6 +1146,13 @@ body.reduce-motion #start-seal.open .seal-svg path {
   letter-spacing: 0.06em;
 }
 
+#end-unlock {
+  margin: 10px 0 0;
+  color: var(--ui-amber);
+  font: 500 12px var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
 #end-best .tag {
   padding: 2px 8px;
   border: 1px solid var(--ui-amber);

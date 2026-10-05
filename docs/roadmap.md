@@ -2,7 +2,7 @@
 
 Agreed with the owner on 2026-10-04, after 0.9.0: the campaign is complete (I to IX), and 1.0 is the release that can be put in front of people. The roadmap to 0.9.0 is closed; its record, with the owner's four decisions on chamber IX, is in the changelog (0.8.5 to 0.9.0).
 
-**Status:** 0.9.5 and 0.9.6 released; 1.0 waits on the owner's part.
+**Status:** 0.9.5 and 0.9.6 released, and the open decisions of spec §18 settled in 0.9.12; 1.0 waits on the owner's part.
 
 ## 0.9.5 · The Ninth Chamber in full, its own music, golden replays
 
@@ -24,7 +24,11 @@ Agreed with the owner on 2026-10-04, after 0.9.0: the campaign is complete (I to
 - the name search (EUIPO, USPTO), and the final name;
 - the licence (docs/license.md);
 - the owner's models (docs/art/models-brief.md), or the decision to ship with the stand-ins;
-- the open decisions of spec §18: adaptive hints, the touch joystick, the classic mode, right-click to shoot.
+- ~~the open decisions of spec §18~~: settled by the owner on 2026-10-05 (0.9.12):
+  - hints: pregenerated only, no adaptive hints (no API calls);
+  - the touch joystick: floating, where the thumb lands (as built since 0.1);
+  - shooting on a computer: right-click as well as F (as built);
+  - classic mode (tank controls, no assists): unlocked by finishing the campaign.
 
 ## How it will be built
 

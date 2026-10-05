@@ -40,7 +40,7 @@ import { PlaytestLog, clearSessions, exportLog, loadSessions } from './ui/playte
 import { browserSaveStore } from './ui/save-store';
 import { inventoryEntries } from './ui/inventory';
 import { setLabelBindings } from './ui/control-labels';
-import { browserProgressStorage, loadReached, markEnding, markReached } from './ui/progress';
+import { browserProgressStorage, loadEndings, loadReached, markEnding, markReached } from './ui/progress';
 import { Hud, type Device } from './ui/hud';
 import { CaptionView } from './ui/caption-view';
 import { applyStaticStrings, isStringKey, pickLocale, setLocale, t, type StringKey } from './ui/i18n';
@@ -131,6 +131,8 @@ async function main(): Promise<void> {
   const chamber = chamberOf(level.id);
   const progress = browserProgressStorage();
   markReached(progress, level.id);
+  /** Classic mode opens once the campaign has been finished (spec §18): any ending. */
+  let classicUnlocked = loadEndings(progress).size > 0;
   const playable = new Set(levelIds());
 
   // The automatic save (spec §9): written at checkpoints and when the page goes
@@ -559,6 +561,7 @@ async function main(): Promise<void> {
     },
     change: applySetting,
     vibration: { get: hapticsEnabled, set: setHapticsEnabled },
+    classicUnlocked: () => classicUnlocked,
     arrangeTouch: () =>
       touchEditor.show(settings.touchLayout, (layout) => {
         settings.touchLayout = layout;
@@ -952,9 +955,11 @@ async function main(): Promise<void> {
       // The next chamber is reached: the map opens it, and the end screen offers it.
       const next = nextChamber(level.id)?.level;
       if (next && playable.has(next)) markReached(progress, next);
-      // The Ninth Chamber's ending is remembered with the campaign's progress.
-      if (world.ending) markEnding(progress, world.ending);
-      endScreen.show(world, (id) => playable.has(id));
+      // The Ninth Chamber's ending is remembered with the campaign's progress; the first one
+      // opens classic mode.
+      const firstEnding = world.ending !== null && !classicUnlocked;
+      if (world.ending) classicUnlocked = markEnding(progress, world.ending).size > 0;
+      endScreen.show(world, (id) => playable.has(id), firstEnding);
       playtest.save();
     }
   };
@@ -997,6 +1002,7 @@ async function main(): Promise<void> {
     if (running && camera.focusing && (tapped !== 0 || Math.hypot(raw.moveX, raw.moveY) > 0.5))
       camera.skipFocus();
     if (isPressed(input, 'recenter')) camera.recenter(world.state.player.yaw);
+    world.classic = settings.classic && classicUnlocked;
     if (running) stepWorld(world, input);
     bus.dispatch(world.events.drain());
 
@@ -1045,6 +1051,8 @@ async function main(): Promise<void> {
       z: prev.pos.z + (curr.pos.z - prev.pos.z) * alpha,
     };
     camera.aiming = p.weapon.drawn && (p.mode === 'ground' || p.mode === 'air');
+    // Tank controls turn her on the spot: the camera keeps behind her.
+    camera.chase = world.classic ? p.yaw : null;
     // The room's framing (the Wind Stair's shaft looks up or down, and has fixed shots).
     camera.setFraming(world.level.roomAt(Math.floor(at.x / 2), Math.floor(at.z / 2))?.camera ?? null);
     camera.update(

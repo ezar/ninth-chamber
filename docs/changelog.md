@@ -1,5 +1,22 @@
 # Changelog
 
+## Version 0.9.12 (2026-10-05): The owner's decisions, and classic mode
+
+The open decisions of spec §18, settled by the owner:
+
+- **Hints: pregenerated only.** No adaptive hints and no calls to an API. Nora's ideas stay the ones written per puzzle.
+- **Touch joystick: floating.** It appears where the left thumb lands, as it has since 0.1.
+- **Shooting on a computer: right-click as well as F**, as built.
+- **Classic mode: unlocked by finishing the campaign.**
+
+Classic mode (spec §5 "Esquemas de control" and "Ayudas"):
+
+- **Unlocking it.** The first ending of the campaign, either one, unlocks it. The end screen says so, and Options → Accessibility gains a _Classic mode_ row. Until then the game plays assisted whatever the setting says.
+- **Tank controls.** Up runs the way Nora faces, down steps back without turning round, and the sides turn her on the spot, also when swimming. Hanging, on a wall and in the air, the sides move her left and right of her own facing. The camera keeps behind her, unless the player is looking round.
+- **No assists.** There is no coyote time after running off an edge and no jump buffer before landing. Action must be held to grab a ledge.
+- **In the simulation** it is `world.classic`, set by the game from the option. It is not part of the state, so saves and golden replays are the same either way.
+- **Tests**: tests/classic-mode.test.ts (tank controls, each assist on by default and off in classic mode) and tests/camera-framing.test.ts (the camera behind her).
+
 ## Version 0.9.11 (2026-10-05): A missing wall clip
 
 - **A climbing direction whose clip did not load fades to the idle.** A missing loop no longer takes weight from the idle, which had left the previous direction's clip frozen at full strength until it popped to the idle.
