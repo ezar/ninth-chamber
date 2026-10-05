@@ -8,6 +8,8 @@
  * - hang: hanging idle and shimmy left / right matched to the sideways speed;
  * - climb: braced hang to crouch, timed to the simulation's climb and its
  *   root motion;
+ * - wall (a wall of roots): an idle on the face, blended into climbing up,
+ *   down, left or right as she moves, the cadence matched to her speed;
  * - block and push: pushing, one cycle per push; pull: pulling a heavy object;
  * - pickup: picking up, fitted to the pickup time;
  * - dead: dying;
@@ -18,7 +20,7 @@
  *   then the climb, timed to the simulation's climb-out;
  * - hurt: a hit reaction over the upper body when health drops.
  *
- * The procedural rig (nora.ts) keeps the mode no clip fits (lever) and
+ * The procedural rig (nora.ts) keeps the modes no clip fits (lever) and
  * any clip that failed to load, with short cross-fades between sources.
  *
  * Upper-body hook (aiming): `setProceduralOverride` blends the procedural
@@ -52,6 +54,11 @@ export const CLIP_NAMES = [
   'shimmy_left',
   'shimmy_right',
   'climb',
+  'wall_idle',
+  'wall_up',
+  'wall_down',
+  'wall_left',
+  'wall_right',
   'push',
   'pull',
   'pickup',
@@ -106,6 +113,9 @@ const LAND_TIME = 0.75;
 /** Shimmy playback: fastest rate, and the sideways speed (m/s) at which it is fully in. */
 const SHIMMY_MAX_RATE = 2.2;
 const SHIMMY_FULL = 0.3;
+/** Climbing a wall: fastest playback rate, and the speed along the face (m/s) at which a move is fully in. */
+const WALL_MAX_RATE = 3.5;
+const WALL_FULL = 0.3;
 /** Hit reaction: playback rate and upper-body weight. */
 const HIT_RATE = 1.4;
 const HIT_WEIGHT = 0.7;
@@ -192,6 +202,12 @@ export class NoraAnimator {
   private shimmyPhase = 0;
   private shimmyW = 0;
   private shimmyDir = 1;
+  /** Vertical root speed (m/s), smoothed: climbing up or down a wall. */
+  private velY = 0;
+  private wallT = 0;
+  private wallPhase = 0;
+  private wallW = 0;
+  private wallMove: 'wall_up' | 'wall_down' | 'wall_left' | 'wall_right' = 'wall_up';
   private lastHealth = Number.NaN;
   /** Cross-fade time of the current mode change (s). */
   private fadeTime = FADE;
@@ -283,6 +299,7 @@ export class NoraAnimator {
       else if (mode === 'ground' && Math.abs(rootPos.y - this.lastRoot.y) > STEP_SNAP)
         this.stepOffset -= rootPos.y - this.lastRoot.y;
       const d = this._d.subVectors(rootPos, this.lastRoot).divideScalar(dt).applyAxisAngle(UP, -rootYaw);
+      this.velY += (d.y - this.velY) * (1 - Math.exp(-dt / SPEED_TAU));
       d.y = 0;
       this.vel.lerp(d, 1 - Math.exp(-dt / SPEED_TAU));
     }
@@ -311,6 +328,9 @@ export class NoraAnimator {
         break;
       case 'climb':
         clipDriven = this.waterClimb ? this.climbOut(p, pose.climbT) : this.climb(p, pose.climbT);
+        break;
+      case 'wall':
+        clipDriven = this.wall(p, dt);
         break;
       case 'swim':
       case 'dive':
@@ -430,6 +450,39 @@ export class NoraAnimator {
       this.shimmyPhase = (this.shimmyPhase + (dt * rate) / shimmy.duration) % 1;
       shimmy.samplePhase(this.shimmyPhase, this.tmp.rot, this.tmp.hips);
       p.blend(p, this.tmp, this.shimmyW);
+    }
+    return true;
+  }
+
+  /**
+   * On a wall of roots: the idle on the face, blended into the climbing loop of the way she is
+   * moving (up, down, left or right, whichever is fastest), its cadence matched to her speed.
+   */
+  private wall(p: AnimPose, dt: number): boolean {
+    const c = this.clips;
+    if (!c.wall_idle) return false;
+    this.wallT += dt;
+    c.wall_idle.sample(this.wallT, p.rot, p.hips);
+    const up = this.velY;
+    const side = this.vel.x;
+    const speed = Math.max(Math.abs(up), Math.abs(side));
+    if (speed > 0.05)
+      this.wallMove =
+        Math.abs(up) >= Math.abs(side)
+          ? up > 0
+            ? 'wall_up'
+            : 'wall_down'
+          : side > 0
+            ? 'wall_right'
+            : 'wall_left';
+    const move = c[this.wallMove];
+    const target = Math.min(1, speed / WALL_FULL);
+    this.wallW += (target - this.wallW) * (1 - Math.exp(-dt / 0.08));
+    if (move && this.wallW > 0.001) {
+      const rate = Math.min(WALL_MAX_RATE, speed / Math.max(0.05, Math.abs(move.speed)));
+      this.wallPhase = (this.wallPhase + (dt * rate) / move.duration) % 1;
+      move.samplePhase(this.wallPhase, this.tmp.rot, this.tmp.hips);
+      p.blend(p, this.tmp, this.wallW);
     }
     return true;
   }

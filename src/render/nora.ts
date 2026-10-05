@@ -2305,8 +2305,8 @@ export class NoraModel {
 
   /**
    * On a wall of roots: hands and feet on the face, each hand reaching up in
-   * turn as she moves, the foot on the other side stepping with it. A stand-in
-   * until the Mixamo climbing clips arrive.
+   * turn as she moves, the foot on the other side stepping with it. The
+   * fallback when the Mixamo climbing clips (anim/animator.ts) are not loaded.
    */
   private evalWall(pose: NoraPose, p: Pose): void {
     const t = pose.modeTime;

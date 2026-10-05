@@ -23,6 +23,11 @@ const loops = new Set([
   'pistol_run',
   'tread',
   'swim',
+  'wall_idle',
+  'wall_up',
+  'wall_down',
+  'wall_left',
+  'wall_right',
 ]);
 
 describe('motion clip data', () => {
