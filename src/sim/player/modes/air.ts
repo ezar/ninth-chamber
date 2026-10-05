@@ -1,7 +1,7 @@
 /** Air mode: gravity, air control, ledge grabs and landing (with fall damage). */
 import { ledgeAhead, sweep } from '../../grid/collision';
 import { BLOCK, DIR_VEC, yawToDir } from '../../grid/units';
-import { die, emit, hurt, setMode, type Ctx } from '../context';
+import { die, emit, hurt, reachesForHold, setMode, type Ctx } from '../context';
 import { windAt } from '../../mechanisms/wind';
 import { tuning } from '../tuning';
 import { jump } from './ground';
@@ -75,8 +75,7 @@ export function air(c: Ctx): void {
 function tryGrab(c: Ctx, rising: boolean): boolean {
   const { p, q } = c;
   if (p.sinceRelease < tuning.regrabDelay) return false;
-  // Auto-grab (an assist, on by default) grabs after a jump without holding Action.
-  if (!c.held('action') && (!p.jumped || !c.assisted)) return false;
+  if (!reachesForHold(c)) return false;
   const dir = yawToDir(p.yaw);
   const ledge = ledgeAhead(q, p.pos.x, p.pos.z, dir);
   if (!ledge || ledge.distance - tuning.radius > tuning.grabReach) return false;

@@ -135,3 +135,49 @@ describe('assists, on by default and off in classic mode', () => {
     expect(v.state.player.mode).toBe('hang');
   });
 });
+
+describe('auto-grab of ropes and climbable walls', () => {
+  /** Jumps up under a rope (lower end at 6 clicks) without Action; returns the modes she went through. */
+  function ropeJump(w: World): string[] {
+    runUntil(w, frame({ y: 1, held: ['walk'] }), (x) => x.state.player.pos.z <= 5.05, 200);
+    run(w, frame(), 20);
+    stepWorld(w, frame({ pressed: ['jump'] }));
+    const modes: string[] = [];
+    for (let i = 0; i < 90; i++) {
+      stepWorld(w, frame());
+      modes.push(w.state.player.mode);
+    }
+    return modes;
+  }
+  const ropeRoom = (): World =>
+    testLevel(['#####', '#...#', '#.R.#', '#...#', '#.S.#', '#####'], {
+      legend: { R: 0 },
+      entities: [{ id: 'rope', type: 'rope', room: 'r', at: [2, 2], h: 6 }],
+    });
+
+  it('grabs a rope after a jump without Action; not in classic mode', () => {
+    expect(ropeJump(ropeRoom())).toContain('rope');
+    expect(ropeJump(classic(ropeRoom()))).not.toContain('rope');
+  });
+
+  /** A 6 m root wall to the north whose south face is climbable; jumps at it without Action. */
+  function wallJump(w: World): void {
+    runUntil(w, frame({ y: 1 }), (x) => x.state.player.pos.z < 3 * 2 + 0.6, 120);
+    stepWorld(w, frame({ y: 1, pressed: ['jump'] }));
+    runUntil(w, frame({ y: 1 }), (x) => x.state.player.mode !== 'air', 120);
+  }
+  const rootWall = (): World =>
+    testLevel(['######', '#RRRP#', '#....#', '#.S..#', '######'], {
+      ceil: 30,
+      legend: { R: { floor: 12, flags: ['climbS'] }, P: 12 },
+    });
+
+  it('catches a climbable face after a jump without Action; not in classic mode', () => {
+    const a = rootWall();
+    wallJump(a);
+    expect(a.state.player.mode).toBe('wall');
+    const b = classic(rootWall());
+    wallJump(b);
+    expect(b.state.player.mode).toBe('ground');
+  });
+});

@@ -1,5 +1,11 @@
 # Changelog
 
+## Version 0.9.13 (2026-10-05): Classic mode fixes
+
+- **No auto-grab of ropes and climbable walls in classic mode.** Action must be held for them too, as for ledges. One rule now decides all three grabs (`reachesForHold`).
+- **The Classic mode row appears as soon as the campaign is finished.** Before, it showed only after a reload. The row is always built, and shown each time the menu opens once an ending has been reached.
+- **Tests**: tests/classic-mode.test.ts (ropes and walls, with and without assists). The menu row was checked in the browser, ending a chamber without a reload.
+
 ## Version 0.9.12 (2026-10-05): The owner's decisions, and classic mode
 
 The open decisions of spec §18, settled by the owner:

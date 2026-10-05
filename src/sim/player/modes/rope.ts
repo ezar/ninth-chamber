@@ -5,14 +5,14 @@
 import { setSignal } from '../../logic/rules';
 import { BLOCK, cellCenter } from '../../grid/units';
 import type { RopeActor } from '../../state';
-import { emit, setMode, type Ctx } from '../context';
+import { emit, reachesForHold, setMode, type Ctx } from '../context';
 import { tuning } from '../tuning';
 
 /** In the air: grabs a rope within reach of her hands. */
 export function tryGrabRope(c: Ctx): boolean {
   const { p, world } = c;
   if (p.sinceRelease < tuning.regrabDelay) return false;
-  if (!c.held('action') && !p.jumped) return false;
+  if (!reachesForHold(c)) return false;
   const cx = Math.floor(p.pos.x / BLOCK);
   const cz = Math.floor(p.pos.z / BLOCK);
   const hands = p.pos.y + tuning.handHeight;
