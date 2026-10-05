@@ -83,9 +83,11 @@ export class EndScreen {
 
   /**
    * Shows the end of `world`'s level. `playable` says whether a level id can
-   * be played in this build (the teaser says "coming soon" otherwise).
+   * be played in this build (the teaser says "coming soon" otherwise). `unlocked`: this ending
+   * was the campaign's first, and opened classic mode.
    */
-  show(world: World, playable: (levelId: string) => boolean = () => false): void {
+  show(world: World, playable: (levelId: string) => boolean = () => false, unlocked = false): void {
+    $('end-unlock').hidden = !unlocked;
     const { stats, level } = world;
     this.showStory(level.id, playable, world.ending);
     const count = (type: string): number => level.entities.filter((e) => e.type === type).length;

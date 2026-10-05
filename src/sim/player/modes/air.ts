@@ -15,7 +15,7 @@ export function air(c: Ctx): void {
   const y0 = p.pos.y;
 
   // Coyote time: a jump just after running off an edge still counts.
-  if (!p.jumped && p.sinceGround <= tuning.coyoteTime && c.pressed('jump')) {
+  if (!p.jumped && c.assisted && p.sinceGround <= tuning.coyoteTime && c.pressed('jump')) {
     jump(c);
     return;
   }
@@ -76,7 +76,7 @@ function tryGrab(c: Ctx, rising: boolean): boolean {
   const { p, q } = c;
   if (p.sinceRelease < tuning.regrabDelay) return false;
   // Auto-grab (an assist, on by default) grabs after a jump without holding Action.
-  if (!c.held('action') && !p.jumped) return false;
+  if (!c.held('action') && (!p.jumped || !c.assisted)) return false;
   const dir = yawToDir(p.yaw);
   const ledge = ledgeAhead(q, p.pos.x, p.pos.z, dir);
   if (!ledge || ledge.distance - tuning.radius > tuning.grabReach) return false;

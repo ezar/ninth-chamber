@@ -43,6 +43,10 @@ export const cameraTuning = {
   followDelay: 1.4,
   /** Maximum lazy-follow turn rate at full running speed (rad/s). */
   followRate: 1.1,
+  /** Classic mode's tank controls: look input this recent leaves the camera alone (s)... */
+  chaseDelay: 0.6,
+  /** ...after which it eases behind the way she faces at this rate (1/s). */
+  chaseRate: 3,
   /** Pitch the lazy follow settles to. */
   restPitch: 14 * DEG,
   /** Seconds of velocity the framing leads by. */
@@ -96,6 +100,11 @@ export class OrbitCamera {
   private shoulderNow = cameraTuning.shoulder;
   /** Pistols drawn: set by the game each frame. */
   aiming = false;
+  /**
+   * Classic mode's tank controls: the yaw the camera keeps behind (her facing), set by the game
+   * each frame; null for the free camera. Without it, turning on the spot would turn her away.
+   */
+  chase: number | null = null;
   private aimNow = 0;
   private readonly lead = { x: 0, z: 0 };
   /** The current room's framing, the distance eased towards it, and a fixed shot's weight. */
@@ -254,11 +263,19 @@ export class OrbitCamera {
       if (Math.abs(d) < 0.01) this.autoYaw = null;
       this.sinceLook = cameraTuning.followDelay;
     }
+    if (
+      this.chase !== null &&
+      this.autoYaw === null &&
+      !this.focus &&
+      this.sinceLook > cameraTuning.chaseDelay
+    )
+      this.yaw += wrap(this.chase - this.yaw) * Math.min(1, dt * cameraTuning.chaseRate);
     const speed = Math.hypot(motion.vx, motion.vz);
     // Lazy follow: once the player stops steering the camera, drift behind the
     // direction of travel. sin() keeps it still when running straight at the
     // lens and strongest when crossing the screen.
     if (
+      this.chase === null &&
       this.autoYaw === null &&
       !this.focus &&
       !hanging &&

@@ -21,7 +21,7 @@ export function ground(c: Ctx): void {
   if (action && tryGrabBlock(c)) return;
   if (walk && action && tryDropToHang(c)) return;
 
-  if (p.sinceJumpPressed <= tuning.jumpBuffer) {
+  if (p.sinceJumpPressed <= (c.assisted ? tuning.jumpBuffer : 0)) {
     jump(c);
     return;
   }
@@ -122,7 +122,8 @@ export function jump(c: Ctx): void {
     p.vel.z = f.z * s;
     kind = 'running';
   } else {
-    p.yaw = Math.atan2(-c.wish.x, -c.wish.z);
+    // Tank controls jump back without turning round.
+    if (!c.tank) p.yaw = Math.atan2(-c.wish.x, -c.wish.z);
     p.vel.x = (c.wish.x / c.wish.mag) * tuning.standJumpSpeed;
     p.vel.z = (c.wish.z / c.wish.mag) * tuning.standJumpSpeed;
     kind = 'forward';

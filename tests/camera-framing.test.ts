@@ -140,3 +140,28 @@ describe('room camera entries', () => {
     expect(w.level.rooms[0]?.camera).toBeNull();
   });
 });
+
+describe('camera behind Nora for tank controls', () => {
+  const rows = ['###########', ...Array<string>(12).fill('#.........#'), '###########'];
+  rows[4] = '#.S.......#';
+  const w = testLevel(rows, { ceil: 60 });
+
+  it('turns behind the way she faces, even standing still', () => {
+    const cam = new OrbitCamera();
+    cam.chase = Math.PI / 2;
+    settle(cam, w.grid, 4);
+    expect(
+      Math.abs(Math.atan2(Math.sin(cam.yaw - Math.PI / 2), Math.cos(cam.yaw - Math.PI / 2))),
+    ).toBeLessThan(0.02);
+  });
+
+  it('leaves the camera alone while the player looks around', () => {
+    const cam = new OrbitCamera();
+    cam.chase = Math.PI / 2;
+    cam.look(200, 0, 0);
+    const yaw = cam.yaw;
+    const at = { x: 11, y: 0, z: 13 };
+    cam.update(at, false, w.grid, DT);
+    expect(cam.yaw).toBeCloseTo(yaw, 5);
+  });
+});
