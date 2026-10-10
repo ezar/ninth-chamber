@@ -17,7 +17,8 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { TICK_DT } from '../core/loop';
 import type { EnemyState } from '../sim/state';
 import type { World } from '../sim/world';
-import { ClayView } from './clay';
+import { ClayView, TAMRIT_BONES } from './clay';
+import { DrivenSkeleton, loadSkinnedAsset, type SkinnedAsset } from './driven-skeleton';
 import { AutomatonView } from './automaton';
 import { ScorpionView } from './scorpion';
 import { BirdView } from './bird';
@@ -848,7 +849,7 @@ interface Slot {
   /** Displayed position and yaw, smoothed between ticks. */
   pos: THREE.Vector3;
   yaw: number;
-  /** A skinned jackal, or a view the skinned model never replaces (Tamrit). */
+  /** A skinned model (jackal or Tamrit), or a view no model replaces. */
   skinned: boolean;
   /** Body centre above the feet, for markers (m). */
   height: number;
@@ -862,11 +863,30 @@ export class EnemyViews {
   readonly group = new THREE.Group();
   private readonly slots = new Map<string, Slot>();
   private asset: JackalAsset | null = null;
+  /** Tamrit's Meshy model, when it loaded with every bone the clay view drives. */
+  private clayAsset: SkinnedAsset | null = null;
 
-  constructor(url: string | null) {
+  constructor(
+    private readonly url: string | null,
+    private readonly clayUrl: string | null = null,
+  ) {}
+
+  /**
+   * Starts loading the skinned models (call once KTX2 is set up, after the renderer has
+   * started). Enemies show their stand-ins until a model arrives, then swap to it.
+   */
+  load(): void {
+    const { url, clayUrl } = this;
     if (url)
       void loadJackalAsset(url).then((a) => {
         this.asset = a;
+      });
+    if (clayUrl)
+      void loadSkinnedAsset(clayUrl).then((a) => {
+        const missing = a ? DrivenSkeleton.missing(a.scene, TAMRIT_BONES) : [];
+        if (missing.length)
+          console.info(`${clayUrl} lacks the bones ${missing.join(', ')}; using the stand-in.`);
+        else this.clayAsset = a;
       });
   }
 
@@ -895,7 +915,8 @@ export class EnemyViews {
     world.state.enemies.forEach((e, i) => {
       seen.add(e.id);
       let slot = this.slots.get(e.id);
-      if (slot && this.asset && !slot.skinned && e.type === 'jackal') {
+      const modelled = (e.type === 'jackal' && this.asset) || (e.type === 'clay' && this.clayAsset);
+      if (slot && modelled && !slot.skinned) {
         // The skinned model arrived: swap the procedural view out.
         this.group.remove(slot.view.root);
         slot.view.dispose();
@@ -904,7 +925,7 @@ export class EnemyViews {
       if (!slot) {
         const view: JackalView =
           e.type === 'clay'
-            ? new ClayView()
+            ? new ClayView(this.clayAsset)
             : e.type === 'automaton'
               ? new AutomatonView()
               : e.type === 'bird'
@@ -918,7 +939,7 @@ export class EnemyViews {
           view,
           pos: new THREE.Vector3(e.pos.x, e.pos.y, e.pos.z),
           yaw: e.yaw,
-          skinned: !!this.asset || e.type !== 'jackal',
+          skinned: e.type === 'jackal' ? !!this.asset : e.type === 'clay' ? !!this.clayAsset : true,
           height:
             e.type === 'clay'
               ? 1.3

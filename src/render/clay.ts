@@ -1,18 +1,45 @@
 /**
- * Tamrit's body (spec §19), the stand-in until the owner's model arrives
- * (docs/art/models-brief.md, tamrit.glb): a tall figure of wet, cracked clay
- * built from rounded pieces on a small joint hierarchy, with a stylus in its
- * right hand and an ember-red core in its chest. Procedural animation follows
- * the simulation: the slow walk, the raised arm before a strike, the slump
- * into a heap when shot to pieces (and rising out of it again), and sinking
- * away for good when the water dissolves it.
+ * Tamrit's body (spec §19): a tall figure of wet, cracked clay on a small
+ * joint hierarchy, with a stylus in its right hand and an ember-red core in
+ * its chest. Procedural animation follows the simulation: the slow walk, the
+ * raised arm before a strike, the slump into a heap when shot to pieces (and
+ * rising out of it again), and sinking away for good when the water dissolves
+ * it.
+ *
+ * With the Meshy model (public/models/tamrit.glb, docs/art/meshy-prompts.md)
+ * the joint hierarchy stays as hidden drivers and a DrivenSkeleton lays its
+ * pose on the model's bones; the core keeps glowing in the model's chest.
+ * Without it, the rounded clay pieces built here stand in.
  */
 import * as THREE from 'three/webgpu';
 import type { EnemyState } from '../sim/state';
 import { clayGuardian, enemyTypes } from '../sim/player/tuning';
 import type { JackalView } from './enemies';
+import { DrivenSkeleton, cloneSkinned, type HangRest, type SkinnedAsset } from './driven-skeleton';
 
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
+
+/** Tamrit's height (docs/art/models-brief.md); the model is scaled to it. */
+const HEIGHT = 2.4;
+/** The model's bones and the joint each one follows. */
+export const TAMRIT_BONES = [
+  'Hips',
+  'Spine02',
+  'Head',
+  'RightUpLeg',
+  'LeftUpLeg',
+  'RightArm',
+  'LeftArm',
+  'RightForeArm',
+  'LeftForeArm',
+] as const;
+/** Warms Meshy's pale clay towards the Archive's ochre and burnt red. */
+const MODEL_TINT = new THREE.Color(1.0, 0.86, 0.74);
+/** The model is rigged in an A pose; the stand-in's arms hang a little away from the hips. */
+const HANG: HangRest[] = [
+  { bone: 'LeftArm', toward: 'LeftForeArm', dir: new THREE.Vector3(0.22, -1, 0.04) },
+  { bone: 'RightArm', toward: 'RightForeArm', dir: new THREE.Vector3(-0.22, -1, 0.04) },
+];
 const smooth = (x: number): number => {
   const t = clamp(x, 0, 1);
   return t * t * (3 - 2 * t);
@@ -84,8 +111,13 @@ export class ClayView implements JackalView {
   /** Eased 0 (standing) … 1 (a heap). */
   private heap = 0;
   private sink = 0;
+  /** The Meshy model and what drives it, when it loaded. */
+  private readonly model: THREE.Object3D | null = null;
+  private readonly skeleton: DrivenSkeleton | null = null;
+  /** The mound of wet clay the model sinks into when shot to pieces. */
+  private readonly mound: THREE.Mesh | null = null;
 
-  constructor() {
+  constructor(asset: SkinnedAsset | null = null) {
     const piece = (
       geo: THREE.BufferGeometry,
       parent: THREE.Object3D,
@@ -161,6 +193,60 @@ export class ClayView implements JackalView {
     const [la, lf] = arm(-1);
     this.arms = [ra, la];
     this.forearms = [rf, lf];
+
+    if (asset) {
+      const model = cloneSkinned(asset);
+      model.scale.multiplyScalar(HEIGHT / Math.max(1e-6, asset.height));
+      // glTF models face +Z; the game's figures face -Z.
+      model.rotation.y = Math.PI;
+      model.traverse((o) => {
+        if (o instanceof THREE.Mesh && o.material instanceof THREE.MeshStandardMaterial) {
+          o.material = o.material.clone();
+          o.material.color.multiply(MODEL_TINT);
+          // Meshy marks the clay as metal, which renders it near black without reflections.
+          o.material.metalness = 0;
+          o.material.metalnessMap = null;
+        }
+      });
+      // The rounded pieces become hidden drivers; the core stays, in the model's chest.
+      this.body.traverse((o) => {
+        if (o instanceof THREE.Mesh && o !== this.core) o.visible = false;
+      });
+      this.core.position.set(0, 0.5, -0.14);
+      // Beside the body, not in it: the body squashes into the heap, the model sinks instead.
+      // Its frame matches the body's, which never turns.
+      this.root.add(model);
+      // Meshy's skeleton stands off the origin: centre its hips over the feet position.
+      this.root.updateMatrixWorld(true);
+      const hips = model.getObjectByName('Hips');
+      if (hips) {
+        const at = this.root.worldToLocal(hips.getWorldPosition(new THREE.Vector3()));
+        model.position.x -= at.x;
+        model.position.z -= at.z;
+      }
+      this.model = model;
+      const moundGeo = new THREE.SphereGeometry(0.7, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+      this.geometries.push(moundGeo);
+      this.mound = piece(moundGeo, this.root, 0, 0, 0);
+      this.mound.visible = false;
+      const [rUp, lUp] = this.legs;
+      this.skeleton = new DrivenSkeleton(
+        model,
+        this.body,
+        {
+          Hips: this.hips,
+          Spine02: this.torso,
+          Head: this.head,
+          RightUpLeg: rUp.pivot,
+          LeftUpLeg: lUp.pivot,
+          RightArm: ra.pivot,
+          LeftArm: la.pivot,
+          RightForeArm: rf,
+          LeftForeArm: lf,
+        },
+        HANG,
+      );
+    }
   }
 
   flinch(): void {
@@ -209,12 +295,26 @@ export class ClayView implements JackalView {
     this.root.scale.setScalar(1 - this.sink * 0.6);
     this.root.visible = this.sink < 1;
 
+    if (this.model && this.skeleton) {
+      // The model bends over and sinks into a spreading mound of clay.
+      this.model.position.y = this.body.position.y - h * HEIGHT * 0.62;
+      this.skeleton.apply();
+    }
+    if (this.mound) {
+      this.mound.visible = h > 0.01;
+      this.mound.scale.set(0.3 + h, h * 0.55, 0.3 + h);
+    }
+
     // The core glows while it hunts, dims in the heap and goes out in the water.
     const glow = e.dissolved ? 0 : crumbled ? 0.3 : 1.4 + 0.3 * Math.sin(this.stride * 0.5);
     this.coreMat.emissiveIntensity += (glow - this.coreMat.emissiveIntensity) * (1 - Math.exp(-dt * 5));
   }
 
   dispose(): void {
+    // The model's geometry is shared with the loaded asset; only its tinted materials are ours.
+    this.model?.traverse((o) => {
+      if (o instanceof THREE.Mesh) (o.material as THREE.Material).dispose();
+    });
     for (const g of this.geometries) g.dispose();
     this.material.map?.dispose();
     this.material.dispose();

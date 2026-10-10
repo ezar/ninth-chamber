@@ -90,11 +90,13 @@ One prompt for each model in [models-brief.md](models-brief.md), which gives the
 
 **Rigs.** Humanoid guardians (Tamrit, Bazûr, the automaton, Anzur): Meshy's humanoid auto-rig, A-pose. The bird and the scorpion: no rig, Claude rigs them. Statues and props: no rig.
 
+**Guardians: from a concept image.** Meshy's Text to 3D turns any humanoid into a person in clay- or bronze-coloured clothes. What works is two steps: Text to Image first (A-pose, front view, plain grey background; a few candidates for the owner to pick from), then Image to 3D from the chosen image with the texture on, and the humanoid auto-rig on the result. Tamrit was made this way. Claude then runs `pnpm models:fit <rigged.glb> <name>` (drops Meshy's sample animations, resizes the textures, compresses the geometry) and `pnpm textures:ktx2 --only models <name>`. The game drives Meshy's own 24-bone rig (`Hips`, `Spine02`, `Head`, `LeftArm` and so on), so the bone names in models-brief.md do not apply to Meshy models.
+
 **Writing.** Meshy cannot write text: the carved signs come out as invented marks, which is what the game wants. Elena's initials on the ninth pedestal are added by Claude in the texture.
 
 ### Chamber IV · The Clay Archive
 
-**Tamrit, the clay guardian** · `tamrit.glb` · 12k · A-pose, humanoid auto-rig
+**Tamrit, the clay guardian** · `tamrit.glb` · 12k · A-pose, humanoid auto-rig · **in the game since 0.9.16** (made from a concept image, see above)
 
 ```text
 Tall ancient guardian figure made of wet, cracked ochre and burnt-red clay, about 2.4 m tall, slender scribe-like body with long arms, a reed stylus in the right hand, a smooth featureless face with two thin eye slits, deep drying cracks, flakes and drips of clay, a fist-sized glowing amber core visible through a crack in the chest, A-pose with arms slightly away from the body, realistic PBR, game-ready.

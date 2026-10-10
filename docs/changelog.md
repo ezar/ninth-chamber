@@ -1,5 +1,18 @@
 # Changelog
 
+## Version 0.9.16 (2026-10-10): Tamrit's model
+
+**Tamrit, the clay guardian of Chamber IV, has its real model.** It was made with Meshy from a concept image the owner picked: a tall, slender figure of cracked clay with a reed stylus in its right hand. It replaces the figure built from rounded pieces, which stays as the stand-in when the model cannot load.
+
+- **The same movements as before**: the slow walk, the stylus raised before a strike, the head turning towards Nora, the collapse when shot to pieces and the rise out of it. The old joint hierarchy is kept as hidden drivers, and its pose is laid on the model's bones (`src/render/driven-skeleton.ts`). The arms, rigged in an A-pose, are lowered to hang at rest.
+- **The heap**: the model bends over and sinks into a spreading mound of wet clay, instead of squashing.
+- **The core** still glows in its chest, dims in the heap and goes out in the water.
+- **The material**: Meshy marked the clay as metal, which rendered it near black; it is matte now, warmed slightly towards the Archive's ochre.
+- **`pnpm models:fit <meshy.glb> <name>`**: a new script that fits a Meshy model to the game. It drops the sample animations, resizes the textures to 1024 px and compresses the geometry; `pnpm textures:ktx2` runs after it. Tamrit's file is 1.1 MB with 12,400 triangles.
+- **Loading fix**: skinned enemy models now start loading once the KTX2 texture loader is ready. Before, a model with KTX2 textures failed to load and the stand-in showed.
+- **Docs**: `docs/art/meshy-prompts.md` describes the concept-image route for the guardians, and `models-brief.md` marks Tamrit as arrived.
+- **Checked in the browser** in the Clay Archive: Tamrit at rest, walking, striking, and in the heap.
+
 ## Version 0.9.15 (2026-10-05): Licence fixes
 
 - **Every image, screenshot, model, animation, audio or video file made for the game is closed, wherever it is in the repository.** Before, such a file outside the listed asset folders fell under the MIT part. Third-party media keeps its own licence (CC0, CC BY 4.0, Adobe's Mixamo terms), as `LICENSE` says.
