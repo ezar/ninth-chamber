@@ -125,6 +125,8 @@ export class Props {
     fire: number;
   }[] = [];
   private relicMesh: THREE.Mesh | null = null;
+  /** The chamber's relic model once loaded (RELIC_MODELS), until its holder takes it. */
+  private relicModel: THREE.Object3D | null = null;
   /** Pushable blocks are drawn as shelves of tablets (the Clay Archive, spec §19). */
   private get shelves(): boolean {
     return this.level.rooms.some((r) => r.look?.startsWith('archive_'));
@@ -146,7 +148,12 @@ export class Props {
     private readonly level: Level,
     private readonly mats: PropMaterials,
   ) {
-    this.relicLight = new THREE.PointLight(RELIC_TINTS[level.id]?.light ?? '#ffab3d', 0, 14, 2);
+    this.relicLight = new THREE.PointLight(
+      RELIC_TINTS[level.id]?.light ?? RELIC_MODEL_GLOW[level.id] ?? '#ffab3d',
+      0,
+      14,
+      2,
+    );
     this.group.add(this.relicLight);
 
     const flameTex = flameTexture();
@@ -232,7 +239,12 @@ export class Props {
     this.buildCrumbleTiles();
     this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
     const relicModel = RELIC_MODELS[level.id];
-    if (relicModel) void loadStaticModel(relicModel.name).then((m) => this.useRelicModel(m));
+    if (relicModel)
+      void loadStaticModel(relicModel.name).then((m) => {
+        // Kept for the relic's holder if it is not built yet (views are built on the first update).
+        this.relicModel = m;
+        this.useRelicModel();
+      });
   }
 
   /** Swaps the procedural stand-ins for the baked models and dresses the rooms. */
@@ -264,12 +276,13 @@ export class Props {
     this.group.add(dressLevel(this.level, lib, busy));
   }
 
-  /** Swaps the relic's stand-in (or the baked gem) for its chamber's own model. */
-  private useRelicModel(model: THREE.Object3D | null): void {
+  /** Swaps the relic's stand-in (or the baked gem) for its chamber's own model, once both exist. */
+  private useRelicModel(): void {
+    const model = this.relicModel;
     const spec = RELIC_MODELS[this.level.id];
     const relic = [...this.actors.values()].find((a) => a.kind === 'relic');
     const holder = relic && this.actorViews.get(relic.id);
-    if (!model || !spec || !holder) return;
+    if (!model || !spec || !holder || holder.userData.relicModel) return;
     const { root, materials } = fitCopy(model, { height: spec.height, origin: 'centre' });
     const glow = RELIC_TINTS[this.level.id]?.emissive ?? RELIC_MODEL_GLOW[this.level.id] ?? '#f2a93b';
     let mesh: THREE.Mesh | null = null;
@@ -289,6 +302,7 @@ export class Props {
     holder.clear();
     holder.add(root);
     holder.userData.model = true;
+    holder.userData.relicModel = true;
     this.relicMesh = mesh;
     this.relicGain = spec.surface ? 0.08 : 0.22;
   }
@@ -533,6 +547,7 @@ export class Props {
     this.actorViews.set(a.id, holder);
     this.actors.set(a.id, a);
     this.upgrade(holder, a);
+    if (a.kind === 'relic') this.useRelicModel();
     return holder;
   }
 
