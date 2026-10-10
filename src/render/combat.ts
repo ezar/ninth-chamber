@@ -187,8 +187,13 @@ export class CombatView {
   private markerFor: string | null = null;
   private time = 0;
 
-  constructor(jackalUrl: string | null) {
-    this.enemies = new EnemyViews(jackalUrl);
+  /** Starts loading the enemies' skinned models (once KTX2 is set up). */
+  load(): void {
+    this.enemies.load();
+  }
+
+  constructor(jackalUrl: string | null, clayUrl: string | null = null) {
+    this.enemies = new EnemyViews(jackalUrl, clayUrl);
     this.group.add(this.enemies.group, this.light);
 
     const flashTex = canvasTexture(64, (g) => {

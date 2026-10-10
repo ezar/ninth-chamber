@@ -1,7 +1,7 @@
 {
   "name": "ninth-chamber",
   "private": true,
-  "version": "0.9.15",
+  "version": "0.9.16",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
@@ -26,7 +26,8 @@
     "textures:ktx2": "tsx scripts/textures/ktx2.ts",
     "smoke": "tsx scripts/browser/smoke.ts",
     "offline": "tsx scripts/browser/offline.ts",
-    "shots": "tsx scripts/browser/shots.ts"
+    "shots": "tsx scripts/browser/shots.ts",
+    "models:fit": "tsx scripts/models/fit-meshy.ts"
   },
   "dependencies": {
     "three": "^0.186.1",

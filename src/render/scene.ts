@@ -110,8 +110,9 @@ export class GameRenderer {
    * Jackals, pistols, muzzle flashes and the target marker. No jackal model is
    * shipped yet, so the jackals are built in code; pass
    * `${import.meta.env.BASE_URL}models/jackal.glb` once public/models has one.
+   * Tamrit's Meshy model is shipped.
    */
-  readonly combat = new CombatView(null);
+  readonly combat = new CombatView(null, `${import.meta.env.BASE_URL}models/tamrit.glb`);
   /** The torch Nora carries, with its own light (not one of the fire pool's). */
   private readonly torch: TorchView;
   private props: Props | null = null;
@@ -244,8 +245,9 @@ export class GameRenderer {
 
   async init(): Promise<void> {
     await this.renderer.init();
-    // KTX2 textures transcode for this GPU (level surfaces, prop models, Nora).
+    // KTX2 textures transcode for this GPU (level surfaces, prop models, Nora, the guardians).
     setupKtx2(this.renderer);
+    this.combat.load();
     [this.surfaces] = await Promise.all([
       loadSurfaces(),
       this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`, `${import.meta.env.BASE_URL}anim/`),
