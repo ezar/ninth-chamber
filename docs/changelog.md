@@ -10,7 +10,10 @@
 - **The material**: Meshy marked the clay as metal, which rendered it near black; it is matte now, warmed slightly towards the Archive's ochre.
 - **`pnpm models:fit <meshy.glb> <name>`**: a new script that fits a Meshy model to the game. It drops the sample animations, resizes the textures to 1024 px and compresses the geometry; `pnpm textures:ktx2` runs after it. Tamrit's file is 1.1 MB with 12,400 triangles.
 - **Loading fix**: skinned enemy models now start loading once the KTX2 texture loader is ready. Before, a model with KTX2 textures failed to load and the stand-in showed.
-- **Docs**: `docs/art/meshy-prompts.md` describes the concept-image route for the guardians, and `models-brief.md` marks Tamrit as arrived.
+- **Docs**:
+  - `docs/art/meshy-prompts.md` describes the concept-image route for the guardians, and `models-brief.md` marks Tamrit as arrived.
+  - Nora's Meshy prompt keeps the owner's thigh holsters: the shared negative prompt no longer removes them for her.
+  - The Stone Seed's prompt and brief give its nine veins, eight closed and the ninth open, as on the end screen.
 - **Checked in the browser** in the Clay Archive: Tamrit at rest, walking, striking, and in the heap.
 
 ## Version 0.9.15 (2026-10-05): Licence fixes

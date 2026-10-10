@@ -13,7 +13,7 @@ The owner makes these models (Blender, MiniMax or similar). Until each one arriv
 
 ## 0.2.5: Nora's holsters (closed)
 
-The brief asked for the two pistol holsters to move from the thighs to the hips. **The owner decided on 2026-10-10 to keep them on the thighs**, so `nora.glb` stays as it is and nothing is wanted here.
+The brief asked for the two pistol holsters to move from the thighs to the hips. **The owner decided on 2026-10-10 to keep them on the thighs**, so `nora.glb` stays as it is and nothing is wanted here. If Nora is ever regenerated, the holsters stay in: the Meshy prompts say how (meshy-prompts.md, Nora).
 
 ## 0.3.0: Chamber IV, the Clay Archive (spec §19)
 
@@ -65,7 +65,7 @@ The brief asked for the two pistol holsters to move from the thighs to the hips.
 | ---------------- | ----------------------- | --------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `root_kit.glb`   | 2 × 2 × 0.3 each        | ≤ 3 000   | `roots`        | Modular root panels for climbable faces: a 2 m square, tiling up and sideways, pale enough to read against the stone. A plain panel, a top piece that curls over the edge and a bottom piece that spreads into the floor.                                                                |
 | `scorpion.glb`   | about 0.35 × 0.25 × 0.5 | ≤ 6 000   | `body`         | A desert scorpion, dark amber-brown, pincers forward and tail arched over its back, facing -Z. No rig needed: Claude rigs it for the game's procedural animation (legs, pincers, tail).                                                                                                  |
-| `stone_seed.glb` | 0.06 × 0.09 × 0.06      | ≤ 2 000   | `seed`, `glow` | The relic: the Stone Seed, a fist-sized seed of green stone with a warm green glow in its grooves (`glow`, emissive).                                                                                                                                                                    |
+| `stone_seed.glb` | 0.06 × 0.09 × 0.06      | ≤ 2 000   | `seed`, `glow` | The relic: the Stone Seed, a fist-sized seed of green stone with nine veins running from its tip, as on the end screen (`src/ui/relic-figures.ts`): eight thin closed grooves and the ninth an open channel, with a warm green glow in it (`glow`, emissive).                            |
 | Climbing clips   | -                       | -         | -              | Arrived in 0.9.9 (Hanging Idle 1, Climbing Up/Down Wall, Left/Right Shimmy). Still wanted: a shimmy along a wall with the feet on it (the ones in use hang from the hands). The jump back off a wall keeps the standing jump: she turns round in the air, so Jump Backward does not fit. |
 
 ## 0.9.0: Chamber IX, the Ninth Chamber (spec §19)

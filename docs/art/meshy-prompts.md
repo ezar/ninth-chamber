@@ -12,11 +12,13 @@ Prompts for generating placeholder and candidate assets with [Meshy](https://www
 - **Characters:** generate in A-pose, then use Meshy's auto-rigging (humanoid) and export the rigged GLB. Nora's animations come from Mixamo (docs/animation.md); the guardians are animated in code, so they need the rig but no animations.
 - **Licence:** check that your Meshy plan grants commercial use and private assets before shipping anything (free-tier outputs may carry an attribution licence).
 
-Always add the shared negative prompt below.
+Always add the shared negative prompt below, except for Nora (see her section).
 
 **Shared negative prompt:** `cartoon, anime, low detail, blurry texture, extra limbs, deformed hands, text, logo, watermark, turquoise, teal, Lara Croft, Tomb Raider, braid, ponytail, tank top, thigh holsters, twin pistols, shorts, backpack with two straps`
 
 ## Nora Vidal (protagonist)
+
+Nora keeps her two pistol holsters on the thighs, by the owner's choice (models-brief.md, 0.2.5). If she is ever regenerated, take `thigh holsters` and `twin pistols` out of the shared negative prompt for her, and add `two dark leather pistol holsters strapped to the outer thighs` to the prompt below, before the satchel. The other negative terms still apply.
 
 ```text
 Full-body realistic 3D character of Nora Vidal, a 34-year-old Spanish field archaeologist, 1.68 m tall, athletic but not exaggerated, grounded and practical. Sand-olive waxed canvas field jacket with sleeves rolled to the elbow, off-white cotton shirt, tobacco-brown canvas work trousers, ankle-high oiled brown leather boots, a worn saddle-leather satchel on a cross-body strap with a field notebook peeking out, a madder-red cotton neckerchief. Dark brown hair gathered in a low loose knot with a pencil pushed through it. Warm olive skin, calm determined expression, light dust and wear on the clothes. A-pose, arms slightly away from the body, neutral lighting, PBR, game-ready, clean topology for rigging.
@@ -169,7 +171,7 @@ Large desert scorpion about 50 cm long, glossy dark amber-brown armoured shell w
 **The Stone Seed (relic)** · `stone_seed.glb` · 2k · glows green
 
 ```text
-Hero relic: a fist-sized seed 9 cm long carved from polished deep green stone, almond shaped with fine vein-like grooves and a short stone stem, a faint warm green glow inside the grooves, realistic PBR, high detail.
+Hero relic: a fist-sized seed 9 cm long carved from polished deep green stone, almond shaped with a short stone stem, exactly nine grooved veins running from the tip down the sides, eight of them thin closed lines and the ninth a wider open channel, a faint warm green glow inside the open ninth channel, realistic PBR, high detail.
 ```
 
 ### Chamber VI · The Bronze Forge
