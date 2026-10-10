@@ -8,14 +8,12 @@ The owner makes these models (Blender, MiniMax or similar). Until each one arriv
 - **Textures:** PBR in three maps per material, at 1024 px for large props and 512 px for small ones: base colour (sRGB), normal (OpenGL, +Y), and ORM (occlusion R, roughness G, metalness B). Any image format is fine: `pnpm textures:ktx2` turns them into KTX2.
 - **Size:** each `.glb` under 1.5 MB before KTX2; triangles as in the table.
 - **Look:** the palette and materials in [docs/art/README.md](README.md). Chamber IV is ochre and burnt-red clay, dust, and thin shafts of light; chamber VI is black soot and bronze, lit by molten metal. Nothing teal or turquoise.
-- **Originality:** no scans, meshes or textures you do not have the rights to, and nothing from Tomb Raider (spec §18): no thigh holsters, braid or tight turquoise top.
+- **Originality:** no scans, meshes or textures you do not have the rights to, and nothing from Tomb Raider (spec §18): no braid or tight turquoise top. Nora's thigh holsters stay by the owner's choice (see 0.2.5 below); no other model should borrow from that look.
 - **Names:** mesh names as in the table, so the game can find the parts it moves or lights.
 
-## 0.2.5: Nora's holsters on the hips
+## 0.2.5: Nora's holsters (closed)
 
-| File       | What changes                                                                                                                                                                                                                            |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `nora.glb` | The two pistol holsters move from the thighs to the hips (belt level, slightly behind the hip bone). Keep the skeleton, bone names and A-pose exactly as they are (`scripts/character/rig_nora.py`); only the mesh and textures change. |
+The brief asked for the two pistol holsters to move from the thighs to the hips. **The owner decided on 2026-10-10 to keep them on the thighs**, so `nora.glb` stays as it is and nothing is wanted here.
 
 ## 0.3.0: Chamber IV, the Clay Archive (spec §19)
 
@@ -63,10 +61,12 @@ The owner makes these models (Blender, MiniMax or similar). Until each one arriv
 
 ## 0.8.0: Chamber V, the Root Halls (spec §19)
 
-| File           | Size (m, x × y × z) | Triangles | Meshes  | Notes                                                                                                                                                                                                                                                                                    |
-| -------------- | ------------------- | --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `root_kit.glb` | 2 × 2 × 0.3 each    | ≤ 3 000   | `roots` | Modular root panels for climbable faces: a 2 m square, tiling up and sideways, pale enough to read against the stone. A plain panel, a top piece that curls over the edge and a bottom piece that spreads into the floor.                                                                |
-| Climbing clips | -                   | -         | -       | Arrived in 0.9.9 (Hanging Idle 1, Climbing Up/Down Wall, Left/Right Shimmy). Still wanted: a shimmy along a wall with the feet on it (the ones in use hang from the hands). The jump back off a wall keeps the standing jump: she turns round in the air, so Jump Backward does not fit. |
+| File             | Size (m, x × y × z)     | Triangles | Meshes         | Notes                                                                                                                                                                                                                                                                                    |
+| ---------------- | ----------------------- | --------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `root_kit.glb`   | 2 × 2 × 0.3 each        | ≤ 3 000   | `roots`        | Modular root panels for climbable faces: a 2 m square, tiling up and sideways, pale enough to read against the stone. A plain panel, a top piece that curls over the edge and a bottom piece that spreads into the floor.                                                                |
+| `scorpion.glb`   | about 0.35 × 0.25 × 0.5 | ≤ 6 000   | `body`         | A desert scorpion, dark amber-brown, pincers forward and tail arched over its back, facing -Z. No rig needed: Claude rigs it for the game's procedural animation (legs, pincers, tail).                                                                                                  |
+| `stone_seed.glb` | 0.06 × 0.09 × 0.06      | ≤ 2 000   | `seed`, `glow` | The relic: the Stone Seed, a fist-sized seed of green stone with a warm green glow in its grooves (`glow`, emissive).                                                                                                                                                                    |
+| Climbing clips   | -                       | -         | -              | Arrived in 0.9.9 (Hanging Idle 1, Climbing Up/Down Wall, Left/Right Shimmy). Still wanted: a shimmy along a wall with the feet on it (the ones in use hang from the hands). The jump back off a wall keeps the standing jump: she turns round in the air, so Jump Backward does not fit. |
 
 ## 0.9.0: Chamber IX, the Ninth Chamber (spec §19)
 
