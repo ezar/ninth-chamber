@@ -8,14 +8,12 @@ The owner makes these models (Blender, MiniMax or similar). Until each one arriv
 - **Textures:** PBR in three maps per material, at 1024 px for large props and 512 px for small ones: base colour (sRGB), normal (OpenGL, +Y), and ORM (occlusion R, roughness G, metalness B). Any image format is fine: `pnpm textures:ktx2` turns them into KTX2.
 - **Size:** each `.glb` under 1.5 MB before KTX2; triangles as in the table.
 - **Look:** the palette and materials in [docs/art/README.md](README.md). Chamber IV is ochre and burnt-red clay, dust, and thin shafts of light; chamber VI is black soot and bronze, lit by molten metal. Nothing teal or turquoise.
-- **Originality:** no scans, meshes or textures you do not have the rights to, and nothing from Tomb Raider (spec §18): no thigh holsters, braid or tight turquoise top.
+- **Originality:** no scans, meshes or textures you do not have the rights to, and nothing from Tomb Raider (spec §18): no braid or tight turquoise top. Nora's thigh holsters stay by the owner's choice (see 0.2.5 below); no other model should borrow from that look.
 - **Names:** mesh names as in the table, so the game can find the parts it moves or lights.
 
-## 0.2.5: Nora's holsters on the hips
+## 0.2.5: Nora's holsters (closed)
 
-| File       | What changes                                                                                                                                                                                                                            |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `nora.glb` | The two pistol holsters move from the thighs to the hips (belt level, slightly behind the hip bone). Keep the skeleton, bone names and A-pose exactly as they are (`scripts/character/rig_nora.py`); only the mesh and textures change. |
+The brief asked for the two pistol holsters to move from the thighs to the hips. **The owner decided on 2026-10-10 to keep them on the thighs**, so `nora.glb` stays as it is and nothing is wanted here.
 
 ## 0.3.0: Chamber IV, the Clay Archive (spec §19)
 
