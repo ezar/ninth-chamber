@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 0.9.18 (2026-10-10): Automaton model check
+
+- **An automaton model without forearm bones is not used.** The view lowers the A-pose arms towards the forearms, so a model without them now falls back to the stand-in, as Tamrit's and the guardians' already do. Before, it was used with its arms left out in the A-pose.
+
 ## Version 0.9.17 (2026-10-10): Bazûr, the automatons and Anzur
 
 **Three more guardians have their real models.** They were made with Meshy from concept images the owner picked, the same way as Tamrit: Bazûr (B), the workshop automaton (A) and Anzur (B). Each one keeps the movements it had; its old figure stays as the stand-in when the model cannot load.

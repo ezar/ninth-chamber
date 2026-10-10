@@ -30,7 +30,7 @@ const smooth = (x: number): number => {
 
 /** The automaton's height (docs/art/models-brief.md); the model is scaled to it. */
 const HEIGHT = 2.2;
-/** The model's bones and the joint each one follows. */
+/** The bones the view needs: those its joints drive, and the forearms the arms hang towards. */
 export const AUTOMATON_BONES = [
   'Hips',
   'Spine02',
@@ -39,6 +39,8 @@ export const AUTOMATON_BONES = [
   'LeftUpLeg',
   'RightArm',
   'LeftArm',
+  'RightForeArm',
+  'LeftForeArm',
 ] as const;
 /** The model is rigged in an A pose; the stand-in's arms hang straight. */
 const HANG: HangRest[] = [
