@@ -1,8 +1,9 @@
 /**
- * The Ninth Chamber's monuments (spec §19, chamber IX), stand-ins until the
- * owner's models arrive (docs/art/models-brief.md):
+ * The Ninth Chamber's monuments (spec §19, chamber IX):
  * - the eight keepers in stone, each holding its chamber's relic, which glows
- *   in that chamber's colour; the ninth pedestal stands empty;
+ *   in that chamber's colour; the ninth pedestal stands empty. Each keeper is
+ *   its Meshy model (public/models/keeper_<n>.glb, tinted to one stone) once
+ *   loaded, with the glowing relic set at its chest; a carved stand-in until then;
  * - the great seal of the nine on a wall: eight segments cut in stone and the
  *   ninth an outline, which fills with amber light once Nora carves her name.
  * It reads the simulation every frame and never writes to it.
@@ -11,9 +12,14 @@ import * as THREE from 'three/webgpu';
 import type { Level } from '../sim/grid/level';
 import { BLOCK, DIR_VEC, DIR_YAW, type Dir } from '../sim/grid/units';
 import type { World } from '../sim/world';
+import { fitCopy, loadStaticModel } from './static-models';
 
 /** Each relic's glow, in campaign order (the Heart's amber … the Astrolabe's moonlight). */
 const RELIC_GLOW = ['#f2a93b', '#7ee6dc', '#ffcf6a', '#ff9a5a', '#86e09a', '#d8894a', '#cfe4ff', '#b9cbf2'];
+
+/** The keepers' models: their height on the pedestal, and the one stone they are all tinted to. */
+const KEEPER_HEIGHT = 3.2;
+const KEEPER_STONE = new THREE.Color('#d8cbb2');
 
 const SEAL_RADIUS = 2.4;
 const SEAL_INNER = 1.7;
@@ -92,6 +98,27 @@ export class Monuments {
     const r = this.mesh(new THREE.IcosahedronGeometry(0.16, 1), glow, g);
     r.position.set(0, 2.05, -0.55);
     r.castShadow = false;
+    void loadStaticModel(`keeper_${relic}`).then((model) => {
+      if (model) this.useKeeper(g, r, model);
+    });
+  }
+
+  /** Swaps a carved stand-in for the keeper's model, keeping the glowing relic at its chest. */
+  private useKeeper(g: THREE.Group, relic: THREE.Mesh, model: THREE.Object3D): void {
+    const { root, materials } = fitCopy(model, { height: KEEPER_HEIGHT, origin: 'bottom' });
+    for (const m of materials) {
+      m.color.copy(KEEPER_STONE);
+      m.metalness = 0;
+      this.materials.push(m);
+    }
+    // Measured before it joins the statue, in the statue's own frame (front is -Z).
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(root);
+    for (const c of g.children) if (c !== relic) c.visible = false;
+    g.add(root);
+    // Just in front of the model's chest.
+    relic.position.z = Math.min(relic.position.z, box.min.z + 0.05);
+    relic.scale.setScalar(0.7);
   }
 
   private seal(cx: number, cz: number, y: number, wall: Dir): void {

@@ -1,5 +1,23 @@
 # Changelog
 
+## Version 0.9.19 (2026-10-10): The keepers' statues and the relics
+
+The first objects generated with Meshy are in the game. They were made with text-to-3D from the prompts in `docs/art/meshy-prompts.md`.
+
+- **The eight keepers of the Ninth Chamber** are statues now. All eight are tinted to one pale stone, since the models came out in different shades and one in colour. Each still holds its chamber's relic at its chest, glowing in that chamber's colour. The ninth pedestal stays empty.
+- **Each chamber's relic has its own shape.** They used to be one generic gem:
+  - the Tablet of the Name (Clay Archive);
+  - the Stone Seed (Root Halls);
+  - the Ninth Segment (Bronze Forge);
+  - the Wind Shell (Wind Stair);
+  - the Astrolabe (Observatory).
+
+  Each one glows through its own texture in its chamber's colour. The Seed and the Shell came without a texture, so the game gives them green stone and bronze.
+
+- **`static-models.ts`**: loads a static model once and hands out fitted copies (height, origin at the floor or the centre, facing -Z). The stand-ins stay until a model arrives.
+- **`pnpm models:fit --grey`**: turns a model's base colour to greyscale, for models the game tints itself.
+- **Not used** (they did not match the game): Meshy's great seal and ninth pedestal, which carry Latin letters, and its dome ring, which is the wrong shape. The seal, the pedestal and the rings stay as they are.
+
 ## Version 0.9.18 (2026-10-10): Automaton model check
 
 - **An automaton model without forearm bones is not used.** The view lowers the A-pose arms towards the forearms, so a model without them now falls back to the stand-in, as Tamrit's and the guardians' already do. Before, it was used with its arms left out in the A-pose.
