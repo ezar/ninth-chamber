@@ -46,7 +46,9 @@ if (grey) {
   for (const t of new Set(root.listMaterials().map((m) => m.getBaseColorTexture()))) {
     const image = t?.getImage();
     if (!t || !image) continue;
-    t.setImage(await sharp(image).grayscale().toColourspace('srgb').png().toBuffer()).setMimeType('image/png');
+    t.setImage(await sharp(image).grayscale().toColourspace('srgb').png().toBuffer()).setMimeType(
+      'image/png',
+    );
   }
 }
 
