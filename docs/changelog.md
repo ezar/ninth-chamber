@@ -1,5 +1,26 @@
 # Changelog
 
+## Version 0.9.17 (2026-10-10): Bazûr, the automatons and Anzur
+
+**Three more guardians have their real models.** They were made with Meshy from concept images the owner picked, the same way as Tamrit: Bazûr (B), the workshop automaton (A) and Anzur (B). Each one keeps the movements it had; its old figure stays as the stand-in when the model cannot load.
+
+- **Bazûr**, the bronze founder of the Forge: a massive figure of soot-blackened cast plates with a furnace grille in its chest. It walks, raises its arms in the wind-up, slams, stays hunched with its core bared, reels, falls into the pit, climbs out and collapses, as before.
+- **The workshop automatons**: lean figures of bronze plates with a forging mallet in the right hand. The mallet rises before a blow. When an automaton is quenched it keels over, and when it is melted it sinks. The furnace painted on the model glows while it works and goes dark when it is quenched.
+- **Anzur**, the one who watches: a giant of night-grey granite with a pale core and eyes. It moves as before, at its own scale.
+- **How they move**: each figure's old joints are kept as hidden drivers of the model's bones (`driven-skeleton.ts`, from 0.9.16). The core, the floor ring before a slam, the dust, the shockwave and the rubble are unchanged.
+- **Loading**:
+  - The models load in the background once the renderer has started.
+  - A guardian swaps its stand-in for its model as soon as the model arrives.
+  - A model missing a bone its view needs is not used, and the console says so.
+- **Sizes**: about 1.0 to 1.35 MB each.
+  - `bazur.glb`: 16,600 triangles.
+  - `automaton.glb`: 8,300 triangles.
+  - `anzur.glb`: 20,900 triangles.
+- **Checked in the browser**:
+  - Bazûr chasing, winding up and recovering.
+  - An automaton walking and striking.
+  - Anzur chasing.
+
 ## Version 0.9.16 (2026-10-10): Tamrit's model
 
 **Tamrit, the clay guardian of Chamber IV, has its real model.** It was made with Meshy from a concept image the owner picked: a tall, slender figure of cracked clay with a reed stylus in its right hand. It replaces the figure built from rounded pieces, which stays as the stand-in when the model cannot load.

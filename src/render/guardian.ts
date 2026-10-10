@@ -12,6 +12,11 @@
  * the collapse throw up dust, and when it falls apart its pieces tumble
  * away from the body. It only reads the simulation, and its per-frame
  * update allocates nothing (scratch poses, fixed particle pools).
+ *
+ * Bazûr and Anzur have Meshy models (public/models/bazur.glb, anzur.glb):
+ * once one has loaded, the carved joints of that guardian become hidden
+ * drivers of its bones (driven-skeleton.ts); the core, the tell, the dust,
+ * the shockwave and the rubble stay as they are.
  */
 import * as THREE from 'three/webgpu';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -21,9 +26,33 @@ import type { World } from '../sim/world';
 import { mergeStatic } from './merge';
 import { PuffPool } from './puffs';
 import { surfaceParams, type SurfaceSet } from './materials';
+import { DrivenSkeleton, mountSkinned, type HangRest, type SkinnedAsset } from './driven-skeleton';
 
 /** Dust puffs per guardian (slams, falls, the collapse). */
 const DUST = 48;
+
+export type GuardianKind = GuardianState['kind'];
+/** A guardian model's bones and the joint each one follows. */
+export const GUARDIAN_BONES = [
+  'Hips',
+  'Spine02',
+  'Head',
+  'LeftArm',
+  'RightArm',
+  'LeftForeArm',
+  'RightForeArm',
+  'LeftUpLeg',
+  'RightUpLeg',
+  'LeftLeg',
+  'RightLeg',
+] as const;
+/** The models are rigged in an A pose; the carved arms hang a little out from their broad bodies. */
+const HANG: HangRest[] = [
+  { bone: 'LeftArm', toward: 'LeftForeArm', dir: new THREE.Vector3(0.3, -1, 0.04) },
+  { bone: 'RightArm', toward: 'RightForeArm', dir: new THREE.Vector3(-0.3, -1, 0.04) },
+];
+/** How metallic each model may read: Bazûr is cast bronze, Anzur stone. */
+const MODEL_METALNESS: Record<GuardianKind, number> = { stone: 0, bronze: 0.6, giant: 0 };
 
 interface Joints {
   root: THREE.Group;
@@ -137,6 +166,9 @@ interface Body {
   tell: THREE.Mesh;
   tellMat: THREE.MeshBasicMaterial;
   dust: PuffPool;
+  /** Its Meshy model and what drives it, once attached. */
+  model: THREE.Object3D | null;
+  skeleton: DrivenSkeleton | null;
 }
 
 export class GuardianView {
@@ -144,9 +176,14 @@ export class GuardianView {
   private readonly bodies: Body[] = [];
   private readonly glowTex: THREE.Texture;
 
+  /**
+   * @param models the guardians' Meshy models by kind; filled in as they load (a guardian
+   *   swaps its carved stand-in for its model as soon as one is there)
+   */
   constructor(
     world: World,
     private readonly stone: SurfaceSet,
+    private readonly models: Readonly<Partial<Record<GuardianKind, SkinnedAsset>>> = {},
   ) {
     this.group.name = 'guardians';
     this.glowTex = glowTexture();
@@ -447,12 +484,48 @@ export class GuardianView {
       tell,
       tellMat,
       dust,
+      model: null,
+      skeleton: null,
     };
+  }
+
+  /** Swaps a guardian's carved parts for its Meshy model, driven by the same joints. */
+  private attach(b: Body, kind: GuardianKind, asset: SkinnedAsset): void {
+    const J = b.joints;
+    // Under the root (which carries the giant's scale): the carved figure's height, scaled with it.
+    const model = mountSkinned(asset, J.root, guardianTuning.height, { metalness: MODEL_METALNESS[kind] });
+    J.root.traverse((o) => {
+      if (o instanceof THREE.Mesh && o.material !== b.core && !model.getObjectById(o.id)) o.visible = false;
+    });
+    b.model = model;
+    b.skeleton = new DrivenSkeleton(
+      model,
+      J.root,
+      {
+        Hips: J.hips,
+        Spine02: J.torso,
+        Head: J.head,
+        LeftArm: J.shoulders[0],
+        RightArm: J.shoulders[1],
+        LeftForeArm: J.elbows[0],
+        RightForeArm: J.elbows[1],
+        LeftUpLeg: J.thighs[0],
+        RightUpLeg: J.thighs[1],
+        LeftLeg: J.knees[0],
+        RightLeg: J.knees[1],
+      },
+      HANG,
+    );
   }
 
   update(world: World, time: number, dt: number, eye: { x: number; y: number; z: number }): void {
     for (const b of this.bodies) {
-      for (const g of world.state.guardians) if (g.id === b.id) this.animate(b, g, time, dt);
+      for (const g of world.state.guardians) {
+        if (g.id !== b.id) continue;
+        const asset = b.model ? undefined : this.models[g.kind];
+        if (asset) this.attach(b, g.kind, asset);
+        this.animate(b, g, time, dt);
+      }
       b.dust.update(dt, eye);
     }
   }
@@ -587,6 +660,7 @@ export class GuardianView {
       J.thighs[i as 0 | 1].rotation.x = -(p.thigh[i] ?? 0);
       J.knees[i as 0 | 1].rotation.x = -(p.knee[i] ?? 0);
     }
+    b.skeleton?.apply();
 
     // Light and glow.
     b.core.emissiveIntensity += (core - b.core.emissiveIntensity) * Math.min(1, dt * 10);

@@ -1,22 +1,50 @@
 /**
- * The Forge's bronze automatons (spec §19), stand-ins until the owner's
- * models (docs/art/models-brief.md): a heavy figure of cast plates on a
- * small joint hierarchy, a furnace glow behind the slits of its face and
+ * The Forge's bronze automatons (spec §19): a heavy figure of cast plates on
+ * a small joint hierarchy, a furnace glow behind the slits of its face and
  * chest, a mallet arm. Procedural animation follows the simulation: the
  * slow, stiff walk, the raised mallet before a blow, and its end: quenched
  * (the glow dies, it locks and keels over) or melted (it sinks into the
  * bronze).
+ *
+ * With the Meshy model (public/models/automaton.glb) the joint hierarchy
+ * stays as hidden drivers of its bones (driven-skeleton.ts) and the furnace
+ * glow lights the model's own painted furnace. Without it, the plates built here stand in.
  */
 import * as THREE from 'three/webgpu';
 import type { EnemyState } from '../sim/state';
 import { enemyTypes } from '../sim/player/tuning';
 import type { JackalView } from './enemies';
+import {
+  DrivenSkeleton,
+  disposeMounted,
+  mountSkinned,
+  type HangRest,
+  type SkinnedAsset,
+} from './driven-skeleton';
 
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
 const smooth = (x: number): number => {
   const t = clamp(x, 0, 1);
   return t * t * (3 - 2 * t);
 };
+
+/** The automaton's height (docs/art/models-brief.md); the model is scaled to it. */
+const HEIGHT = 2.2;
+/** The model's bones and the joint each one follows. */
+export const AUTOMATON_BONES = [
+  'Hips',
+  'Spine02',
+  'Head',
+  'RightUpLeg',
+  'LeftUpLeg',
+  'RightArm',
+  'LeftArm',
+] as const;
+/** The model is rigged in an A pose; the stand-in's arms hang straight. */
+const HANG: HangRest[] = [
+  { bone: 'LeftArm', toward: 'LeftForeArm', dir: new THREE.Vector3(0.18, -1, 0.04) },
+  { bone: 'RightArm', toward: 'RightForeArm', dir: new THREE.Vector3(-0.18, -1, 0.04) },
+];
 
 interface Limb {
   pivot: THREE.Group;
@@ -54,8 +82,12 @@ export class AutomatonView implements JackalView {
   private fall = 0;
   /** 0 … 1 sunk into the bronze (melted). */
   private sink = 0;
+  /** The Meshy model, what drives it, and its materials (their painted furnace glows). */
+  private readonly model: THREE.Object3D | null = null;
+  private readonly skeleton: DrivenSkeleton | null = null;
+  private readonly modelMats: THREE.MeshStandardMaterial[] = [];
 
-  constructor() {
+  constructor(asset: SkinnedAsset | null = null) {
     const piece = (
       geo: THREE.BufferGeometry,
       mat: THREE.Material,
@@ -122,6 +154,40 @@ export class AutomatonView implements JackalView {
       return { pivot, restZ: 0.06 * side };
     };
     this.arms = [arm(1), arm(-1)];
+
+    if (asset) {
+      // The model rides the body (it keels over and sinks with it); the plates become hidden drivers.
+      this.body.traverse((o) => {
+        if (o instanceof THREE.Mesh) o.visible = false;
+      });
+      const model = mountSkinned(asset, this.body, HEIGHT, { metalness: 0.6 });
+      this.model = model;
+      const [rLeg, lLeg] = this.legs;
+      const [rArm, lArm] = this.arms;
+      this.skeleton = new DrivenSkeleton(
+        model,
+        this.body,
+        {
+          Hips: this.hips,
+          Spine02: this.torso,
+          Head: this.head,
+          RightUpLeg: rLeg.pivot,
+          LeftUpLeg: lLeg.pivot,
+          RightArm: rArm.pivot,
+          LeftArm: lArm.pivot,
+        },
+        HANG,
+      );
+      // The furnace is painted in the texture: lit by its own colour it glows where it is bright
+      // orange and barely on the dark bronze, and goes out with the glow when quenched.
+      model.traverse((o) => {
+        if (o instanceof THREE.Mesh && o.material instanceof THREE.MeshStandardMaterial) {
+          o.material.emissive.set('#ff6a1a');
+          o.material.emissiveMap = o.material.map;
+          this.modelMats.push(o.material);
+        }
+      });
+    }
   }
 
   flinch(): void {
@@ -162,9 +228,12 @@ export class AutomatonView implements JackalView {
     // The furnace glow: steady while it works, flickering when hit, dark once quenched.
     const target = gone ? (melted ? 3 : 0) : this.flinchT > 0 ? 3 : 1.8;
     this.glow.emissiveIntensity += (target - this.glow.emissiveIntensity) * (1 - Math.exp(-dt * 4));
+    for (const m of this.modelMats) m.emissiveIntensity = this.glow.emissiveIntensity * 0.2;
+    this.skeleton?.apply();
   }
 
   dispose(): void {
+    if (this.model) disposeMounted(this.model);
     for (const g of this.geometries) g.dispose();
     this.plate.dispose();
     this.dark.dispose();

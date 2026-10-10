@@ -10,7 +10,7 @@ import { enemyCenter, findEnemy } from '../sim/actors/enemies';
 import { torchInHand } from '../sim/player/torch';
 import { weapons } from '../sim/player/tuning';
 import type { World } from '../sim/world';
-import { EnemyViews } from './enemies';
+import { EnemyViews, type ModelledType } from './enemies';
 import type { NoraPose } from './nora';
 import type { NoraRig } from './nora-scan';
 
@@ -192,8 +192,8 @@ export class CombatView {
     this.enemies.load();
   }
 
-  constructor(jackalUrl: string | null, clayUrl: string | null = null) {
-    this.enemies = new EnemyViews(jackalUrl, clayUrl);
+  constructor(jackalUrl: string | null, modelUrls: Partial<Record<ModelledType, string>> = {}) {
+    this.enemies = new EnemyViews(jackalUrl, modelUrls);
     this.group.add(this.enemies.group, this.light);
 
     const flashTex = canvasTexture(64, (g) => {

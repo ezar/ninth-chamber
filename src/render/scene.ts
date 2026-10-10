@@ -17,7 +17,8 @@ import { buildLevelMeshes, type Surface } from './level-mesh';
 import { blendLook, cloneLook, getLook, lookFile, type Look } from './looks';
 import type { NoraPose } from './nora';
 import { NoraRig } from './nora-scan';
-import { GuardianView } from './guardian';
+import { GUARDIAN_BONES, GuardianView, type GuardianKind } from './guardian';
+import { DrivenSkeleton, loadSkinnedAsset, type SkinnedAsset } from './driven-skeleton';
 import { Props } from './props';
 import { loadSurfaces, surfaceParams, type SurfaceName, type SurfaceSet } from './materials';
 import { PostStack } from './post';
@@ -112,7 +113,10 @@ export class GameRenderer {
    * `${import.meta.env.BASE_URL}models/jackal.glb` once public/models has one.
    * Tamrit's Meshy model is shipped.
    */
-  readonly combat = new CombatView(null, `${import.meta.env.BASE_URL}models/tamrit.glb`);
+  readonly combat = new CombatView(null, {
+    clay: `${import.meta.env.BASE_URL}models/tamrit.glb`,
+    automaton: `${import.meta.env.BASE_URL}models/automaton.glb`,
+  });
   /** The torch Nora carries, with its own light (not one of the fire pool's). */
   private readonly torch: TorchView;
   private props: Props | null = null;
@@ -126,6 +130,8 @@ export class GameRenderer {
   private grabEdges: GrabEdgeView | null = null;
   private highContrast = false;
   private guardians: GuardianView | null = null;
+  /** Bazûr's and Anzur's Meshy models, filled in as they load (GuardianView swaps them in). */
+  private readonly guardianModels: Partial<Record<GuardianKind, SkinnedAsset>> = {};
   private world: World | null = null;
   private look: Look = cloneLook(getLook(null));
   private currentRoom: string | null = null;
@@ -248,6 +254,7 @@ export class GameRenderer {
     // KTX2 textures transcode for this GPU (level surfaces, prop models, Nora, the guardians).
     setupKtx2(this.renderer);
     this.combat.load();
+    this.loadGuardianModels();
     [this.surfaces] = await Promise.all([
       loadSurfaces(),
       this.nora.loadScan(`${import.meta.env.BASE_URL}models/nora.glb`, `${import.meta.env.BASE_URL}anim/`),
@@ -257,6 +264,20 @@ export class GameRenderer {
       if (o instanceof THREE.Mesh) o.layers.set(CHARACTER_LAYER);
     });
     this.applyAnisotropy();
+  }
+
+  /** Starts loading the guardians' Meshy models (once KTX2 is set up); each is used as soon as it arrives. */
+  private loadGuardianModels(): void {
+    const files: Partial<Record<GuardianKind, string>> = { bronze: 'bazur.glb', giant: 'anzur.glb' };
+    for (const [kind, file] of Object.entries(files) as [GuardianKind, string][]) {
+      const url = `${import.meta.env.BASE_URL}models/${file}`;
+      void loadSkinnedAsset(url).then((a) => {
+        if (!a) return;
+        const missing = DrivenSkeleton.missing(a.scene, GUARDIAN_BONES);
+        if (missing.length) console.info(`${url} lacks the bones ${missing.join(', ')}; using the stand-in.`);
+        else this.guardianModels[kind] = a;
+      });
+    }
   }
 
   /** 'WebGPU' or 'WebGL2', depending on the backend Three.js picked. */
@@ -557,7 +578,7 @@ export class GameRenderer {
     this.temple = new TempleView(level, propMats);
     this.temple.setQuality(this.profile);
     for (const id of this.temple.replacedActors) this.props.hidden.add(id);
-    this.guardians = new GuardianView(world, surf.wall);
+    this.guardians = new GuardianView(world, surf.wall, this.guardianModels);
     this.scene.add(this.temple.group, this.guardians.group);
     this.archive?.dispose();
     this.archive = new ArchiveView(level, new THREE.MeshStandardMaterial(surfaceParams(surf.wall)));
