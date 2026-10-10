@@ -15,6 +15,7 @@ import type { World } from '../sim/world';
 import { surfaceParams, type SurfaceSet } from './materials';
 import { FIRE_BASE } from './fire-lights';
 import { DOOR_MODEL_HEIGHT, dressLevel, PropLibrary, type PropModel } from './prop-models';
+import { fitCopy, loadStaticModel } from './static-models';
 import { crackMask } from './textures';
 import { materialColor, texture, uv, vec2 } from 'three/tsl';
 import { torchModel } from './torch';
@@ -33,6 +34,34 @@ const RELIC_TINTS: Readonly<Record<string, { color: string; emissive: string; li
   cisterns: { color: '#bfeee6', emissive: '#46d0c4', light: '#7ee6dc' },
   clay_archive: { color: '#b4683e', emissive: '#ff6a2a', light: '#ff9a5a' },
   root_halls: { color: '#9cc9a0', emissive: '#3fb05e', light: '#86e09a' },
+};
+
+/**
+ * Chambers whose relic has a Meshy model of its own (static-models.ts), its height
+ * (m) as drawn, and for untextured models their surface. The relic glows by its own
+ * texture lit in its chamber's colour; until the model loads the stand-in shows.
+ */
+const RELIC_MODELS: Readonly<
+  Record<
+    string,
+    { name: string; height: number; surface?: { color: string; metalness: number; roughness: number } }
+  >
+> = {
+  clay_archive: { name: 'name_tablet', height: 0.34 },
+  root_halls: {
+    name: 'stone_seed',
+    height: 0.26,
+    surface: { color: '#4f8a5e', metalness: 0, roughness: 0.35 },
+  },
+  bronze_forge: { name: 'segment', height: 0.42 },
+  wind_stair: { name: 'shell', height: 0.32, surface: { color: '#a07a46', metalness: 0.6, roughness: 0.4 } },
+  observatory: { name: 'astrolabe', height: 0.42 },
+};
+/** Each modelled relic's glow colour, where RELIC_TINTS has none. */
+const RELIC_MODEL_GLOW: Readonly<Record<string, string>> = {
+  bronze_forge: '#ff9a3a',
+  wind_stair: '#cfe4ff',
+  observatory: '#b9cbf2',
 };
 
 /** Chambers whose relic is a tablet of fired clay rather than a gem in a cage. */
@@ -202,6 +231,8 @@ export class Props {
     this.group.add(this.monuments.group);
     this.buildCrumbleTiles();
     this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
+    const relicModel = RELIC_MODELS[level.id];
+    if (relicModel) void loadStaticModel(relicModel.name).then((m) => this.useRelicModel(m));
   }
 
   /** Swaps the procedural stand-ins for the baked models and dresses the rooms. */
@@ -231,6 +262,35 @@ export class Props {
     for (const e of this.level.entities) busy.add(`${e.at[0]},${e.at[1]}`);
     for (const a of this.actors.values()) busy.add(`${a.cx},${a.cz}`);
     this.group.add(dressLevel(this.level, lib, busy));
+  }
+
+  /** Swaps the relic's stand-in (or the baked gem) for its chamber's own model. */
+  private useRelicModel(model: THREE.Object3D | null): void {
+    const spec = RELIC_MODELS[this.level.id];
+    const relic = [...this.actors.values()].find((a) => a.kind === 'relic');
+    const holder = relic && this.actorViews.get(relic.id);
+    if (!model || !spec || !holder) return;
+    const { root, materials } = fitCopy(model, { height: spec.height, origin: 'centre' });
+    const glow = RELIC_TINTS[this.level.id]?.emissive ?? RELIC_MODEL_GLOW[this.level.id] ?? '#f2a93b';
+    let mesh: THREE.Mesh | null = null;
+    root.traverse((o) => {
+      if (o instanceof THREE.Mesh && !mesh) mesh = o;
+    });
+    for (const m of materials) {
+      if (spec.surface) {
+        m.color.set(spec.surface.color);
+        m.metalness = spec.surface.metalness;
+        m.roughness = spec.surface.roughness;
+      }
+      // Lit by its own texture (or evenly, untextured): the bright parts glow most.
+      m.emissive.set(glow);
+      m.emissiveMap = m.map;
+    }
+    holder.clear();
+    holder.add(root);
+    holder.userData.model = true;
+    this.relicMesh = mesh;
+    this.relicGain = spec.surface ? 0.08 : 0.22;
   }
 
   /** Replaces an actor's stand-in with its baked model, when there is one. */

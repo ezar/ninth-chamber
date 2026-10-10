@@ -1,14 +1,16 @@
 /**
  * Fits a Meshy model to the game (docs/art/meshy-prompts.md):
  *
- *   pnpm models:fit <meshy.glb> <name> [--size 1024]
+ *   pnpm models:fit <meshy.glb> <name> [--size 1024] [--grey]
  *
  * Writes public/models/<name>.glb: Meshy's sample animations dropped (the
  * game animates guardians in code), the mesh renamed after the model, and
  * every texture resized to `--size` (1024 by default; normal maps as PNG,
  * the rest as JPEG) so the file stays near the 1.5 MB budget of
  * docs/art/models-brief.md, and the geometry meshopt-compressed (the game's
- * loaders decode it). Run `pnpm textures:ktx2 --only models <name>` afterwards.
+ * loaders decode it). `--grey` turns the base colour texture to greyscale, for
+ * models the game tints itself (the keepers' stone, say). Run
+ * `pnpm textures:ktx2 --only models <name>` afterwards.
  */
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -22,9 +24,10 @@ const ROOT = new URL('../../', import.meta.url).pathname;
 const args = process.argv.slice(2);
 const sizeAt = args.indexOf('--size');
 const size = sizeAt >= 0 ? Number(args[sizeAt + 1]) : 1024;
+const grey = args.includes('--grey');
 const [input, name] = args.filter((a, i) => !a.startsWith('--') && (sizeAt < 0 || i !== sizeAt + 1));
 if (!input || !name || !Number.isFinite(size)) {
-  console.error('usage: pnpm models:fit <meshy.glb> <name> [--size 1024]');
+  console.error('usage: pnpm models:fit <meshy.glb> <name> [--size 1024] [--grey]');
   process.exit(1);
 }
 
@@ -38,6 +41,14 @@ const root = doc.getRoot();
 for (const anim of root.listAnimations()) anim.dispose();
 for (const mesh of root.listMeshes()) mesh.setName(name);
 for (const node of root.listNodes()) if (node.getMesh()) node.setName(name);
+
+if (grey) {
+  for (const t of new Set(root.listMaterials().map((m) => m.getBaseColorTexture()))) {
+    const image = t?.getImage();
+    if (!t || !image) continue;
+    t.setImage(await sharp(image).grayscale().toColourspace('srgb').png().toBuffer()).setMimeType('image/png');
+  }
+}
 
 const normals = new Set(
   root
