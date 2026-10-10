@@ -180,3 +180,59 @@ export function cloneSkinned(asset: SkinnedAsset): THREE.Object3D {
   });
   return model;
 }
+
+export interface MountLook {
+  /** Multiplies the base colour. */
+  tint?: THREE.Color;
+  /**
+   * Caps how metallic the surface reads (the metalness map is scaled by it; 0 drops it).
+   * Meshy often marks stone and clay as metal, which renders near black without reflections.
+   */
+  metalness?: number;
+}
+
+/**
+ * Adds a copy of a skinned asset under `parent`, `height` metres tall, turned to face -Z,
+ * with its hips centred over the parent's origin and its own materials (tinted as asked).
+ * Dispose it with disposeMounted.
+ */
+export function mountSkinned(
+  asset: SkinnedAsset,
+  parent: THREE.Object3D,
+  height: number,
+  look: MountLook = {},
+): THREE.Object3D {
+  const model = cloneSkinned(asset);
+  model.scale.multiplyScalar(height / Math.max(1e-6, asset.height));
+  // glTF models face +Z; the game's figures face -Z.
+  model.rotation.y = Math.PI;
+  model.traverse((o) => {
+    if (o instanceof THREE.Mesh && o.material instanceof THREE.MeshStandardMaterial) {
+      const m = o.material.clone();
+      if (look.tint) m.color.multiply(look.tint);
+      if (look.metalness !== undefined) {
+        m.metalness = Math.min(m.metalness, look.metalness);
+        if (look.metalness === 0) m.metalnessMap = null;
+      }
+      o.material = m;
+    }
+  });
+  parent.add(model);
+  // Meshy's skeleton stands off the origin: centre its hips over the feet position.
+  parent.updateMatrixWorld(true);
+  const hips = model.getObjectByName('Hips');
+  if (hips) {
+    const at = parent.worldToLocal(hips.getWorldPosition(new THREE.Vector3()));
+    model.position.x -= at.x;
+    model.position.z -= at.z;
+  }
+  return model;
+}
+
+/** Frees what mountSkinned made for one copy (its materials; the geometry stays with the asset). */
+export function disposeMounted(model: THREE.Object3D): void {
+  model.removeFromParent();
+  model.traverse((o) => {
+    if (o instanceof THREE.Mesh) (o.material as THREE.Material).dispose();
+  });
+}

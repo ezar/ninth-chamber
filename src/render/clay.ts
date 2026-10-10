@@ -15,7 +15,13 @@ import * as THREE from 'three/webgpu';
 import type { EnemyState } from '../sim/state';
 import { clayGuardian, enemyTypes } from '../sim/player/tuning';
 import type { JackalView } from './enemies';
-import { DrivenSkeleton, cloneSkinned, type HangRest, type SkinnedAsset } from './driven-skeleton';
+import {
+  DrivenSkeleton,
+  disposeMounted,
+  mountSkinned,
+  type HangRest,
+  type SkinnedAsset,
+} from './driven-skeleton';
 
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
 
@@ -195,35 +201,14 @@ export class ClayView implements JackalView {
     this.forearms = [rf, lf];
 
     if (asset) {
-      const model = cloneSkinned(asset);
-      model.scale.multiplyScalar(HEIGHT / Math.max(1e-6, asset.height));
-      // glTF models face +Z; the game's figures face -Z.
-      model.rotation.y = Math.PI;
-      model.traverse((o) => {
-        if (o instanceof THREE.Mesh && o.material instanceof THREE.MeshStandardMaterial) {
-          o.material = o.material.clone();
-          o.material.color.multiply(MODEL_TINT);
-          // Meshy marks the clay as metal, which renders it near black without reflections.
-          o.material.metalness = 0;
-          o.material.metalnessMap = null;
-        }
-      });
+      // Beside the body, not in it: the body squashes into the heap, the model sinks instead.
+      // Its frame matches the body's, which never turns.
+      const model = mountSkinned(asset, this.root, HEIGHT, { tint: MODEL_TINT, metalness: 0 });
       // The rounded pieces become hidden drivers; the core stays, in the model's chest.
       this.body.traverse((o) => {
         if (o instanceof THREE.Mesh && o !== this.core) o.visible = false;
       });
       this.core.position.set(0, 0.5, -0.14);
-      // Beside the body, not in it: the body squashes into the heap, the model sinks instead.
-      // Its frame matches the body's, which never turns.
-      this.root.add(model);
-      // Meshy's skeleton stands off the origin: centre its hips over the feet position.
-      this.root.updateMatrixWorld(true);
-      const hips = model.getObjectByName('Hips');
-      if (hips) {
-        const at = this.root.worldToLocal(hips.getWorldPosition(new THREE.Vector3()));
-        model.position.x -= at.x;
-        model.position.z -= at.z;
-      }
       this.model = model;
       const moundGeo = new THREE.SphereGeometry(0.7, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2);
       this.geometries.push(moundGeo);
@@ -311,10 +296,7 @@ export class ClayView implements JackalView {
   }
 
   dispose(): void {
-    // The model's geometry is shared with the loaded asset; only its tinted materials are ours.
-    this.model?.traverse((o) => {
-      if (o instanceof THREE.Mesh) (o.material as THREE.Material).dispose();
-    });
+    if (this.model) disposeMounted(this.model);
     for (const g of this.geometries) g.dispose();
     this.material.map?.dispose();
     this.material.dispose();

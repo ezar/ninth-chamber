@@ -92,7 +92,7 @@ One prompt for each model in [models-brief.md](models-brief.md), which gives the
 
 **Rigs.** Humanoid guardians (Tamrit, Bazûr, the automaton, Anzur): Meshy's humanoid auto-rig, A-pose. The bird and the scorpion: no rig, Claude rigs them. Statues and props: no rig.
 
-**Guardians: from a concept image.** Meshy's Text to 3D turns any humanoid into a person in clay- or bronze-coloured clothes. What works is two steps: Text to Image first (A-pose, front view, plain grey background; a few candidates for the owner to pick from), then Image to 3D from the chosen image with the texture on, and the humanoid auto-rig on the result. Tamrit was made this way. Claude then runs `pnpm models:fit <rigged.glb> <name>` (drops Meshy's sample animations, resizes the textures, compresses the geometry) and `pnpm textures:ktx2 --only models <name>`. The game drives Meshy's own 24-bone rig (`Hips`, `Spine02`, `Head`, `LeftArm` and so on), so the bone names in models-brief.md do not apply to Meshy models.
+**Guardians: from a concept image.** Meshy's Text to 3D turns any humanoid into a person in clay- or bronze-coloured clothes. What works is two steps: Text to Image first (A-pose, front view, plain grey background; a few candidates for the owner to pick from), then Image to 3D from the chosen image with the texture on, and the humanoid auto-rig on the result. Tamrit, Bazûr, the workshop automaton and Anzur were made this way. Claude then runs `pnpm models:fit <rigged.glb> <name>` (drops Meshy's sample animations, resizes the textures, compresses the geometry) and `pnpm textures:ktx2 --only models <name>`. The game drives Meshy's own 24-bone rig (`Hips`, `Spine02`, `Head`, `LeftArm` and so on), so the bone names in models-brief.md do not apply to Meshy models.
 
 **Writing.** Meshy cannot write text: the carved signs come out as invented marks, which is what the game wants. Elena's initials on the ninth pedestal are added by Claude in the texture.
 
@@ -176,13 +176,13 @@ Hero relic: a fist-sized seed 9 cm long carved from polished deep green stone, a
 
 ### Chamber VI · The Bronze Forge
 
-**Bazûr, the bronze founder** · `bazur.glb` · 16k · A-pose, humanoid auto-rig
+**Bazûr, the bronze founder** · `bazur.glb` · 16k · A-pose, humanoid auto-rig · **in the game since 0.9.17** (from a concept image)
 
 ```text
 Massive ancient bronze automaton about 3 m tall, heavy cast bronze plates with rivets and hinges, broad shoulders, thick arms ending in huge blunt hands, blackened with soot and oil, bright worn bronze on the edges, a furnace core glowing orange behind a grille in the chest, two narrow glowing eye slits in a helmet-like head, A-pose with arms away from the body, realistic PBR, game-ready.
 ```
 
-**Workshop automaton** · `automaton.glb` · 8k · A-pose, humanoid auto-rig
+**Workshop automaton** · `automaton.glb` · 8k · A-pose, humanoid auto-rig · **in the game since 0.9.17** (from a concept image)
 
 ```text
 Ancient workshop automaton of cast bronze about 2.2 m tall, lean body of overlapping plates, a heavy forging mallet in its right hand, soot-darkened, an orange furnace glow behind narrow slits in its face and chest, A-pose with arms away from the body, realistic PBR, game-ready.
@@ -252,7 +252,7 @@ Hero relic: a bronze conch shell 30 cm long with a spiral body, eight small notc
 
 ### Chamber VIII · The Observatory
 
-**Anzur, the one who watches** · `anzur.glb` · 20k · A-pose, humanoid auto-rig (the game seats it and makes it rise)
+**Anzur, the one who watches** · `anzur.glb` · 20k · A-pose, humanoid auto-rig (the game seats it and makes it rise) · **in the game since 0.9.17** (from a concept image)
 
 ```text
 Giant ancient guardian of night-grey granite, about 5 m tall, massive figure with broad shoulders made to hold up a dome, long arms and heavy hands, smooth stern face, a pale glowing core in its chest and two pale glowing eyes, faint star-like flecks in the stone, cracks with dust, A-pose with arms away from the body, realistic PBR, game-ready.

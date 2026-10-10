@@ -19,7 +19,7 @@ import type { EnemyState } from '../sim/state';
 import type { World } from '../sim/world';
 import { ClayView, TAMRIT_BONES } from './clay';
 import { DrivenSkeleton, loadSkinnedAsset, type SkinnedAsset } from './driven-skeleton';
-import { AutomatonView } from './automaton';
+import { AUTOMATON_BONES, AutomatonView } from './automaton';
 import { ScorpionView } from './scorpion';
 import { BirdView } from './bird';
 
@@ -858,17 +858,26 @@ interface Slot {
 const _look = new THREE.Vector3();
 const _inv = new THREE.Matrix4();
 
+/** Enemy types whose stand-in a Meshy model can replace, and the bones each view drives. */
+const MODELLED = ['clay', 'automaton'] as const;
+export type ModelledType = (typeof MODELLED)[number];
+const MODEL_BONES: Record<ModelledType, readonly string[]> = {
+  clay: TAMRIT_BONES,
+  automaton: AUTOMATON_BONES,
+};
+const isModelled = (t: string): t is ModelledType => (MODELLED as readonly string[]).includes(t);
+
 /** One view per enemy in the world, created on demand and removed when the enemy is gone. */
 export class EnemyViews {
   readonly group = new THREE.Group();
   private readonly slots = new Map<string, Slot>();
   private asset: JackalAsset | null = null;
-  /** Tamrit's Meshy model, when it loaded with every bone the clay view drives. */
-  private clayAsset: SkinnedAsset | null = null;
+  /** The guardians' Meshy models (Tamrit, the automatons), once loaded with every bone their views drive. */
+  private readonly models: Partial<Record<ModelledType, SkinnedAsset>> = {};
 
   constructor(
     private readonly url: string | null,
-    private readonly clayUrl: string | null = null,
+    private readonly modelUrls: Partial<Record<ModelledType, string>> = {},
   ) {}
 
   /**
@@ -876,18 +885,21 @@ export class EnemyViews {
    * started). Enemies show their stand-ins until a model arrives, then swap to it.
    */
   load(): void {
-    const { url, clayUrl } = this;
+    const { url } = this;
     if (url)
       void loadJackalAsset(url).then((a) => {
         this.asset = a;
       });
-    if (clayUrl)
-      void loadSkinnedAsset(clayUrl).then((a) => {
-        const missing = a ? DrivenSkeleton.missing(a.scene, TAMRIT_BONES) : [];
-        if (missing.length)
-          console.info(`${clayUrl} lacks the bones ${missing.join(', ')}; using the stand-in.`);
-        else this.clayAsset = a;
+    for (const type of MODELLED) {
+      const at = this.modelUrls[type];
+      if (!at) continue;
+      void loadSkinnedAsset(at).then((a) => {
+        if (!a) return;
+        const missing = DrivenSkeleton.missing(a.scene, MODEL_BONES[type]);
+        if (missing.length) console.info(`${at} lacks the bones ${missing.join(', ')}; using the stand-in.`);
+        else this.models[type] = a;
       });
+    }
   }
 
   /** Displayed position of an enemy's body centre (for markers and effects). */
@@ -915,7 +927,7 @@ export class EnemyViews {
     world.state.enemies.forEach((e, i) => {
       seen.add(e.id);
       let slot = this.slots.get(e.id);
-      const modelled = (e.type === 'jackal' && this.asset) || (e.type === 'clay' && this.clayAsset);
+      const modelled = e.type === 'jackal' ? !!this.asset : isModelled(e.type) && !!this.models[e.type];
       if (slot && modelled && !slot.skinned) {
         // The skinned model arrived: swap the procedural view out.
         this.group.remove(slot.view.root);
@@ -925,9 +937,9 @@ export class EnemyViews {
       if (!slot) {
         const view: JackalView =
           e.type === 'clay'
-            ? new ClayView(this.clayAsset)
+            ? new ClayView(this.models.clay)
             : e.type === 'automaton'
-              ? new AutomatonView()
+              ? new AutomatonView(this.models.automaton)
               : e.type === 'bird'
                 ? new BirdView()
                 : e.type === 'scorpion'
@@ -939,7 +951,7 @@ export class EnemyViews {
           view,
           pos: new THREE.Vector3(e.pos.x, e.pos.y, e.pos.z),
           yaw: e.yaw,
-          skinned: e.type === 'jackal' ? !!this.asset : e.type === 'clay' ? !!this.clayAsset : true,
+          skinned: e.type === 'jackal' ? !!this.asset : isModelled(e.type) ? !!this.models[e.type] : true,
           height:
             e.type === 'clay'
               ? 1.3
