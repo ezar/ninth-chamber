@@ -142,6 +142,15 @@ export class OrbitCamera {
     );
   }
 
+  /**
+   * Pins the camera at `eye`, looking at `at`, until unpinned (null): for tools that frame
+   * one thing (scripts/browser), never for play.
+   */
+  pin(view: { eye: Vec3; at: Vec3 } | null): void {
+    this.pinned = view && { eye: { ...view.eye }, at: { ...view.at } };
+  }
+  private pinned: { eye: Vec3; at: Vec3 } | null = null;
+
   /** Recenter behind the character. */
   recenter(playerYaw: number): void {
     this.autoYaw = playerYaw;
@@ -417,6 +426,11 @@ export class OrbitCamera {
       if (f.left < -0.5) this.focus = null;
     } else {
       this.focusEase = 0;
+    }
+    // A pinned view for tools (the reference shots, model checks): it overrides everything above.
+    if (this.pinned) {
+      Object.assign(this.eye, this.pinned.eye);
+      Object.assign(this.lookAt, this.pinned.at);
     }
   }
 

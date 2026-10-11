@@ -7,6 +7,7 @@
  * darts themselves crossing the corridor. Views only read the simulation.
  */
 import * as THREE from 'three/webgpu';
+import { fitCopy, loadStaticModel } from './static-models';
 import type { SimEvent } from '../core/events';
 import type { Level } from '../sim/grid/level';
 import { BLOCK, DIR_VEC, DIR_YAW, type Dir } from '../sim/grid/units';
@@ -20,6 +21,10 @@ const FACES = GLYPHS.length;
 const DRUM_R = 0.42;
 const DRUM_H = 0.8;
 const PLINTH_H = 0.55;
+/** The carved wheel behind each lock's drum: how far back from the cell's middle, its height and depth (m). */
+const STELE_BACK = 0.68;
+const STELE_H = 1.8;
+const STELE_DEPTH = 0.4;
 /** Seconds a volley takes to cross. */
 const FLIGHT = 0.28;
 
@@ -154,7 +159,7 @@ interface LockView {
 }
 
 interface Volley {
-  darts: THREE.Mesh[];
+  darts: THREE.Object3D[];
   from: THREE.Vector3;
   to: THREE.Vector3;
   t: number;
@@ -168,6 +173,12 @@ export class ArchiveView {
   private readonly dartGeo = new THREE.CylinderGeometry(0.012, 0.018, 0.24, 5);
   private readonly dartMat = new THREE.MeshStandardMaterial({ color: '#3b2c22', roughness: 0.6 });
   private readonly disposables: { dispose(): void }[] = [this.dartGeo, this.dartMat];
+  /** Holders behind each glyph lock for its carved wheel. */
+  private readonly steles: THREE.Group[] = [];
+  /** The dart traps' wall niches, swapped for the Meshy niche once it loads. */
+  private readonly niches: THREE.Mesh[] = [];
+  /** A Meshy dart (pointing along +Z) to copy for each volley, once loaded. */
+  private dartModel: THREE.Object3D | null = null;
 
   constructor(
     private readonly level: Level,
@@ -286,7 +297,27 @@ export class ArchiveView {
       const base = DIR_YAW[d.facing] + Math.PI + Math.PI / FACES;
       this.locks.push({ id: d.id, drum, base, shown: d.glyph });
       drum.rotation.y = base - (d.glyph * Math.PI * 2) / FACES;
+      // The carved wheel (Meshy) stands behind the drum like a stele, facing the same way.
+      const stele = new THREE.Group();
+      const back = DIR_VEC[d.facing];
+      stele.position.set(x - back.x * STELE_BACK, y, z - back.z * STELE_BACK);
+      stele.rotation.y = DIR_YAW[d.facing];
+      this.group.add(stele);
+      this.steles.push(stele);
     }
+    void loadStaticModel('glyph_lock').then((model) => {
+      if (!model) return;
+      for (const stele of this.steles) {
+        // Taller than the drum, so the carved wheel shows above and around it.
+        const { root, materials } = fitCopy(model, { height: STELE_H, origin: 'bottom' });
+        this.disposables.push(...materials);
+        // Thinned to fit between the drum and the edge of the cell.
+        root.updateMatrixWorld(true);
+        const depth = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).z;
+        if (depth > STELE_DEPTH) root.scale.z = STELE_DEPTH / depth;
+        stele.add(root);
+      }
+    });
   }
 
   private buildDarts(): void {
@@ -323,7 +354,31 @@ export class ArchiveView {
       );
       niche.rotation.y = DIR_YAW[d.from as Dir];
       this.group.add(niche);
+      this.niches.push(niche);
     }
+    void loadStaticModel('dart_niche').then((model) => {
+      if (!model) return;
+      for (const slot of this.niches) {
+        const { root, materials } = fitCopy(model, { width: 0.6, origin: 'centre' });
+        this.disposables.push(...materials);
+        // The slot is turned so its -Z points into the wall; the niche's face must look out.
+        root.rotation.y = Math.PI;
+        root.position.copy(slot.position);
+        root.quaternion.premultiply(slot.quaternion);
+        slot.visible = false;
+        this.group.add(root);
+      }
+    });
+    void loadStaticModel('dart').then((model) => {
+      if (!model) return;
+      const { root, materials } = fitCopy(model, { width: 0.26, origin: 'centre' });
+      this.disposables.push(...materials);
+      // The model lies along X; a volley aims each dart's +Z at its target.
+      root.rotation.y = Math.PI / 2;
+      const dart = new THREE.Group();
+      dart.add(root);
+      this.dartModel = dart;
+    });
   }
 
   onEvent(e: SimEvent): void {
@@ -336,10 +391,10 @@ export class ArchiveView {
     const v = DIR_VEC[def.from];
     const a = new THREE.Vector3(center(from[0]) + v.x * BLOCK * 0.5, y, center(from[1]) + v.z * BLOCK * 0.5);
     const b = new THREE.Vector3(center(to[0]) - v.x * BLOCK * 0.5, y, center(to[1]) - v.z * BLOCK * 0.5);
-    const darts: THREE.Mesh[] = [];
+    const darts: THREE.Object3D[] = [];
     const n = typeof e.count === 'number' ? e.count : 3;
     for (let i = 0; i < n; i++) {
-      const m = new THREE.Mesh(this.dartGeo, this.dartMat);
+      const m = this.dartModel ? this.dartModel.clone() : new THREE.Mesh(this.dartGeo, this.dartMat);
       m.lookAt(b.x - a.x, 0, b.z - a.z);
       m.userData.offset = new THREE.Vector3(
         -v.z * (i - (n - 1) / 2) * 0.18,
