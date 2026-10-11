@@ -14,7 +14,16 @@ A third-person tomb-exploration adventure for the browser, in the spirit of the 
 
 ## What's in the game
 
-- **Chamber I · The Antechamber:** ten rooms built around weight plates, timed gates, a sunlit well, a sunken causeway and the Chamber of Scales. It has three secrets, four journal notes and the Amber Heart at the end. Chambers II (**The Cisterns**) and III (**The Temple of the Sun**) are in progress.
+- **Nine chambers**, a campaign of one tomb after another, each built around its own mechanism, with secrets, journal notes and a relic at the end:
+  1. **The Antechamber:** weight plates, timed gates and a shaft of daylight.
+  2. **The Cisterns:** flooded halls where the water rises and falls.
+  3. **The Temple of the Sun:** bronze mirrors that carry the sun into the mountain.
+  4. **The Clay Archive:** glyph locks, shelves to push and a clay guardian.
+  5. **The Root Halls:** walls of roots to climb, tangles and scorpions.
+  6. **The Bronze Forge:** bronze pours, bellows, heat and automatons.
+  7. **The Wind Stair:** gusts on a cycle, flute levers, rock birds and lifts.
+  8. **The Observatory:** rings to align under the dome, and a giant guardian.
+  9. **The Ninth Chamber:** every mechanism at once, under the conjunction's light, and two endings.
 - **Nora** is a scanned character with motion-captured animation (Mixamo clips made on her own mesh) and foot planting. She runs, jumps, grabs ledges, shimmies, climbs, pushes and pulls blocks, and draws dual pistols.
 - **Combat:** jackals with perception, grid pathfinding and pack hunting; auto-aim pistols; medkits.
 - **Puzzles as data:** levels are JSON grids with declarative `when → do` rules. A bot plays every level end to end in the test suite.
@@ -27,7 +36,8 @@ A third-person tomb-exploration adventure for the browser, in the spirit of the 
   - An adaptive orchestral score that reacts to exploration, tension, combat, chases and bosses, with stingers for discoveries.
   - Haptics on phones and gamepads.
 - **Story:** a cinematic intro, journal notes, an end screen with a relic reveal, rank and best time, and a campaign across nine chambers.
-- **Languages:** English and Spanish. The UI follows the browser and can be changed in Options.
+- **Languages:** English, Spanish and Catalan. The UI follows the browser and can be changed in Options.
+- **Plays offline:** installed from the browser (or added to the Home Screen), it saves the whole game and plays without a connection.
 
 ## Controls
 
@@ -81,6 +91,7 @@ The simulation emits events; render, audio and UI only listen. The rules for con
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Lightmaps | `scripts/bake/`: `export-level.ts` exports the level, then Blender Cycles bakes the indirect light with `bake_lightmap.py`.                        |
 | Nora      | `scripts/character/rig_nora.py` turns the Meshy scan into a rigged, optimised GLB.                                                                 |
+| Models    | `pnpm models:fit` fits a Meshy model (guardians, keepers, relics, props) to the game, then `pnpm textures:ktx2 --only models` compresses it.       |
 | Animation | `pnpm anim:build scripts/anim/sources/mixamo.json <folder>` retargets Mixamo FBX clips onto Nora ([docs/animation.md](docs/animation.md)).         |
 | Props     | `scripts/blender/build_props.py` models and bakes the PBR prop kit in Blender.                                                                     |
 | Audio     | `scripts/audio/build_audio.py` downloads, checks licences, trims, loops and normalises every sound and music cue ([docs/audio.md](docs/audio.md)). |

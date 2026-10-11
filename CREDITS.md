@@ -35,6 +35,7 @@ Recorded sound under open licences. The full list, file by file with source link
 - Art direction, interface and identity: the Claude Design canvas described in [docs/art/README.md](docs/art/README.md).
 - Props and level art (`public/models`): procedural, built in Blender by the prop kit (`scripts/blender`) and in code (`src/render`).
 - Nora Vidal: a Meshy model from the owner's reference, decimated and rigged in Blender (`scripts/character/rig_nora.py`).
+- The guardians (Tamrit, Bazûr, the automatons, Anzur), the keepers' statues, the relics and the chambers' objects (from the kiln to the great seal): Meshy models generated for the project from the prompts and concept images in `docs/art/`, fitted with `pnpm models:fit`.
 - Indirect light baked with Blender Cycles (`scripts/bake`).
 
 ## Animation
