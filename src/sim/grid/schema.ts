@@ -171,6 +171,19 @@ const entity = z.discriminatedUnion('type', [
   z
     .object({
       ...entityBase,
+      type: z.literal('decor'),
+      /**
+       * Set dressing with a model of its own (public/models/<model>.glb): the Clay Archive's
+       * kiln. It fills its cell, like a statue.
+       */
+      model: z.enum(['kiln']),
+      /** The way its front looks. */
+      face: z.enum(FACINGS).default('S'),
+    })
+    .strict(),
+  z
+    .object({
+      ...entityBase,
       type: z.literal('seal'),
       /** The great seal of the nine, carved on this wall of its sector (chamber IX). */
       wall: z.enum(FACINGS),

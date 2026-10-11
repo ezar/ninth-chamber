@@ -22,6 +22,7 @@ import { torchModel } from './torch';
 import { rootFaces } from './roots';
 import { TangleViews } from './tangles';
 import { Monuments } from './monuments';
+import { DecorViews } from './decor';
 
 const center = (c: number): number => c * BLOCK + BLOCK / 2;
 
@@ -106,6 +107,7 @@ export class Props {
   private readonly tileViews = new Map<string, THREE.Mesh>();
   private readonly tangles: TangleViews;
   private readonly monuments: Monuments;
+  private readonly decor: DecorViews;
   private readonly flames: {
     sprite: THREE.Sprite;
     base: THREE.Vector3;
@@ -236,6 +238,8 @@ export class Props {
     this.group.add(this.tangles.group);
     this.monuments = new Monuments(this.level);
     this.group.add(this.monuments.group);
+    this.decor = new DecorViews(this.level);
+    this.group.add(this.decor.group);
     this.buildCrumbleTiles();
     this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
     const relicModel = RELIC_MODELS[level.id];

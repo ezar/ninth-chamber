@@ -1,0 +1,49 @@
+/**
+ * Set dressing with a model of its own (`decor` entities: the Clay Archive's
+ * kiln, say), standing on its cell's floor and facing its `face`. The cell is
+ * solid in the simulation; nothing shows until the model has loaded. Each
+ * stands in a holder placed from the start, which room culling files in its
+ * room (the group itself is flattened, like the monuments).
+ */
+import * as THREE from 'three/webgpu';
+import type { Level } from '../sim/grid/level';
+import { BLOCK, DIR_YAW } from '../sim/grid/units';
+import { fitCopy, loadStaticModel, type Fit } from './static-models';
+
+/** How big each model is drawn (docs/art/models-brief.md). */
+const FITS: Readonly<Record<string, Fit>> = {
+  kiln: { height: 2.2, origin: 'bottom' },
+};
+
+export class DecorViews {
+  readonly group = new THREE.Group();
+  private readonly materials: THREE.Material[] = [];
+
+  constructor(level: Level) {
+    this.group.name = 'decor';
+    for (const e of level.entities) {
+      if (e.type !== 'decor') continue;
+      const [cx, cz] = e.at;
+      const x = cx * BLOCK + BLOCK / 2;
+      const z = cz * BLOCK + BLOCK / 2;
+      const y = level.floorAt(x, z);
+      const fit = FITS[e.model];
+      if (!fit) continue;
+      // The holder stands in its cell from the start, so room culling files it in its room.
+      const holder = new THREE.Group();
+      holder.position.set(x, y, z);
+      holder.rotation.y = DIR_YAW[e.face];
+      this.group.add(holder);
+      void loadStaticModel(e.model).then((model) => {
+        if (!model) return;
+        const { root, materials } = fitCopy(model, fit);
+        this.materials.push(...materials);
+        holder.add(root);
+      });
+    }
+  }
+
+  dispose(): void {
+    for (const m of this.materials) m.dispose();
+  }
+}

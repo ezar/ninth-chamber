@@ -283,6 +283,7 @@ function buildDefs(level: Level): MechanismDefs {
         d.sunbeams.set(e.id, { id: e.id, cx, cz, dir: e.dir, y: o.y + e.y * CLICK, from: e.from, on: e.on });
         break;
       case 'statue':
+      case 'decor':
         d.solid.add(cellKey(cx, cz));
         break;
       case 'mirror':

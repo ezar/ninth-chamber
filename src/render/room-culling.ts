@@ -16,6 +16,7 @@ const MAX_DEPTH = 3;
 const box = new THREE.Box3();
 const portalBox = new THREE.Box3();
 const centre = new THREE.Vector3();
+const zero = new THREE.Vector3();
 const viewProjection = new THREE.Matrix4();
 
 export class RoomCulling {
@@ -68,7 +69,8 @@ export class RoomCulling {
     } else {
       box.setFromObject(o);
     }
-    if (box.isEmpty()) box.setFromCenterAndSize(o.getWorldPosition(centre), centre.set(0, 0, 0));
+    // Nothing drawn yet (a holder whose model is still loading): its own position.
+    if (box.isEmpty()) box.setFromCenterAndSize(o.getWorldPosition(centre), zero);
     box.getCenter(centre);
     const at = roomAtPoint(this.level, centre.x, centre.z);
     if (!at) return null;
