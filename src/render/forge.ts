@@ -6,6 +6,7 @@
  * (pushable blocks with the bellows' look). Views only read the simulation.
  */
 import * as THREE from 'three/webgpu';
+import { fitCopy, loadStaticModel } from './static-models';
 import type { SimEvent } from '../core/events';
 import type { Level } from '../sim/grid/level';
 import { BLOCK } from '../sim/grid/units';
@@ -155,6 +156,14 @@ export class ForgeView {
     tip.add(bowl, rim, base);
     tip.rotation.set(bz * 0.5, 0, -bx * 0.5);
     g.add(tip);
+    // The Meshy crucible takes the bowl's place in the same tipped cradle, once loaded.
+    void loadStaticModel('crucible').then((model) => {
+      if (!model) return;
+      const { root, materials } = fitCopy(model, { width: 1.3, origin: 'centre', brightness: 1.5 });
+      this.materials.push(...materials);
+      bowl.visible = rim.visible = base.visible = false;
+      tip.add(root);
+    });
     // A stone bracket into the wall.
     const bracketGeo = new THREE.BoxGeometry(0.5, 0.25, 0.9);
     this.geometries.push(bracketGeo);
@@ -247,6 +256,17 @@ export function bellowsBlock(height: number): THREE.Group {
   g.add(handle, nozzle);
   g.traverse((o) => {
     if (o instanceof THREE.Mesh) o.castShadow = o.receiveShadow = true;
+  });
+  // The Meshy bellows, once loaded, in place of the boards and pleats (the block keeps moving it).
+  void loadStaticModel('bellows').then((model) => {
+    if (!model) return;
+    const parts = [...g.children];
+    const { root } = fitCopy(model, { width: w, origin: 'bottom', brightness: 1.8 });
+    root.updateMatrixWorld(true);
+    const tall = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).y;
+    if (tall > height) root.scale.y = height / tall;
+    for (const p of parts) p.visible = false;
+    g.add(root);
   });
   return g;
 }

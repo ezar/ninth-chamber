@@ -17,6 +17,20 @@ describe('decor', () => {
     expect(w.state.player.pos.z).toBeGreaterThan(4);
   });
 
+  it('one marked not solid (set in the floor, like the mould) lets her walk over it', () => {
+    const decor = {
+      id: 'm',
+      type: 'decor',
+      room: 'r',
+      at: [2, 1],
+      model: 'mould',
+      solid: false,
+    } as EntityFile;
+    const w = testLevel(room, { entities: [decor] });
+    run(w, frame({ y: 1 }), 120);
+    expect(w.state.player.pos.z).toBeLessThan(4);
+  });
+
   it('without it she walks on to the far wall', () => {
     const w = testLevel(room);
     run(w, frame({ y: 1 }), 120);

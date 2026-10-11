@@ -839,6 +839,14 @@
       "accepts": "founder_key"
     },
     {
+      "id": "mould_seal",
+      "type": "decor",
+      "room": "mould",
+      "at": [4, 4],
+      "model": "mould",
+      "solid": false
+    },
+    {
       "id": "pour_mould",
       "type": "pour",
       "room": "mould",

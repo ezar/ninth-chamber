@@ -1,7 +1,7 @@
 /**
  * Set dressing with a model of its own (`decor` entities: the Clay Archive's
- * kiln, say), standing on its cell's floor and facing its `face`. The cell is
- * solid in the simulation; nothing shows until the model has loaded. Each
+ * kiln, the Forge's mould), standing on its cell's floor and facing its `face`.
+ * The cell is solid in the simulation unless the entity says otherwise; nothing shows until the model has loaded. Each
  * stands in a holder placed from the start, which room culling files in its
  * room (the group itself is flattened, like the monuments).
  */
@@ -16,6 +16,7 @@ import { fitCopy, loadStaticModel, type Fit } from './static-models';
  */
 const FITS: Readonly<Record<string, Fit>> = {
   kiln: { width: BLOCK - 0.1, origin: 'bottom' },
+  mould: { width: BLOCK - 0.1, origin: 'bottom', brightness: 1.4 },
 };
 
 export class DecorViews {

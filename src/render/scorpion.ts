@@ -7,10 +7,13 @@
  * and it rolls over when killed.
  */
 import * as THREE from 'three/webgpu';
+import { fitCopy, loadStaticModel } from './static-models';
 import type { EnemyState } from '../sim/state';
 import type { JackalView } from './enemies';
 
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
+/** The Meshy scorpion's length, nose to tail (m), about the jointed stand-in's. */
+const LENGTH = 0.5;
 
 export class ScorpionView implements JackalView {
   readonly root = new THREE.Group();
@@ -31,6 +34,10 @@ export class ScorpionView implements JackalView {
   private flinchT = 0;
   private roll = 0;
   private lastBite = 0;
+  /** The Meshy scorpion once loaded (it replaces the jointed parts), and its materials. */
+  private model: THREE.Object3D | null = null;
+  private readonly modelMaterials: THREE.Material[] = [];
+  private disposed = false;
 
   constructor() {
     const piece = (geo: THREE.BufferGeometry, mat: THREE.Material, parent: THREE.Object3D): THREE.Mesh => {
@@ -99,6 +106,24 @@ export class ScorpionView implements JackalView {
     const tip = piece(new THREE.ConeGeometry(0.012, 0.06, 6), this.sting, parent);
     tip.position.set(0, 0.04, -0.01);
     tip.rotation.x = -0.6;
+    void loadStaticModel('scorpion').then((model) => {
+      if (model && !this.disposed) this.useModel(model);
+    });
+  }
+
+  /**
+   * Swaps the jointed stand-in for the Meshy scorpion, carried by the body: it keeps the
+   * body's lunge, flinch and roll onto its back, and its strike becomes a lunge forward.
+   */
+  private useModel(model: THREE.Object3D): void {
+    const { root, materials } = fitCopy(model, { width: LENGTH, origin: 'bottom' });
+    this.modelMaterials.push(...materials);
+    root.position.y = -this.body.position.y;
+    this.body.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.visible = false;
+    });
+    this.body.add(root);
+    this.model = root;
   }
 
   flinch(): void {
@@ -137,9 +162,13 @@ export class ScorpionView implements JackalView {
     this.roll = dead ? Math.min(Math.PI, this.roll + dt * 8) : 0;
     this.body.rotation.set(this.flinchT > 0 ? -0.2 : 0, 0, this.roll);
     this.body.position.y = 0.09 + (dead ? 0.03 : 0);
+    // The model has no tail to whip: the whole body lunges at the sting instead.
+    if (this.model) this.model.position.z = -s * 0.08;
   }
 
   dispose(): void {
+    this.disposed = true;
+    for (const m of this.modelMaterials) m.dispose();
     for (const g of this.geometries) g.dispose();
     this.shell.dispose();
     this.limb.dispose();

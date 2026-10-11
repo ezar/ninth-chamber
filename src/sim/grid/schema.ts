@@ -174,11 +174,13 @@ const entity = z.discriminatedUnion('type', [
       type: z.literal('decor'),
       /**
        * Set dressing with a model of its own (public/models/<model>.glb): the Clay Archive's
-       * kiln. It fills its cell, like a statue.
+       * kiln, the Forge's mould of the seal.
        */
-      model: z.enum(['kiln']),
+      model: z.enum(['kiln', 'mould']),
       /** The way its front looks. */
       face: z.enum(FACINGS).default('S'),
+      /** It fills its cell, like a statue; false for one set into the floor (the mould). */
+      solid: z.boolean().default(true),
     })
     .strict(),
   z
