@@ -6,10 +6,13 @@
  * rises and dives, a glide while it climbs away, a tumble when shot down.
  */
 import * as THREE from 'three/webgpu';
+import { fitCopy, loadStaticModel } from './static-models';
 import type { EnemyState } from '../sim/state';
 import type { JackalView } from './enemies';
 
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v));
+/** The Meshy bird's wingspan (m), as the stand-in's. */
+const WINGSPAN = 1.4;
 
 export class BirdView implements JackalView {
   readonly root = new THREE.Group();
@@ -24,6 +27,10 @@ export class BirdView implements JackalView {
   private beat = 0;
   private flinchT = 0;
   private tumble = 0;
+  /** The Meshy bird once loaded (it replaces the jointed parts), and its materials. */
+  private model: THREE.Object3D | null = null;
+  private readonly modelMaterials: THREE.Material[] = [];
+  private disposed = false;
 
   constructor() {
     const piece = (geo: THREE.BufferGeometry, mat: THREE.Material, parent: THREE.Object3D): THREE.Mesh => {
@@ -79,6 +86,24 @@ export class BirdView implements JackalView {
     const l = wing(-1);
     this.wings = [r[0], l[0]];
     this.tips = [r[1], l[1]];
+    void loadStaticModel('bird').then((model) => {
+      if (model && !this.disposed) this.useModel(model);
+    });
+  }
+
+  /**
+   * Swaps the jointed stand-in for the Meshy bird, carried by the body: it keeps the pitch of
+   * a dive and the tumble when shot down. Its wings are carved spread, so a beat becomes a
+   * rise and a rock of the whole bird.
+   */
+  private useModel(model: THREE.Object3D): void {
+    const { root, materials } = fitCopy(model, { width: WINGSPAN / this.body.scale.x, origin: 'centre' });
+    this.modelMaterials.push(...materials);
+    this.body.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.visible = false;
+    });
+    this.body.add(root);
+    this.model = root;
   }
 
   flinch(): void {
@@ -118,9 +143,15 @@ export class BirdView implements JackalView {
       this.head.rotation.y += (clamp(yaw, -0.8, 0.8) - this.head.rotation.y) * (1 - Math.exp(-dt * 6));
     }
     this.head.rotation.x = this.flinchT > 0 ? 0.4 : 0;
+    if (this.model) {
+      this.model.position.y = perched || dead ? 0 : flap * 0.03;
+      this.model.rotation.z = perched || dead ? 0 : flap * 0.12;
+    }
   }
 
   dispose(): void {
+    this.disposed = true;
+    for (const m of this.modelMaterials) m.dispose();
     for (const g of this.geometries) g.dispose();
     this.feather.dispose();
     this.pale.dispose();

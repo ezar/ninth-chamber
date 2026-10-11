@@ -19,6 +19,7 @@
  * boulder's dust.
  */
 import * as THREE from 'three/webgpu';
+import { fitCopy, loadStaticModel } from './static-models';
 import { color, float, normalView, positionViewDirection, uniform } from 'three/tsl';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -519,6 +520,16 @@ export class TempleView {
         g.add(chains);
       }
       mergeStatic(g);
+      // The Wind Stair's lifts are counterweighted: the Meshy weight hangs under each deck.
+      if (this.level.id === 'wind_stair')
+        void loadStaticModel('counterweight').then((model) => {
+          if (!model) return;
+          const { root } = fitCopy(model, { width: BLOCK - 0.4, origin: 'bottom' });
+          root.updateMatrixWorld(true);
+          const tall = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).y;
+          root.position.y = -devices.platformThickness - tall;
+          g.add(root);
+        });
       this.group.add(g);
       this.platforms.set(def.id, g);
     }

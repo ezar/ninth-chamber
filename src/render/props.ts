@@ -65,6 +65,9 @@ const RELIC_MODEL_GLOW: Readonly<Record<string, string>> = {
   observatory: '#b9cbf2',
 };
 
+/** The length of the Meshy rope's knotted end drawn over the lower end of a hanging cord (m). */
+const ROPE_END = 1.6;
+
 /** The Forge's hearths: tall enough that the fire in the mouth sits at the brazier flames' height (m). */
 const FORGE_HEIGHT = 2.4;
 
@@ -692,6 +695,8 @@ export class Props {
           if (cord) cord.scale.y = top - a.y + next;
           const knot = v.getObjectByName('knot');
           if (knot) knot.position.y = -(top - a.y + next);
+          const end = v.getObjectByName('rope-end');
+          if (end) end.position.y = -(top - a.y + next);
           v.rotation.z = Math.sin(time * 0.9 + a.cx) * 0.012;
           v.rotation.x = Math.sin(time * 0.7 + a.cz) * 0.012;
           break;
@@ -963,6 +968,17 @@ function rope(m: PropMaterials): THREE.Group {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 14), m.bronze);
   ring.rotation.x = Math.PI / 2;
   g.add(cord, knot, ring);
+  // The Meshy rope's knotted end, once loaded, over the lower end of the cord (the plain cord
+  // goes on above it to the ceiling, in the Meshy rope's colour).
+  void loadStaticModel('rope').then((model) => {
+    if (!model) return;
+    const { root } = fitCopy(model, { height: ROPE_END, origin: 'bottom' });
+    root.name = 'rope-end';
+    root.position.y = knot.position.y;
+    knot.visible = false;
+    fibre.color.set('#a08660');
+    g.add(root);
+  });
   return g;
 }
 
