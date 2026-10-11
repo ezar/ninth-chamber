@@ -52,6 +52,7 @@ import { PAD, PadReader, focusItem, padHas } from './ui/pad';
 import { Prelude } from './ui/prelude';
 import { Reader } from './ui/reader';
 import { applyUpdate, registerServiceWorker, type OfflineState } from './ui/service-worker';
+import { fitStandaloneViewport } from './ui/standalone-viewport';
 import { browserStorage, defaultSettings, loadSettings, saveSettings, type Settings } from './ui/settings';
 import { TitleScreen } from './ui/title';
 import { version } from '../package.json';
@@ -105,6 +106,8 @@ function deviceHints(): DeviceHints {
 }
 
 async function main(): Promise<void> {
+  // Before anything is laid out: an installed iPhone app may need the page grown to the screen.
+  fitStandaloneViewport(() => window.dispatchEvent(new Event('resize')));
   const storage = browserStorage();
   const hints = deviceHints();
   // The lowest tier the game picks by itself: computers stop at medium.

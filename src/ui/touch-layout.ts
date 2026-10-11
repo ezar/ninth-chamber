@@ -12,6 +12,12 @@ import { TOUCH_BUTTONS, type TouchButton, type TouchLayout } from './settings';
 const isTouchButton = (b: string | undefined): b is TouchButton =>
   b !== undefined && (TOUCH_BUTTONS as readonly string[]).includes(b);
 
+/**
+ * The height the buttons may use: the viewport's, or the body's where an installed iPhone app
+ * grows the page past a viewport a status bar short (src/ui/standalone-viewport.ts).
+ */
+const pageHeight = (): number => Math.max(window.innerHeight, document.body.clientHeight);
+
 /** The offset a button is drawn with (its CSS translate), [0, 0] when none. */
 export function parseOffset(translate: string): [number, number] {
   // A zero second value is dropped when read back ("-742px 0px" reads "-742px").
@@ -64,7 +70,7 @@ export function applyTouchLayout(root: HTMLElement, layout: TouchLayout): void {
       right: box.right - o[0],
       bottom: box.bottom - o[1],
     };
-    const [x, y] = clampOffset(home, o, window.innerWidth, window.innerHeight);
+    const [x, y] = clampOffset(home, o, window.innerWidth, pageHeight());
     el.style.translate = `${x}px ${y}px`;
   }
 }
@@ -179,7 +185,7 @@ export class TouchLayoutEditor {
       Math.max(-d.home.left, d.from[0] + e.clientX - d.start.x),
     );
     const y = Math.min(
-      window.innerHeight - d.home.bottom,
+      pageHeight() - d.home.bottom,
       Math.max(-d.home.top, d.from[1] + e.clientY - d.start.y),
     );
     const o: [number, number] = [Math.round(x), Math.round(y)];

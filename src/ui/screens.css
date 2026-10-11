@@ -89,6 +89,8 @@ body:not([data-phase='play']) #touch,
 #start {
   position: fixed;
   inset: 0;
+  /* Clear of the status bar where the page starts under it (an installed iPhone app). */
+  padding-top: env(safe-area-inset-top);
   display: flex;
   flex-direction: column;
   justify-content: center;
