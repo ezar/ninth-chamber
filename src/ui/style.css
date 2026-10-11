@@ -23,6 +23,19 @@ body {
 }
 
 /*
+ * An iPhone Home Screen app whose viewport is a status bar short (src/ui/standalone-viewport.ts):
+ * the body grows to the whole screen and, through the transform, frames every fixed layer.
+ */
+html.standalone-gap body {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(100% + var(--standalone-gap, 0px));
+  transform: translateZ(0);
+}
+
+/*
  * Stacking: scene, HUD, death fade, touch controls, pause button, end
  * screen, title, menu. Vignette and film grain are part of the render
  * pipeline (src/render/post.ts), not overlays.

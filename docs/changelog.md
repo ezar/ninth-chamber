@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 0.9.22 (2026-10-11): The iPhone Home Screen app fills the screen
+
+- **The fix in 0.9.21 did not reach an app already installed.** The owner's iPhone app still sat a status bar too high, with a black band at the bottom. An iPhone Home Screen app keeps the status bar style it was installed with, so the new opaque bar only applies to new installs.
+- **The game now corrects it itself** (`src/ui/standalone-viewport.ts`). In an installed iPhone app whose page starts under the status bar, it measures how much shorter the viewport is than the screen. The page then grows by that much: the body becomes the frame of every full-screen layer and is sized to the whole screen. Nothing changes in Safari, on computers or on Android, or when the gap is not about one status bar (a keyboard, a split view).
+- **The title clears the status bar** where the page starts under it: the seal and the title no longer sit behind the clock.
+- **Tests**: tests/standalone-viewport.test.ts covers the measurement in portrait and landscape, with an opaque bar, and with a larger gap that is left alone.
+
 ## Version 0.9.21 (2026-10-11): Offline play in every chamber, and Chamber IV's Meshy objects
 
 - **Offline play works in every chamber.** The owner played offline and could only play the chamber they had started. Two causes:
