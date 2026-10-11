@@ -10,9 +10,12 @@ import type { Level } from '../sim/grid/level';
 import { BLOCK, DIR_YAW } from '../sim/grid/units';
 import { fitCopy, loadStaticModel, type Fit } from './static-models';
 
-/** How big each model is drawn (docs/art/models-brief.md). */
+/**
+ * How big each model is drawn: within its cell, which is all the simulation makes solid
+ * (a little inside it, so Nora's shoulder does not sink into the model).
+ */
 const FITS: Readonly<Record<string, Fit>> = {
-  kiln: { height: 2.2, origin: 'bottom' },
+  kiln: { width: BLOCK - 0.1, origin: 'bottom' },
 };
 
 export class DecorViews {
