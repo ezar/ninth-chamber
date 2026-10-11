@@ -10,6 +10,7 @@
   - offline, every address of the game starts the newest version saved complete. A version still downloading never starts, so every chamber it names is there;
   - pages loaded online are not stored over the saved copy;
   - files are looked up in complete versions first, and a server's `Vary` header no longer hides a saved file from the page.
+
 - **The whole game is saved for offline play, sounds included.** The download (about 42 MB) goes a few files at a time, and resumes where it stopped if it was cut short. The page is saved last, so a version counts as complete only when everything has arrived. The music (45 MB) follows in the background once the game runs. Streamed music asks for byte ranges, and these are now answered from the saved file, so it also plays offline.
 - **The title says how it is going**: "Saving the tomb for offline play · 45%", then "Ready to play offline". Texts in English, Spanish and Catalan. It says ready only once this version's worker is in control, since it asks the worker which version it is (older workers never answer). A device that has an older version keeps it until the player updates: open the game online once and press "Update" when it is offered, or close every tab of the game and open it again.
 - **Tests**:
