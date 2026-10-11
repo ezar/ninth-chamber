@@ -529,6 +529,8 @@
   "options.touchOpacity": "Opacitat dels botons tàctils",
   "update.ready": "Hi ha una versió nova del joc.",
   "update.apply": "Actualitza",
+  "offline.progress": "Desant la tomba per jugar sense connexió · {pct} %",
+  "offline.ready": "A punt per jugar sense connexió",
   "level.bronze_forge": "La Farga de Bronze",
   "kicker.bronze_forge": "A les profunditats de la muntanya · Sisena cambra",
   "premise.bronze_forge": "Aquí els constructors fonien els segells de les nou cambres. Els canals de foc són freds. No pas tots.",

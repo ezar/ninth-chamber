@@ -30,7 +30,12 @@
     <link rel="manifest" href="./manifest.json" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!--
+      An opaque status bar: with black-translucent, iOS sizes a Home Screen app's viewport as if the
+      status bar were still there, but starts it under it, so the game sits that much too high and
+      leaves a black band at the bottom (WebKit bug 236445).
+    -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="%t:meta.shortName%" />
 
     <meta property="og:type" content="website" />
@@ -352,6 +357,7 @@
       </main>
       <footer class="legal">
         <span class="fallback" data-i18n="start.copyright">%tt:start.copyright%</span>
+        <span id="offline-status" role="status" hidden></span>
         <span id="version">%version%</span>
       </footer>
       <div id="splash" aria-hidden="true">

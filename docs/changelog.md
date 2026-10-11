@@ -1,5 +1,29 @@
 # Changelog
 
+## Version 0.9.21 (2026-10-11): Offline play in every chamber, and Chamber IV's Meshy objects
+
+- **Offline play works in every chamber.** The owner played offline and could only play the chamber they had started. Two causes:
+  - changing chamber loads the page again with the chamber in its address (`?level=…`). Offline, the old worker only answered addresses already opened online, and the page it fell back to was not saved, so any other chamber failed to open;
+  - after an update, the new version's page started offline while only the old version's files were saved. A chamber whose data had changed did not load, and the game quietly fell back to the first one.
+
+  Now:
+  - offline, every address of the game starts the newest version saved complete. A version still downloading never starts, so every chamber it names is there;
+  - pages loaded online are not stored over the saved copy;
+  - files are looked up in complete versions first, and a server's `Vary` header no longer hides a saved file from the page.
+  - a saved file is never refreshed in place, so a version saved complete stays that version. A new deploy brings its files with its own worker.
+
+- **The whole game is saved for offline play, sounds included.** The download (about 42 MB) goes a few files at a time, and resumes where it stopped if it was cut short. The page is saved last, so a version counts as complete only when everything has arrived. The music (45 MB) follows in the background once the game runs. Streamed music asks for byte ranges, and these are now answered from the saved file, so it also plays offline.
+- **The title says how it is going**: "Saving the tomb for offline play · 45%", then "Ready to play offline". Texts in English, Spanish and Catalan. It says ready only once this version's worker is in control, since it asks the worker which version it is (older workers never answer). A device that has an older version keeps it until the player updates: open the game online once and press "Update" when it is offered, or close every tab of the game and open it again.
+- **Installed on an iPhone's Home Screen, the game no longer sits too high.** It had been leaving a black band at the bottom while the top went under the status bar. With a translucent status bar, iOS sizes the app's viewport as if the bar were still there, but starts it under the bar (WebKit bug 236445). The status bar is opaque black now, and the game fills the screen below it. The setting is read when the app opens; if the band stays, remove the app from the Home Screen and add it again.
+- **Tests**:
+  - tests/service-worker.test.ts runs the worker against in-memory caches. It checks that offline it starts the complete version and not a newer one cut short, that a failed download never counts as complete, and that byte ranges are answered;
+  - `pnpm offline` now opens all nine chambers by their addresses without network and checks that each one loads as itself. It also stops the local server, since the browser's offline switch does not reach the service worker's own requests; that is why the old check passed.
+- **Chamber IV, more Meshy objects**:
+  - every glyph lock has the carved wheel standing behind its drum;
+  - the Archive's pushable shelves are faced with the shelf of tablets;
+  - the dart traps' slots are the carved niche, and volleys fly the Meshy darts.
+- **`OrbitCamera.pin`**: a fixed view for tools that frame a single object.
+
 ## Version 0.9.20 (2026-10-11): The kiln
 
 - **The Clay Archive's kiln room has its kiln.** The domed brick kiln generated with Meshy now stands in the room's south-west corner, where it fills its cell.

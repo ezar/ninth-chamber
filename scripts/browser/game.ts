@@ -16,20 +16,29 @@ export const arg = (name: string, fallback: string): string => {
 export async function serve(url: string | null): Promise<{ base: string; stop: () => void }> {
   if (url) return { base: url.endsWith('/') ? url : `${url}/`, stop: () => undefined };
   const port = 4300 + Math.floor(Math.random() * 500);
+  // In a process group of its own, so stopping it also stops the server npx started.
   const child: ChildProcess = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort'], {
     stdio: 'ignore',
+    detached: true,
   });
+  const kill = (): void => {
+    try {
+      if (child.pid) process.kill(-child.pid);
+    } catch {
+      // Already gone.
+    }
+  };
   const base = `http://localhost:${port}/`;
   for (let i = 0; i < 100; i++) {
     try {
       const r = await fetch(base);
-      if (r.ok) return { base, stop: () => child.kill() };
+      if (r.ok) return { base, stop: kill };
     } catch {
       // Not up yet.
     }
     await new Promise((r) => setTimeout(r, 200));
   }
-  child.kill();
+  kill();
   throw new Error('vite preview did not start (run pnpm build first)');
 }
 

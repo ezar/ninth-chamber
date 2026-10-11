@@ -51,7 +51,7 @@ import { PadEdgeReader } from './ui/nav';
 import { PAD, PadReader, focusItem, padHas } from './ui/pad';
 import { Prelude } from './ui/prelude';
 import { Reader } from './ui/reader';
-import { applyUpdate, registerServiceWorker } from './ui/service-worker';
+import { applyUpdate, registerServiceWorker, type OfflineState } from './ui/service-worker';
 import { browserStorage, defaultSettings, loadSettings, saveSettings, type Settings } from './ui/settings';
 import { TitleScreen } from './ui/title';
 import { version } from '../package.json';
@@ -227,6 +227,19 @@ async function main(): Promise<void> {
     document.body.append(box);
   };
 
+  /** The title's footer says how far the game is saved for offline play, then that it is. */
+  const showOffline = (state: OfflineState): void => {
+    const el = $('#offline-status');
+    el.hidden = false;
+    if (state === 'ready') {
+      el.dataset.i18n = 'offline.ready';
+      el.textContent = t('offline.ready');
+    } else {
+      delete el.dataset.i18n;
+      el.textContent = t('offline.progress', { pct: Math.floor(state * 100) });
+    }
+  };
+
   /** Loading is over: the button wakes, and the cards finish the one on screen. */
   const loadingDone = (): void => {
     loading.ready();
@@ -241,7 +254,7 @@ async function main(): Promise<void> {
     if (press === 'start') start();
     else if (press === 'continue') continueGame();
     // Offline play and fast restarts, once the first room no longer needs the bandwidth.
-    registerServiceWorker(showUpdate);
+    registerServiceWorker(showUpdate, showOffline);
   };
 
   // Quality: the stored tier, or on first run the device heuristic until the benchmark decides.

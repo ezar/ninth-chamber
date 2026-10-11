@@ -127,6 +127,9 @@ export class Props {
     fire: number;
   }[] = [];
   private relicMesh: THREE.Mesh | null = null;
+  /** The Meshy shelf of tablets (the Archive's pushable shelves) once loaded, and its copies' materials. */
+  private shelfModel: THREE.Object3D | null = null;
+  private readonly shelfMaterials: THREE.Material[] = [];
   /** The chamber's relic model once loaded (RELIC_MODELS), until its holder takes it. */
   private relicModel: THREE.Object3D | null = null;
   /** Pushable blocks are drawn as shelves of tablets (the Clay Archive, spec §19). */
@@ -242,6 +245,11 @@ export class Props {
     this.group.add(this.decor.group);
     this.buildCrumbleTiles();
     this.modelsLoaded = PropLibrary.load(import.meta.env.BASE_URL).then((lib) => this.useModels(lib));
+    if (this.shelves)
+      void loadStaticModel('shelf').then((m) => {
+        this.shelfModel = m;
+        this.dressShelf();
+      });
     const relicModel = RELIC_MODELS[level.id];
     if (relicModel)
       void loadStaticModel(relicModel.name).then((m) => {
@@ -278,6 +286,38 @@ export class Props {
     for (const e of this.level.entities) busy.add(`${e.at[0]},${e.at[1]}`);
     for (const a of this.actors.values()) busy.add(`${a.cx},${a.cz}`);
     this.group.add(dressLevel(this.level, lib, busy));
+  }
+
+  /**
+   * Faces each of the Archive's pushable shelves with the Meshy shelf of tablets, on all four
+   * sides, once the model and the shelf's holder both exist (the carved shelf stays inside).
+   */
+  private dressShelf(holder?: THREE.Object3D): void {
+    const model = this.shelfModel;
+    if (!model) return;
+    const holders = holder
+      ? [holder]
+      : [...this.actorViews.entries()]
+          .filter(([id]) => this.actors.get(id)?.kind === 'block')
+          .map(([, h]) => h);
+    const W = BLOCK - 0.06;
+    const H = mechanics.blockHeight - 0.02;
+    for (const h of holders) {
+      if (h.userData.shelfFaces) continue;
+      h.userData.shelfFaces = true;
+      for (let k = 0; k < 4; k++) {
+        const { root, materials } = fitCopy(model, { width: W, origin: 'bottom' });
+        this.shelfMaterials.push(...materials);
+        root.updateMatrixWorld(true);
+        const tall = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).y;
+        if (tall > H) root.scale.y = H / tall;
+        // Out along the face's own -Z (its front), a hair proud of the carved shelf.
+        const a = (k * Math.PI) / 2;
+        root.rotation.y = a;
+        root.position.set(-Math.sin(a) * (W / 2 + 0.01), 0, -Math.cos(a) * (W / 2 + 0.01));
+        h.add(root);
+      }
+    }
   }
 
   /** Swaps the relic's stand-in (or the baked gem) for its chamber's own model, once both exist. */
@@ -552,6 +592,7 @@ export class Props {
     this.actors.set(a.id, a);
     this.upgrade(holder, a);
     if (a.kind === 'relic') this.useRelicModel();
+    if (a.kind === 'block' && this.shelves) this.dressShelf(holder);
     return holder;
   }
 
