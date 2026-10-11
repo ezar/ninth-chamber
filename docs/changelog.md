@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 0.9.20 (2026-10-11): The kiln
+
+- **The Clay Archive's kiln room has its kiln.** The domed brick kiln generated with Meshy now stands in the room's south-west corner, where it fills its cell.
+- **`decor` level entities**: set dressing with a model of its own, standing in its cell and facing its `face`. The cell is solid, as a keeper's statue is. For now the kiln is the only model it accepts. Tests: tests/decor.test.ts.
+- **Room culling fix**: an object with nothing drawn yet was filed in the room at the world's origin, not the room at its own position. A shared vector was overwritten while being read. Holders whose model is still loading now land in their own room.
+- **Not used**: Meshy's forge hearth and mould of the seal. The hearth would replace the Forge's 26 braziers, two of which start cold for a puzzle, and the mould has no clear place. The dart niche, dart and oculus rim were also left out, because they could not be checked in the browser.
+
 ## Version 0.9.19 (2026-10-10): The keepers' statues and the relics
 
 The first objects generated with Meshy are in the game. They were made with text-to-3D from the prompts in `docs/art/meshy-prompts.md`.

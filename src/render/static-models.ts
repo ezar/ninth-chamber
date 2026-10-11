@@ -30,7 +30,9 @@ export function loadStaticModel(name: string): Promise<THREE.Object3D | null> {
 
 export interface Fit {
   /** Height (m) of the copy; its width and depth follow. */
-  height: number;
+  height?: number;
+  /** Instead of the height: its widest horizontal extent (m), to keep it inside a cell. */
+  width?: number;
   /** Where the copy's origin goes: the middle of its footprint on the floor, or its centre. */
   origin: 'bottom' | 'centre';
 }
@@ -57,7 +59,10 @@ export function fitCopy(
   inner.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(inner);
   const size = box.getSize(new THREE.Vector3());
-  const s = fit.height / Math.max(1e-6, size.y);
+  const s =
+    fit.width !== undefined
+      ? fit.width / Math.max(1e-6, size.x, size.z)
+      : (fit.height ?? 1) / Math.max(1e-6, size.y);
   inner.scale.multiplyScalar(s);
   const c = box.getCenter(new THREE.Vector3()).multiplyScalar(s);
   inner.position.set(-c.x, fit.origin === 'bottom' ? -box.min.y * s : -c.y, -c.z);

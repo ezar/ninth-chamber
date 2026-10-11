@@ -437,6 +437,14 @@
       "height": 8
     },
     {
+      "id": "kiln_oven",
+      "type": "decor",
+      "room": "kiln",
+      "at": [1, 9],
+      "model": "kiln",
+      "face": "N"
+    },
+    {
       "id": "brazier_kiln",
       "type": "brazier",
       "room": "kiln",
