@@ -529,6 +529,8 @@
   "options.touchOpacity": "Opacidad de los botones táctiles",
   "update.ready": "Hay una versión nueva del juego.",
   "update.apply": "Actualizar",
+  "offline.progress": "Guardando la tumba para jugar sin conexión · {pct} %",
+  "offline.ready": "Lista para jugar sin conexión",
   "level.bronze_forge": "La Fragua de Bronce",
   "kicker.bronze_forge": "En lo hondo de la montaña · Sexta cámara",
   "premise.bronze_forge": "Aquí los constructores fundían los sellos de las nueve cámaras. Los canales de fuego están fríos. No todos.",

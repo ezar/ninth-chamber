@@ -322,6 +322,11 @@ body.reduce-motion #start-seal.open .seal-svg path {
   font: 400 12px var(--font-ui);
 }
 
+#offline-status {
+  margin-left: auto;
+  text-align: right;
+}
+
 #version {
   font: 500 11px var(--font-mono);
   letter-spacing: 0.08em;

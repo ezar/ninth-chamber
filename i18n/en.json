@@ -529,6 +529,8 @@
   "options.touchOpacity": "Touch button opacity",
   "update.ready": "A new version of the game is ready.",
   "update.apply": "Update",
+  "offline.progress": "Saving the tomb for offline play · {pct}%",
+  "offline.ready": "Ready to play offline",
   "level.bronze_forge": "The Bronze Forge",
   "kicker.bronze_forge": "Deep under the mountain · Sixth chamber",
   "premise.bronze_forge": "Here the builders cast the seals of the nine chambers. The channels of fire are cold. Not all of them.",
