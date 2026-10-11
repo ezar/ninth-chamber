@@ -4,6 +4,7 @@
 
 - **The fix in 0.9.21 did not reach an app already installed.** The owner's iPhone app still sat a status bar too high, with a black band at the bottom. An iPhone Home Screen app keeps the status bar style it was installed with, so the new opaque bar only applies to new installs.
 - **The game now corrects it itself** (`src/ui/standalone-viewport.ts`). In an installed iPhone app whose page starts under the status bar, it measures how much shorter the viewport is than the screen. The page then grows by that much: the body becomes the frame of every full-screen layer and is sized to the whole screen. Nothing changes in Safari, on computers or on Android, or when the gap is not about one status bar (a keyboard, a split view).
+- **Touch buttons use the grown page too**: a custom layout and the editor keep buttons within the whole page, not the shorter viewport, so a button placed at the bottom is no longer pushed up by the status bar's height.
 - **The title clears the status bar** where the page starts under it: the seal and the title no longer sit behind the clock.
 - **Tests**: tests/standalone-viewport.test.ts covers the measurement in portrait and landscape, with an opaque bar, and with a larger gap that is left alone.
 
