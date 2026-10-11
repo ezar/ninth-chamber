@@ -4,9 +4,9 @@
  * - Versioned by a hash of everything the build ships (bundle file names,
  *   which carry content hashes, and the contents of public/), so any change
  *   installs a new worker whose activation drops the old caches.
- * - Pages are network-first: online, a deploy is always picked up. Hashed bundles (/assets/) are cache-first, which
- *   can never be stale since a new build has new names. Other files (models,
- *   textures, audio) are served from the cache and refreshed behind it.
+ * - Pages are network-first: online, a deploy is always picked up. Every other
+ *   file is cache-first and never refreshed in place: each build's cache holds
+ *   that build's files, and a deploy brings its own with its worker.
  * - The whole game (engine, every chamber, its models, textures and sounds) is
  *   precached on install, a few files at a time, resuming where an install cut
  *   short stopped; the page goes in last, so a cache that holds it is complete.
@@ -205,18 +205,9 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(ranged(request));
     return;
   }
-  const hashed = url.pathname.includes('/assets/');
-  event.respondWith(
-    lookup(request).then((cached) => {
-      const network = fetch(request).then((r) => put(request, r));
-      if (cached) {
-        // Content-hashed bundles never change; other files refresh behind the cached copy.
-        if (!hashed) event.waitUntil(network.catch(() => undefined));
-        return cached;
-      }
-      return network;
-    }),
-  );
+  // A cached file is never refreshed in place: a build's cache stays that build's, and a new
+  // deploy brings its files with its own worker. Only files no cache holds are added.
+  event.respondWith(lookup(request).then((cached) => cached || fetch(request).then((r) => put(request, r))));
 });
 `;
 }

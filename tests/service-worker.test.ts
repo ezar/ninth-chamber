@@ -157,6 +157,20 @@ describe('service worker at work', () => {
     expect(said).toBe('a');
   });
 
+  it('never refreshes a cached file in place, so a build cached whole stays that build', async () => {
+    const files: Record<string, string> = { './': 'page A', './models/x.glb': 'model A' };
+    const a = harness('a', ['./', './models/x.glb'], files);
+    await a.run('install');
+    // Build B is deployed: same name, new content.
+    files['./models/x.glb'] = 'model B';
+    const r = await a.get('./models/x.glb');
+    expect(await r?.text()).toBe('model A');
+    await new Promise((done) => setTimeout(done, 0));
+    expect(await (await a.caches.open('nc-a')).match('./models/x.glb').then((c) => c?.text())).toBe(
+      'model A',
+    );
+  });
+
   it('answers a byte range from the cached file', async () => {
     const a = harness('a', ['./', './audio/music/x.webm'], {
       './': 'p',
