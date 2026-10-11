@@ -6,15 +6,21 @@
  * a notch in the stone at the ninth place they align to; the oculus's shaft
  * of moonlight and its pool on the floor; and the night sky beyond the
  * openings, with the Amber Heart's eight stars drawn as a constellation.
- * Views only read the simulation.
+ * Two Meshy models dress it: the dial of the dome ring, inlaid in the floor
+ * under the centre of each dome (where the oculus's moonlight falls), and the
+ * carved stone rim round each oculus in the ceiling. Views only read the simulation.
  */
 import * as THREE from 'three/webgpu';
 import type { Level } from '../sim/grid/level';
 import { BLOCK } from '../sim/grid/units';
+import { fitCopy, loadStaticModel } from './static-models';
 import { defsOf, type OculusDef, type RingDef } from '../sim/mechanisms/defs';
 import type { World } from '../sim/world';
 
 const TAU = Math.PI * 2;
+/** The dome ring's dial inlaid in the floor: its thickness, and its top above the floor, under the oculus's pool (m). */
+const DIAL_DEPTH = 0.04;
+const DIAL_TOP = 0.015;
 /** Angle round the dome (clockwise from north, radians) of position `i` of `n`. */
 const step = (i: number, n: number): number => (i / n) * TAU;
 
@@ -110,6 +116,14 @@ export class DomeView {
       );
       notch.rotation.y = -a;
       this.group.add(notch);
+      // The dome ring's dial, inlaid in the floor under the dome's centre (where an oculus's
+      // moonlight falls), inside the rings: flattened to a slab just under the pool of light.
+      const rMin = Math.min(
+        ...[...defs.rings.values()].filter((d) => d.cx === def.cx && d.cz === def.cz).map((d) => d.radius),
+      );
+      const x = def.cx * BLOCK + BLOCK / 2;
+      const z = def.cz * BLOCK + BLOCK / 2;
+      this.dress('dome_ring', x, level.floorAt(x, z) + DIAL_TOP - DIAL_DEPTH / 2, z, rMin * 1.4, DIAL_DEPTH);
     }
 
     // The oculus: a shaft of moonlight and its pool on the floor.
@@ -144,8 +158,31 @@ export class DomeView {
       light.position.set(cx, floor + 2.5, cz);
       shaft.visible = pool.visible = false;
       this.group.add(shaft, pool, light);
+      // The carved rim round the opening, in the ceiling.
+      this.dress('oculus', cx, ceil - 0.1, cz, Math.min(w, d) * 1.35);
       this.oculi.push({ def, shaft, pool, light, open: def.on ? 1 : 0 });
     }
+  }
+
+  /**
+   * A Meshy model centred at a place in the dome, `width` across, its holder placed at once so
+   * room culling files it in its room; `depth`, when given, flattens it to that thickness.
+   */
+  private dress(name: string, x: number, y: number, z: number, width: number, depth?: number): void {
+    const holder = new THREE.Group();
+    holder.position.set(x, y, z);
+    this.group.add(holder);
+    void loadStaticModel(name).then((model) => {
+      if (!model) return;
+      const { root, materials } = fitCopy(model, { width, origin: 'centre' });
+      this.materials.push(...materials);
+      if (depth !== undefined) {
+        root.updateMatrixWorld(true);
+        const tall = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).y;
+        root.scale.y *= depth / Math.max(1e-6, tall);
+      }
+      holder.add(root);
+    });
   }
 
   update(world: World, dt: number): void {

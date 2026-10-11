@@ -8,7 +8,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { glyphRows } from '../core/glyphs';
 import type { NoteStyle } from '../sim/grid/schema';
 import type { Level } from '../sim/grid/level';
-import { BLOCK, DIR_VEC, DIR_YAW } from '../sim/grid/units';
+import { BLOCK, DIR_VEC, DIR_YAW, DIRS, type Dir } from '../sim/grid/units';
 import { mechanics } from '../sim/player/tuning';
 import type { Actor } from '../sim/state';
 import type { World } from '../sim/world';
@@ -19,7 +19,7 @@ import { fitCopy, loadStaticModel } from './static-models';
 import { crackMask } from './textures';
 import { materialColor, texture, uv, vec2 } from 'three/tsl';
 import { torchModel } from './torch';
-import { rootFaces } from './roots';
+import { rootFaces, rootPanels } from './roots';
 import { TangleViews } from './tangles';
 import { Monuments } from './monuments';
 import { DecorViews } from './decor';
@@ -64,6 +64,12 @@ const RELIC_MODEL_GLOW: Readonly<Record<string, string>> = {
   wind_stair: '#cfe4ff',
   observatory: '#b9cbf2',
 };
+
+/** The length of the Meshy rope's knotted end drawn over the lower end of a hanging cord (m). */
+const ROPE_END = 1.6;
+
+/** The Forge's hearths: tall enough that the fire in the mouth sits at the brazier flames' height (m). */
+const FORGE_HEIGHT = 2.4;
 
 /** Chambers whose relic is a tablet of fired clay rather than a gem in a cage. */
 const TABLET_RELICS: ReadonlySet<string> = new Set(['clay_archive']);
@@ -127,6 +133,8 @@ export class Props {
     fire: number;
   }[] = [];
   private relicMesh: THREE.Mesh | null = null;
+  /** The Forge's hearth copies' materials. */
+  private readonly forgeMaterials: THREE.Material[] = [];
   /** The Meshy shelf of tablets (the Archive's pushable shelves) once loaded, and its copies' materials. */
   private shelfModel: THREE.Object3D | null = null;
   private readonly shelfMaterials: THREE.Material[] = [];
@@ -236,7 +244,13 @@ export class Props {
 
     this.buildSpikes();
     const roots = rootFaces(this.level);
-    if (roots) this.group.add(roots);
+    if (roots) {
+      this.group.add(roots);
+      void loadStaticModel('root_kit').then((m) => {
+        const panels = m && rootPanels(this.level, m);
+        if (panels) this.group.add(panels);
+      });
+    }
     this.tangles = new TangleViews(this.level);
     this.group.add(this.tangles.group);
     this.monuments = new Monuments(this.level);
@@ -249,6 +263,11 @@ export class Props {
       void loadStaticModel('shelf').then((m) => {
         this.shelfModel = m;
         this.dressShelf();
+      });
+    // The Forge's lit braziers are forge hearths (Meshy); the cold ones stay braziers, dark till lit.
+    if (level.id === 'bronze_forge')
+      void loadStaticModel('forge').then((m) => {
+        if (m) this.useForgeHearths(m);
       });
     const relicModel = RELIC_MODELS[level.id];
     if (relicModel)
@@ -264,6 +283,7 @@ export class Props {
     this.lib = lib;
     this.coals = lib.material('brazier', 'coals');
     this.brazierViews.forEach((b, i) => {
+      if (b.userData.forge) return;
       const m = lib.instance('brazier');
       if (!m) return;
       b.clear();
@@ -286,6 +306,27 @@ export class Props {
     for (const e of this.level.entities) busy.add(`${e.at[0]},${e.at[1]}`);
     for (const a of this.actors.values()) busy.add(`${a.cx},${a.cz}`);
     this.group.add(dressLevel(this.level, lib, busy));
+  }
+
+  /**
+   * Swaps each lit brazier's stand-in (or baked brazier) for a forge hearth, its mouth away
+   * from the nearest wall. Tall enough that its fire sits where the brazier's flames burn.
+   */
+  private useForgeHearths(model: THREE.Object3D): void {
+    this.brazierViews.forEach((b, i) => {
+      if (this.fires[i]?.cold) return;
+      const { root, materials } = fitCopy(model, { height: FORGE_HEIGHT, origin: 'bottom' });
+      this.forgeMaterials.push(...materials);
+      const cx = Math.floor(b.position.x / BLOCK);
+      const cz = Math.floor(b.position.z / BLOCK);
+      const wall = DIRS.find((d) => this.level.sector(cx + DIR_VEC[d].x, cz + DIR_VEC[d].z)?.wall !== false);
+      // Facing away from that wall (DIR_YAW turns the model's front towards a direction).
+      const away: Record<Dir, Dir> = { N: 'S', S: 'N', E: 'W', W: 'E' };
+      root.rotation.y = DIR_YAW[wall ? away[wall] : 'S'];
+      b.clear();
+      b.add(root);
+      b.userData.forge = true;
+    });
   }
 
   /**
@@ -654,6 +695,8 @@ export class Props {
           if (cord) cord.scale.y = top - a.y + next;
           const knot = v.getObjectByName('knot');
           if (knot) knot.position.y = -(top - a.y + next);
+          const end = v.getObjectByName('rope-end');
+          if (end) end.position.y = -(top - a.y + next);
           v.rotation.z = Math.sin(time * 0.9 + a.cx) * 0.012;
           v.rotation.x = Math.sin(time * 0.7 + a.cz) * 0.012;
           break;
@@ -925,6 +968,17 @@ function rope(m: PropMaterials): THREE.Group {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 14), m.bronze);
   ring.rotation.x = Math.PI / 2;
   g.add(cord, knot, ring);
+  // The Meshy rope's knotted end, once loaded, over the lower end of the cord (the plain cord
+  // goes on above it to the ceiling, in the Meshy rope's colour).
+  void loadStaticModel('rope').then((model) => {
+    if (!model) return;
+    const { root } = fitCopy(model, { height: ROPE_END, origin: 'bottom' });
+    root.name = 'rope-end';
+    root.position.y = knot.position.y;
+    knot.visible = false;
+    fibre.color.set('#a08660');
+    g.add(root);
+  });
   return g;
 }
 

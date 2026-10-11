@@ -35,6 +35,11 @@ export interface Fit {
   width?: number;
   /** Where the copy's origin goes: the middle of its footprint on the floor, or its centre. */
   origin: 'bottom' | 'centre';
+  /**
+   * Multiplies the copy's base colour: some Meshy textures came out so dark (soot, old iron,
+   * leather) that they read as black shapes in the game's dim rooms.
+   */
+  brightness?: number;
 }
 
 /**
@@ -52,6 +57,7 @@ export function fitCopy(
     o.castShadow = o.receiveShadow = true;
     if (o.material instanceof THREE.MeshStandardMaterial) {
       o.material = o.material.clone();
+      if (fit.brightness !== undefined) o.material.color.multiplyScalar(fit.brightness);
       materials.push(o.material);
     }
   });

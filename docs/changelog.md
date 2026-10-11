@@ -1,5 +1,34 @@
 # Changelog
 
+## Version 1.0.0 (2026-10-11): The Ninth Chamber
+
+**The game is released.** The campaign runs from the Antechamber to the Ninth Chamber, in English, Spanish and Catalan, on computers, phones and gamepads, online or offline. The owner chose to ship now; the playtests with five people, the iPhone check and the name search stay open (docs/roadmap.md).
+
+**Every object made with Meshy is in the game.** None was left out:
+
+- **Root Halls:**
+  - the root panel tiles every climbable face behind the pale runners, in one instanced mesh;
+  - the scorpions are the Meshy scorpion, lunging forward at each sting.
+- **Bronze Forge:**
+  - the pour crucibles and the bellows blocks use their models;
+  - the lit braziers are forge hearths, each facing away from its wall. The two that start cold for a puzzle stay braziers;
+  - the mould stands in the last pour's cell. It is decor that does not block (`decor.solid: false`, tested in tests/decor.test.ts).
+- **Wind Stair:**
+  - the rock birds are the Meshy bird. Its wings are carved spread, so it rocks and rises with each beat;
+  - a stone flute stands beside each wind lever;
+  - the rope ends in the Meshy rope's knot;
+  - a counterweight hangs under each lift.
+- **Observatory**, and every chamber with rings:
+  - the dome ring's dial is inlaid in the floor under the dome's centre, where the oculus's moonlight falls;
+  - a carved stone rim rings the oculus.
+- **Ninth Chamber:**
+  - the great seal backs the nine segments, which now stand out from it;
+  - the empty ninth pedestal is the inscribed block.
+
+**Model loading:** `fitCopy` takes a brightness factor, for models whose textures came out near black (soot, old iron, leather): the crucible, the bellows and the mould.
+
+**Documentation:** the README lists the nine chambers, the three languages and offline play, and the credits list the Meshy models. Ubara stays procedural, since only concept images of her exist.
+
 ## Version 0.9.22 (2026-10-11): The iPhone Home Screen app fills the screen
 
 - **The fix in 0.9.21 did not reach an app already installed.** The owner's iPhone app still sat a status bar too high, with a black band at the bottom. An iPhone Home Screen app keeps the status bar style it was installed with, so the new opaque bar only applies to new installs.

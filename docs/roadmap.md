@@ -2,7 +2,7 @@
 
 Agreed with the owner on 2026-10-04, after 0.9.0: the campaign is complete (I to IX), and 1.0 is the release that can be put in front of people. The roadmap to 0.9.0 is closed; its record, with the owner's four decisions on chamber IX, is in the changelog (0.8.5 to 0.9.0).
 
-**Status:** 0.9.5 and 0.9.6 released, and the open decisions of spec §18 settled in 0.9.12; 1.0 waits on the owner's part.
+**Status:** 1.0.0 released on 2026-10-11. The owner chose to ship it without the playtests, the iPhone check and the name search, which stay open below.
 
 ## 0.9.5 · The Ninth Chamber in full, its own music, golden replays
 
@@ -17,13 +17,13 @@ Agreed with the owner on 2026-10-04, after 0.9.0: the campaign is complete (I to
 
 ## 1.0 · Release
 
-1.0 ships when the owner's part is done, or when the owner chooses to ship without it:
+1.0 ships when the owner's part is done, or when the owner chooses to ship without it (the owner did, on 2026-10-11):
 
 - playtests with five people (spec §16);
 - the iPhone check: 30 fps or more, and a save that survives a reload;
 - the name search (EUIPO, USPTO), and the final name;
 - ~~the licence~~: MIT for the code, the game's own assets closed (decided on 2026-10-05, 0.9.14; docs/license.md);
-- the owner's models (docs/art/models-brief.md), or the decision to ship with the stand-ins;
+- ~~the owner's models~~: made with Meshy and in the game, 0.9.16 to 1.0.0 (Ubara alone stays procedural);
 - ~~the open decisions of spec §18~~: settled by the owner on 2026-10-05 (0.9.12):
   - hints: pregenerated only, no adaptive hints (no API calls);
   - the touch joystick: floating, where the thumb lands (as built since 0.1);

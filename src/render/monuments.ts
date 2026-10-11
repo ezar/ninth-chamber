@@ -1,11 +1,12 @@
 /**
  * The Ninth Chamber's monuments (spec §19, chamber IX):
  * - the eight keepers in stone, each holding its chamber's relic, which glows
- *   in that chamber's colour; the ninth pedestal stands empty. Each keeper is
+ *   in that chamber's colour; the ninth pedestal (the inscribed Meshy block) stands empty. Each keeper is
  *   its Meshy model (public/models/keeper_<n>.glb, tinted to one stone) once
  *   loaded, with the glowing relic set at its chest; a carved stand-in until then;
  * - the great seal of the nine on a wall: eight segments cut in stone and the
- *   ninth an outline, which fills with amber light once Nora carves her name.
+ *   ninth an outline, which fills with amber light once Nora carves her name,
+ *   over the Meshy great seal whose inscribed rim rings them.
  * It reads the simulation every frame and never writes to it.
  */
 import * as THREE from 'three/webgpu';
@@ -24,6 +25,11 @@ const KEEPER_STONE = new THREE.Color('#d8cbb2');
 const SEAL_RADIUS = 2.4;
 const SEAL_INNER = 1.7;
 const SEAL_HEIGHT = 3.2;
+/** The great seal's backing: a shade darker than the segments, and thin enough to sit in front of the wall (m). */
+const SEAL_BACKING = new THREE.Color('#a89b84');
+const SEAL_BACKING_DEPTH = 0.05;
+/** How far the segments then stand out from the backing (m). */
+const SEAL_RELIEF = 0.08;
 
 export class Monuments {
   readonly group = new THREE.Group();
@@ -70,8 +76,24 @@ export class Monuments {
     g.rotation.y = DIR_YAW[face];
     this.group.add(g);
     // The pedestal.
-    this.mesh(new THREE.BoxGeometry(1.3, 0.6, 1.3), this.dark, g).position.y = 0.3;
-    if (relic > 8) return;
+    const pedestal = this.mesh(new THREE.BoxGeometry(1.3, 0.6, 1.3), this.dark, g);
+    pedestal.position.y = 0.3;
+    if (relic > 8) {
+      // The ninth stands empty: its pedestal is the inscribed Meshy block.
+      void loadStaticModel('pedestal_9').then((model) => {
+        if (!model) return;
+        const { root, materials } = fitCopy(model, { width: 1.3, origin: 'bottom' });
+        // In the other pedestals' darker stone, so the empty place reads as one of the nine.
+        for (const m of materials) {
+          m.color.copy(this.dark.color);
+          m.metalness = 0;
+          this.materials.push(m);
+        }
+        pedestal.visible = false;
+        g.add(root);
+      });
+      return;
+    }
     // A robed keeper: a tapered body, shoulders, a hooded head, arms forward holding the relic.
     const body = this.mesh(new THREE.CylinderGeometry(0.32, 0.5, 2.0, 10), this.stone, g);
     body.position.y = 0.6 + 1.0;
@@ -149,6 +171,24 @@ export class Monuments {
     }
     // The centre boss.
     this.mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.16, 20), this.dark, g).rotation.x = Math.PI / 2;
+    // Behind the segments, the Meshy great seal: its inscribed rim rings them, thin against the wall.
+    void loadStaticModel('great_seal').then((model) => {
+      if (!model) return;
+      const { root, materials } = fitCopy(model, { width: SEAL_RADIUS * 2.4, origin: 'centre' });
+      for (const m of materials) {
+        m.color.copy(SEAL_BACKING);
+        m.metalness = 0;
+        this.materials.push(m);
+      }
+      root.updateMatrixWorld(true);
+      const depth = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).z;
+      // Between the wall (0.06 behind) and the segments' faces.
+      root.scale.z *= SEAL_BACKING_DEPTH / Math.max(1e-6, depth);
+      root.position.z = 0.005 + SEAL_BACKING_DEPTH / 2;
+      // The segments and the boss stand out from it, towards the room (-Z).
+      for (const c of g.children) c.position.z -= SEAL_RELIEF;
+      g.add(root);
+    });
   }
 
   update(world: World, dt: number): void {
